@@ -9,30 +9,27 @@ import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import './globals.css'
 
-// Configuración de Mastesto Engineering
-const title = 'Mastesto Engineering'
-const description = 'Innovation in Technology - Plataforma de Ingeniería Avanzada'
+// Configuración de +TESTO
+const title = '+TESTO | Disciplina · Honor · Voluntad de Hierro'
+const description = 'Plataforma diseñada para asistir con la disciplina y dejar de fumar.'
 
-export const metadata: Metadata = {
-  title,
-  description,
-  // ESTO PONE LA "T" ROJA EN LA PESTAÑA Y ELIMINA EL LOGO POR DEFECTO
+export const metadata = {
+  title: '+TESTO',
+  description: '+TESTO',
   icons: {
-    icon: [
-      {
-        url: 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22red%22/><text y=%22.9em%22 x=%22.15em%22 font-size=%2275%22 font-weight=%22900%22 fill=%22white%22 font-family=%22Arial%22>T</text></svg>',
-        type: 'image/svg+xml',
-      },
-    ],
+    icon: '/icon.png',
+    shortcut: '/icon.png',
+    apple: '/icon.png',
   },
-}
+};
+
 
 export default function RootLayout({
   children,
 }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en">
-      <body className="antialiased">
+    <html lang="es">
+      <body className="antialiased bg-black"> {/* Añadido bg-black para coherencia visual */}
         <Suspense fallback={null}>
           <NuqsAdapter>
             <ChatProvider>
@@ -46,8 +43,9 @@ export default function RootLayout({
         <CommandLogsStream />
         <SandboxState />
 
-        {/* IMPORTANTE: He eliminado el componente VercelToolbar 
-            que es el que hacía aparecer el triángulo negro.
+        {/* 
+            Al no incluir el componente VercelToolbar aquí, 
+            el triángulo negro dejará de aparecer en tu entorno.
         */}
       </body>
     </html>
