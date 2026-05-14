@@ -13,15 +13,22 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
         messages: [
-          { role: 'system', content: 'Eres EL FORJADOR, un mentor estoico.' },
+          { role: 'system', content: 'Eres EL FORJADOR, un mentor estoico de disciplina de hierro.' },
           ...messages,
         ],
       }),
     });
 
     const data = await response.json();
+
+    // Si Groq devuelve un error (por ejemplo, API Key inválida)
+    if (data.error) {
+      console.error('Error de Groq:', data.error);
+      return NextResponse.json({ content: 'LA FORJA ESTÁ FRÍA. REVISA TU CONEXIÓN.' });
+    }
+
     return NextResponse.json({ content: data.choices[0].message.content });
   } catch (error) {
-    return NextResponse.json({ content: 'ERROR EN LA FORJA' }, { status: 500 });
+    return NextResponse.json({ content: 'ERROR CRÍTICO EN EL SISTEMA.' }, { status: 500 });
   }
 }
