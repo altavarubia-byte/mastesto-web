@@ -1,85 +1,41 @@
-import { type ChatUIMessage } from '@/components/chat/types'
-import {
-  convertToModelMessages,
-  createUIMessageStream,
-  createUIMessageStreamResponse,
-  stepCountIs,
-  streamText,
-} from 'ai'
-import { DEFAULT_MODEL, MODEL_NAMES, SUPPORTED_MODELS } from '@/ai/constants'
-import { NextResponse } from 'next/server'
-import { getModelOptions } from '@/ai/gateway'
-import { checkBotId } from 'botid/server'
-import { tools } from '@/ai/tools'
-import prompt from './prompt.md'
-
-interface BodyData {
-  messages: ChatUIMessage[]
-  modelId?: string
-  reasoningEffort?: 'low' | 'medium'
-}
+import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
-  const [checkResult, { messages, modelId = DEFAULT_MODEL, reasoningEffort }] =
-    await Promise.all([checkBotId(), req.json() as Promise<BodyData>])
+  try {
+    const { messages, contexto } = await req.json();
 
-  if (checkResult.isBot) {
-    return NextResponse.json({ error: `Bot detected` }, { status: 403 })
-  }
-
-  if (!SUPPORTED_MODELS.includes(modelId)) {
-    return NextResponse.json(
-      { error: `Model ${modelId} not found.` },
-      { status: 400 }
-    )
-  }
-
-  return createUIMessageStreamResponse({
-    stream: createUIMessageStream({
-      originalMessages: messages,
-      execute: async ({ writer }) => {
-        const result = streamText({
-          ...getModelOptions(modelId, { reasoningEffort }),
-          system: prompt,
-          messages: await convertToModelMessages(
-            messages.map((message) => {
-              message.parts = message.parts.map((part) => {
-                if (part.type === 'data-report-errors') {
-                  return {
-                    type: 'text',
-                    text:
-                      `There are errors in the generated code. This is the summary of the errors we have:\n` +
-                      `\`\`\`${part.data.summary}\`\`\`\n` +
-                      (part.data.paths?.length
-                        ? `The following files may contain errors:\n` +
-                          `\`\`\`${part.data.paths?.join('\n')}\`\`\`\n`
-                        : '') +
-                      `Fix the errors reported.`,
-                  }
-                }
-                return part
-              })
-              return message
-            })
-          ),
-          stopWhen: stepCountIs(20),
-          tools: tools({ modelId, writer }),
-          onError: (error) => {
-            console.error('Error communicating with AI')
-            console.error(JSON.stringify(error, null, 2))
-          },
-        })
-        result.consumeStream()
-        writer.merge(
-          result.toUIMessageStream({
-            sendReasoning: true,
-            sendStart: false,
-            messageMetadata: () => ({
-              model: MODEL_NAMES[modelId] ?? modelId,
-            }),
-          })
-        )
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
       },
-    }),
-  });
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile', // El modelo más potente de Groq actualmente
+        messages: [
+          {
+            role: 'system',
+            content: `Eres "EL FORJADOR", un mentor de disciplina absoluta. 
+            Tu tono es ESTOICO, DURO y MOTIVADOR. 
+            No usas emojis. Escribes en un formato limpio. 
+            Si el socio flaquea, recuérdale su compromiso. 
+            DATOS DEL SOCIO: ${contexto}.`
+          },
+          ...messages,
+        ],
+        temperature: 0.7,
+      }),
+    });
+
+    const data = await response.json();
+    
+    if (!data.choices) {
+      console.error('Error de Groq:', data);
+      return NextResponse.json({ content: 'LA FORJA ESTÁ FRÍA. REVISA TU CONEXIÓN.' });
+    }
+
+    return NextResponse.json({ content: data.choices[0].message.content });
+  } catch (error) {
+    return NextResponse.json({ content: 'ERROR EN EL SISTEMA DE LA FORJA.' }, { status: 500 });
+  }
 }
