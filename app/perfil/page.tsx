@@ -21,6 +21,7 @@ export default function PerfilPage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
+  // 1. Obtener datos del usuario
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -35,6 +36,7 @@ export default function PerfilPage() {
     getUser();
   }, [supabase, router]);
 
+  // 2. Lógica del Cronómetro (Días, Horas, Minutos, Segundos)
   useEffect(() => {
     if (!fechaInicio) return;
     const intervalo = setInterval(() => {
@@ -54,6 +56,7 @@ export default function PerfilPage() {
     return () => clearInterval(intervalo);
   }, [fechaInicio]);
 
+  // 3. Consulta a la IA (Groq vía /api/chat)
   const consultarMentor = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!mensaje.trim() || cargandoIA) return;
@@ -90,21 +93,21 @@ export default function PerfilPage() {
   return (
     <div className="min-h-screen bg-black text-white p-4 md:p-12 font-sans relative overflow-hidden">
       
-      {/* EXPEDIENTE LATERAL IZQUIERDA */}
+      {/* --- EXPEDIENTE LATERAL IZQUIERDA --- */}
       <div className="fixed top-12 left-12 w-64 hidden lg:block border-l border-orange-600 pl-6 py-2 opacity-80">
         <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 mb-6 italic">Expediente_Socio</h2>
         <p className="text-[7px] text-orange-600 uppercase font-black mb-1">Nombre</p>
         <p className="text-[11px] font-black uppercase mb-4">{user.user_metadata?.nombre || 'Socio'} {user.user_metadata?.apellido || ''}</p>
-        <p className="text-[7px] text-orange-600 uppercase font-black mb-1">Edad / Sexo</p>
-        <p className="text-[11px] font-black uppercase mb-4">{user.user_metadata?.edad || '--'} años | {user.user_metadata?.sexo || '--'}</p>
-        <p className="text-[7px] text-orange-600 uppercase font-black mb-1">Estado</p>
-        <p className="text-[11px] font-black text-green-500 uppercase italic">Activo</p>
+        <p className="text-[7px] text-orange-600 uppercase font-black mb-1">Datos</p>
+        <p className="text-[11px] font-black uppercase mb-4">{user.user_metadata?.edad || '--'} AÑOS | {user.user_metadata?.sexo || '--'}</p>
+        <p className="text-[7px] text-orange-600 uppercase font-black mb-1">ID_Socio</p>
+        <p className="text-[9px] font-mono text-zinc-500 break-all">{user.id}</p>
       </div>
 
-      {/* CONTENIDO CENTRAL: CRONÓMETRO DETALLADO */}
+      {/* --- CONTENIDO CENTRAL: CRONÓMETRO --- */}
       <div className="flex flex-col items-center justify-center min-h-screen">
-        <div className="w-full max-w-2xl bg-zinc-950 border border-zinc-900 rounded-[3rem] p-12 md:p-20 text-center shadow-[0_0_80px_rgba(0,0,0,1)]">
-          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-orange-600 mb-12 opacity-60 italic">Tiempo de Disciplina Absoluta</p>
+        <div className="w-full max-w-2xl bg-zinc-950 border border-zinc-900 rounded-[3rem] p-12 md:p-20 text-center shadow-2xl">
+          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-orange-600 mb-12 opacity-60 italic">Tiempo de Disciplina</p>
           
           <div className="grid grid-cols-4 gap-4 md:gap-8 mb-12">
             <div>
@@ -125,17 +128,19 @@ export default function PerfilPage() {
             </div>
           </div>
 
-          <button onClick={() => router.push('/')} className="text-[9px] font-black uppercase tracking-[0.4em] text-zinc-800 hover:text-orange-600 transition-colors italic">[ Finalizar Sesión ]</button>
+          <button onClick={() => router.push('/')} className="text-[9px] font-black uppercase tracking-[0.4em] text-zinc-800 hover:text-orange-600 transition-colors italic">
+            [ Finalizar Sesión ]
+          </button>
         </div>
       </div>
 
-      {/* IA DESPLEGABLE (Círculo Naranja) */}
+      {/* --- IA DESPLEGABLE --- */}
       <div className="fixed bottom-10 right-10 z-50 flex flex-col items-end">
         {isOpen && (
-          <div className="mb-6 w-80 md:w-96 bg-zinc-950 border-2 border-orange-600 rounded-[2rem] overflow-hidden shadow-2xl">
+          <div className="mb-6 w-80 md:w-96 bg-zinc-950 border-2 border-orange-600 rounded-[2rem] overflow-hidden shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
             <div className="p-4 bg-orange-600 text-black font-black uppercase italic text-[10px] flex justify-between items-center">
               <span>Mentor IA (Groq)</span>
-              <button onClick={() => setIsOpen(false)}>✕</button>
+              <button onClick={() => setIsOpen(false)} className="font-bold">✕</button>
             </div>
             
             <div ref={scrollRef} className="h-80 overflow-y-auto p-6 font-mono text-[10px] uppercase bg-black text-orange-500 space-y-4">
@@ -163,7 +168,7 @@ export default function PerfilPage() {
 
         <button 
           onClick={() => setIsOpen(!isOpen)} 
-          className="w-20 h-20 bg-orange-600 rounded-full border-4 border-black shadow-[0_0_30px_rgba(234,88,12,0.4)] flex items-center justify-center hover:scale-110 transition-all"
+          className="w-20 h-20 bg-orange-600 rounded-full border-4 border-black shadow-[0_0_30px_rgba(234,88,12,0.4)] flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
         >
           <span className="text-black font-black text-xl italic">IA</span>
         </button>
