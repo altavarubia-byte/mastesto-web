@@ -9,44 +9,73 @@ import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import './globals.css'
 
-// Configuración de +TESTO
-const title = '+TESTO | Disciplina · Honor · Voluntad de Hierro'
-const description = 'Plataforma diseñada para asistir con la disciplina y dejar de fumar.'
-
-export const metadata = {
-  title: '+TESTO',
-  description: '+TESTO',
+// Configuración de metadatos profesional (SEO)
+export const metadata: Metadata = {
+  title: {
+    default: '+TESTO | Forja de Voluntad',
+    template: '%s | +TESTO'
+  },
+  description: 'Plataforma de alta intensidad para la reconstrucción de hábitos, disciplina marcial y superación de vicios.',
   icons: {
     icon: '/icon.png',
     shortcut: '/icon.png',
     apple: '/icon.png',
   },
+  openGraph: {
+    title: '+TESTO | Disciplina de Hierro',
+    description: 'Domina tu voluntad. Erradica la debilidad.',
+    type: 'website',
+    images: [{ url: '/icon.png' }], // Si tienes un logo más grande, cámbialo aquí
+  }
 };
-
 
 export default function RootLayout({
   children,
 }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="es">
-      <body className="antialiased bg-black"> {/* Añadido bg-black para coherencia visual */}
+    <html lang="es" className="dark">
+      <body className="antialiased bg-black text-white selection:bg-orange-600 selection:text-black">
         <Suspense fallback={null}>
           <NuqsAdapter>
             <ChatProvider>
-              <ErrorMonitor>{children}</ErrorMonitor>
+              <ErrorMonitor>
+                {/* Contenedor principal para empujar el footer abajo */}
+                <div className="flex flex-col min-h-screen">
+                  <main className="flex-grow">
+                    {children}
+                  </main>
+
+                  {/* FOOTER PROFESIONAL */}
+                  <footer className="bg-black border-t border-zinc-900 py-12 px-6">
+                    <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
+                      <div className="flex flex-col items-center md:items-start">
+                        <span className="text-xl font-black italic tracking-tighter text-orange-600">+TESTO</span>
+                        <p className="text-[8px] text-zinc-600 uppercase tracking-[0.4em] mt-2">Victoria sobre la autocomplacencia</p>
+                      </div>
+
+                      <div className="flex gap-8 text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                        <a href="/privacidad" className="hover:text-orange-600 transition-colors">Privacidad</a>
+                        <a href="/terminos" className="hover:text-orange-600 transition-colors">Términos</a>
+                        <a href="/contacto" className="hover:text-orange-600 transition-colors">Contacto</a>
+                      </div>
+
+                      <div className="text-[9px] font-mono text-zinc-700">
+                        [ SYSTEM_STATUS: OPERATIONAL ]
+                      </div>
+                    </div>
+                    <div className="mt-8 text-center">
+                      <p className="text-[7px] text-zinc-800 uppercase tracking-[0.5em]">© 2026 Vicente Altava. Todos los derechos reservados.</p>
+                    </div>
+                  </footer>
+                </div>
+              </ErrorMonitor>
             </ChatProvider>
           </NuqsAdapter>
         </Suspense>
         
-        {/* Componentes de la interfaz */}
-        <Toaster />
+        <Toaster position="bottom-right" theme="dark" />
         <CommandLogsStream />
         <SandboxState />
-
-        {/* 
-            Al no incluir el componente VercelToolbar aquí, 
-            el triángulo negro dejará de aparecer en tu entorno.
-        */}
       </body>
     </html>
   )
