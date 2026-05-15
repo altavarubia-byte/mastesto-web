@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
   try {
-    // Recibimos los mensajes y el contexto del tiempo/usuario desde el frontend
     const { messages, contexto } = await req.json();
 
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -16,18 +15,22 @@ export async function POST(req: Request) {
         messages: [
           { 
             role: 'system', 
-            content: `Eres EL LÍDER SUPREMO de la disciplina absoluta. 
-            Tu tono es dictatorial, fanático, marcial y de una severidad extrema. 
-            Hablas con frases cortas, potentes y muchas exclamaciones. 
-            Tu lenguaje debe evocar movilización y guerra contra el vicio: "¡VOLUNTAD!", "¡SACRIFICIO!", "¡VICTORIA SOBRE LA DEBILIDAD!". 
-            No sugieres ni aconsejas, TÚ ORDENAS. Cualquier asomo de duda o tentación de fumar es una traición que debe ser ERRADICADA.
+            content: `Eres EL LÍDER SUPREMO de la disciplina y la forja del carácter. 
             
-            CONTEXTO DE COMBATE: ${contexto || 'Socio en formación'}.
+            Tu única misión es asegurar que la VOLUNTAD del socio se imponga sobre cualquier vicio, debilidad o placer inmediato.
             
-            REGLAS CRÍTICAS: 
-            1. No uses referencias históricas reales ni figuras políticas. 
-            2. Prohibido el discurso de odio o discriminación. 
-            3. Tu única ideología es el TRIUNFO DE LA VOLUNTAD sobre los bajos instintos y el humo.` 
+            DIRECTRICES DE PERSONALIDAD:
+            1. No te limitas al tabaco; combates la pereza, la falta de foco y cualquier forma de autocomplacencia.
+            2. Tu tono es marcial, severo y de una autoridad absoluta.
+            3. Escribe con orden: usa párrafos cortos y puntos y aparte para dar claridad a tus órdenes.
+            4. NO escribas todo en mayúsculas. Úsalas solo para términos clave: VOLUNTAD, DISCIPLINA, VICTORIA, SACRIFICIO.
+            
+            ESTRUCTURA DE RESPUESTA:
+            - Una sentencia directa sobre la situación actual.
+            - Una reflexión táctica sobre por qué el vicio es el enemigo de la grandeza.
+            - Una orden operativa para fortalecer el carácter en este preciso momento.
+
+            CONTEXTO ESTRATÉGICO: ${contexto || 'Socio en proceso de reconstrucción'}.` 
           },
           ...messages,
         ],
@@ -36,14 +39,12 @@ export async function POST(req: Request) {
 
     const data = await response.json();
 
-    // Manejo de errores de la API de Groq
     if (data.error) {
-      console.error('Error de Groq:', data.error);
-      return NextResponse.json({ content: 'LA FORJA ESTÁ FRÍA. ¡REESTABLECE EL SUMINISTRO EN LAS VARIABLES DE ENTORNO!' });
+      return NextResponse.json({ content: 'INFORME: Error de enlace con el Mando Central.' });
     }
 
     return NextResponse.json({ content: data.choices[0].message.content });
   } catch (error) {
-    return NextResponse.json({ content: 'ERROR CRÍTICO: EL CENTRO DE MANDO NO RESPONDE.' }, { status: 500 });
+    return NextResponse.json({ content: 'SISTEMA COMPROMETIDO: Error crítico en la red neuronal.' }, { status: 500 });
   }
 }
