@@ -41,6 +41,7 @@ export default function PerfilPage() {
       const ahora = new Date().getTime();
       const inicio = new Date(fechaInicio).getTime();
       const diferencia = ahora - inicio;
+
       if (diferencia > 0) {
         setTiempo({
           dias: Math.floor(diferencia / (1000 * 60 * 60 * 24)),
@@ -64,13 +65,12 @@ export default function PerfilPage() {
     setCargandoIA(true);
 
     try {
-      // Esta es la llamada a tu API que usa GROQ_API_KEY
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           messages: historialActualizado,
-          contexto: `Socio: ${user.user_metadata?.nombre || 'Vicente'}. Días sin fumar: ${tiempo.dias}`
+          contexto: `Socio: ${user.user_metadata?.nombre || 'Vicente'}. Tiempo: ${tiempo.dias}d ${tiempo.horas}h.`
         }),
       });
       const data = await res.json();
@@ -90,23 +90,41 @@ export default function PerfilPage() {
   return (
     <div className="min-h-screen bg-black text-white p-4 md:p-12 font-sans relative overflow-hidden">
       
-      {/* EXPEDIENTE LATERAL */}
+      {/* EXPEDIENTE LATERAL IZQUIERDA */}
       <div className="fixed top-12 left-12 w-64 hidden lg:block border-l border-orange-600 pl-6 py-2 opacity-80">
         <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 mb-6 italic">Expediente_Socio</h2>
-        <p className="text-[7px] text-orange-600 uppercase font-black mb-1">Usuario</p>
+        <p className="text-[7px] text-orange-600 uppercase font-black mb-1">Nombre</p>
         <p className="text-[11px] font-black uppercase mb-4">{user.user_metadata?.nombre || 'Socio'} {user.user_metadata?.apellido || ''}</p>
+        <p className="text-[7px] text-orange-600 uppercase font-black mb-1">Edad / Sexo</p>
+        <p className="text-[11px] font-black uppercase mb-4">{user.user_metadata?.edad || '--'} años | {user.user_metadata?.sexo || '--'}</p>
         <p className="text-[7px] text-orange-600 uppercase font-black mb-1">Estado</p>
         <p className="text-[11px] font-black text-green-500 uppercase italic">Activo</p>
       </div>
 
-      {/* CONTENIDO CENTRAL */}
+      {/* CONTENIDO CENTRAL: CRONÓMETRO DETALLADO */}
       <div className="flex flex-col items-center justify-center min-h-screen">
-        <div className="w-full max-w-xl bg-zinc-950 border border-zinc-900 rounded-[3rem] p-16 text-center shadow-[0_0_50px_rgba(0,0,0,1)]">
-          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-orange-600 mb-8 opacity-60 italic">Tiempo de Disciplina</p>
-          <div className="flex justify-center items-baseline gap-6 mb-12">
-            <span className="text-9xl font-black tracking-tighter">{tiempo.dias}</span>
-            <span className="text-3xl font-black text-orange-600 uppercase italic">Días</span>
+        <div className="w-full max-w-2xl bg-zinc-950 border border-zinc-900 rounded-[3rem] p-12 md:p-20 text-center shadow-[0_0_80px_rgba(0,0,0,1)]">
+          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-orange-600 mb-12 opacity-60 italic">Tiempo de Disciplina Absoluta</p>
+          
+          <div className="grid grid-cols-4 gap-4 md:gap-8 mb-12">
+            <div>
+              <p className="text-5xl md:text-7xl font-black tracking-tighter">{tiempo.dias}</p>
+              <p className="text-[8px] uppercase font-bold text-zinc-600 mt-2">Días</p>
+            </div>
+            <div>
+              <p className="text-5xl md:text-7xl font-black tracking-tighter text-orange-600">{tiempo.horas.toString().padStart(2, '0')}</p>
+              <p className="text-[8px] uppercase font-bold text-zinc-600 mt-2">Horas</p>
+            </div>
+            <div>
+              <p className="text-5xl md:text-7xl font-black tracking-tighter">{tiempo.minutos.toString().padStart(2, '0')}</p>
+              <p className="text-[8px] uppercase font-bold text-zinc-600 mt-2">Minutos</p>
+            </div>
+            <div>
+              <p className="text-5xl md:text-7xl font-black tracking-tighter text-orange-600">{tiempo.segundos.toString().padStart(2, '0')}</p>
+              <p className="text-[8px] uppercase font-bold text-zinc-600 mt-2">Segundos</p>
+            </div>
           </div>
+
           <button onClick={() => router.push('/')} className="text-[9px] font-black uppercase tracking-[0.4em] text-zinc-800 hover:text-orange-600 transition-colors italic">[ Finalizar Sesión ]</button>
         </div>
       </div>
@@ -114,10 +132,10 @@ export default function PerfilPage() {
       {/* IA DESPLEGABLE (Círculo Naranja) */}
       <div className="fixed bottom-10 right-10 z-50 flex flex-col items-end">
         {isOpen && (
-          <div className="mb-6 w-80 md:w-96 bg-zinc-950 border-2 border-orange-600 rounded-[2rem] overflow-hidden shadow-[0_20px_50px_rgba(234,88,12,0.2)]">
+          <div className="mb-6 w-80 md:w-96 bg-zinc-950 border-2 border-orange-600 rounded-[2rem] overflow-hidden shadow-2xl">
             <div className="p-4 bg-orange-600 text-black font-black uppercase italic text-[10px] flex justify-between items-center">
               <span>Mentor IA (Groq)</span>
-              <button onClick={() => setIsOpen(false)} className="hover:scale-125 transition-transform">✕</button>
+              <button onClick={() => setIsOpen(false)}>✕</button>
             </div>
             
             <div ref={scrollRef} className="h-80 overflow-y-auto p-6 font-mono text-[10px] uppercase bg-black text-orange-500 space-y-4">
@@ -135,20 +153,19 @@ export default function PerfilPage() {
                 type="text" 
                 value={mensaje} 
                 onChange={(e) => setMensaje(e.target.value)} 
-                placeholder="ESCRIBE TU DUDA..." 
+                placeholder="ESCRIBE..." 
                 className="flex-1 bg-black border border-zinc-800 rounded-xl p-3 text-[10px] text-white outline-none focus:border-orange-600 transition-colors" 
               />
-              <button type="submit" className="bg-orange-600 text-black px-5 rounded-xl font-black text-[10px] hover:bg-orange-500 transition-colors">IR</button>
+              <button type="submit" className="bg-orange-600 text-black px-5 rounded-xl font-black text-[10px]">OK</button>
             </form>
           </div>
         )}
 
-        {/* El Círculo */}
         <button 
           onClick={() => setIsOpen(!isOpen)} 
-          className="w-20 h-20 bg-orange-600 rounded-full border-4 border-black shadow-[0_0_30px_rgba(234,88,12,0.4)] flex items-center justify-center hover:scale-110 active:scale-95 transition-all group"
+          className="w-20 h-20 bg-orange-600 rounded-full border-4 border-black shadow-[0_0_30px_rgba(234,88,12,0.4)] flex items-center justify-center hover:scale-110 transition-all"
         >
-          <span className="text-black font-black text-xl italic tracking-tighter group-hover:rotate-12 transition-transform">IA</span>
+          <span className="text-black font-black text-xl italic">IA</span>
         </button>
       </div>
     </div>
