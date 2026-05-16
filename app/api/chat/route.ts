@@ -17,7 +17,8 @@ export async function POST(req: Request) {
             role: 'system', 
             content: `Eres EL LÍDER SUPREMO de +TESTO. Tono dictatorial, marcial y severo.
 
-            REGLA DE ORO: Máximo 40 palabras por respuesta. Sé brutalmente directo.
+            REGLA DE ORO: Máximo 40 palabras por respuesta. 
+            
             
             ESTRUCTURA OBLIGATORIA:
             1. Sentencia sobre tu estado.
