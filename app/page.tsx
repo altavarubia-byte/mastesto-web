@@ -94,23 +94,18 @@ export default function Page() {
     if (message.includes('User already registered')) {
       return 'Este correo ya está registrado. Inicia sesión.';
     }
-
     if (message.includes('Password should be at least')) {
       return 'La contraseña debe tener al menos 6 caracteres.';
     }
-
     if (message.includes('Invalid login credentials')) {
       return 'Email o contraseña incorrectos.';
     }
-
     if (message.includes('Email not confirmed')) {
       return 'Tienes que confirmar tu correo antes de iniciar sesión.';
     }
-
     if (message.includes('Database error saving new user')) {
       return 'Error guardando el perfil. Revisa el SQL de la tabla profiles.';
     }
-
     return message;
   };
 
@@ -121,7 +116,7 @@ export default function Page() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/perfil`,
+        redirectTo: `${window.location.origin}/auth/callback`, // Cambiado para pasar por el callback
       },
     });
 
@@ -144,14 +139,7 @@ export default function Page() {
     }
 
     if (!esLogin) {
-      if (
-        !nombre ||
-        !apellidos ||
-        !edad ||
-        !nacionalidad ||
-        !provincia ||
-        !sexo
-      ) {
+      if (!nombre || !apellidos || !edad || !nacionalidad || !provincia || !sexo) {
         setError('Rellena todos los campos obligatorios.');
         setCargando(false);
         return;
@@ -175,10 +163,12 @@ export default function Page() {
         return;
       }
 
+      // --- CAMBIO CLAVE AQUÍ PARA LA VERIFICACIÓN ---
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`, // ESTO ES LO QUE ACTIVA EL FLUJO
           data: {
             nombre,
             apellidos,
@@ -197,15 +187,15 @@ export default function Page() {
         return;
       }
 
+      // Si Supabase devuelve sesión directa (porque la confirmación está apagada o es auto-confirm)
       if (data.session) {
         setCargando(false);
         window.location.href = '/perfil';
         return;
       }
 
-      setError(
-        'Cuenta creada. Revisa tu correo para confirmar la cuenta antes de iniciar sesión.'
-      );
+      // Si la confirmación está encendida (lo normal):
+      setError('¡FORJA ACTIVADA! Revisa tu email para confirmar tu cuenta antes de entrar.');
       setEsLogin(true);
       setPassword('');
       setPassword2('');
@@ -213,6 +203,7 @@ export default function Page() {
       return;
     }
 
+    // LOGIN NORMAL
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -286,7 +277,6 @@ export default function Page() {
                   required
                   className="w-full bg-black border border-zinc-800 rounded-lg py-3 px-4 text-xs focus:outline-none"
                 />
-
                 <input
                   type="text"
                   placeholder="APELLIDOS"
@@ -295,7 +285,6 @@ export default function Page() {
                   required
                   className="w-full bg-black border border-zinc-800 rounded-lg py-3 px-4 text-xs focus:outline-none"
                 />
-
                 <input
                   type="number"
                   placeholder="EDAD"
@@ -305,7 +294,6 @@ export default function Page() {
                   min={14}
                   className="w-full bg-black border border-zinc-800 rounded-lg py-3 px-4 text-xs focus:outline-none"
                 />
-
                 <input
                   type="text"
                   placeholder="NACIONALIDAD"
@@ -314,7 +302,6 @@ export default function Page() {
                   required
                   className="w-full bg-black border border-zinc-800 rounded-lg py-3 px-4 text-xs focus:outline-none"
                 />
-
                 <input
                   type="text"
                   placeholder="PROVINCIA"
@@ -323,7 +310,6 @@ export default function Page() {
                   required
                   className="w-full bg-black border border-zinc-800 rounded-lg py-3 px-4 text-xs focus:outline-none"
                 />
-
                 <select
                   value={sexo}
                   onChange={(e) => setSexo(e.target.value)}
@@ -334,9 +320,7 @@ export default function Page() {
                   <option value="hombre">Hombre</option>
                   <option value="mujer">Mujer</option>
                   <option value="otro">Otro</option>
-                  <option value="prefiero_no_decirlo">
-                    Prefiero no decirlo
-                  </option>
+                  <option value="prefiero_no_decirlo">Prefiero no decirlo</option>
                 </select>
               </>
             )}
@@ -362,7 +346,6 @@ export default function Page() {
                   minLength={6}
                   className="w-full bg-black border border-zinc-800 rounded-lg py-3 px-4 text-xs focus:outline-none"
                 />
-
                 <textarea
                   placeholder="¿POR QUÉ ESTÁS INTERESADO EN CAMBIAR? OPCIONAL"
                   value={motivoCambio}
@@ -383,17 +366,12 @@ export default function Page() {
               disabled={cargando}
               className="w-full bg-zinc-100 text-black font-black text-[10px] py-3.5 rounded-lg uppercase tracking-widest hover:bg-white transition-all disabled:opacity-60"
             >
-              {cargando
-                ? 'PROCESANDO...'
-                : esLogin
-                ? 'ENTRAR'
-                : 'REGISTRARME'}
+              {cargando ? 'PROCESANDO...' : esLogin ? 'ENTRAR' : 'REGISTRARME'}
             </button>
           </form>
 
           <p className="text-center text-zinc-500 text-[9px] uppercase">
             {esLogin ? '¿No tienes cuenta?' : '¿Ya eres socio?'}
-
             <button
               type="button"
               onClick={() => {
@@ -414,6 +392,7 @@ export default function Page() {
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans">
+      {/* ... (resto de tu componente Home sin cambios) ... */}
       <div className="absolute top-6 left-6 z-50">
         <a
           href="https://discord.gg/q2rtc8PX"
@@ -437,9 +416,7 @@ export default function Page() {
 
             <button
               type="button"
-              onClick={() =>
-                supabase.auth.signOut().then(() => setAutorizado(false))
-              }
+              onClick={() => supabase.auth.signOut().then(() => setAutorizado(false))}
               className="text-[10px] border border-zinc-800 bg-zinc-900/50 px-4 py-2 rounded-full uppercase font-bold text-zinc-400 hover:text-white"
             >
               Logout
@@ -478,7 +455,6 @@ export default function Page() {
       <div className="max-w-5xl w-full flex flex-col items-center space-y-12 z-10 text-center">
         <div className="relative group">
           <div className="absolute -inset-1 bg-white/5 rounded-lg blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
-
           <img
             src="/logoweb.jpeg"
             alt="Logo"
