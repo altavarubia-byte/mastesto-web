@@ -1,22 +1,38 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
-  // 1. Obtenemos la URL de la petición para extraer el código de verificación
-  const requestUrl = new URL(request.url)
-  const code = requestUrl.searchParams.get('code')
+  const { searchParams, origin } = new URL(request.url)
+  const code = searchParams.get('code')
+  const next = searchParams.get('next') ?? '/'
 
   if (code) {
-    // 2. Creamos el cliente de Supabase usando las cookies
-    const supabase = createRouteHandlerClient({ cookies })
+    const cookieStore = cookies()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
+          },
+          set(name: string, value: string, options: CookieOptions) {
+            cookieStore.set({ name, value, ...options })
+          },
+          remove(name: string, options: CookieOptions) {
+            cookieStore.set({ name, value: '', ...options })
+          },
+        },
+      }
+    )
     
-    // 3. Intercambiamos el código por una sesión activa
-    // Esto es lo que hace que el usuario aparezca como "Confirmado" en tu panel
-    await supabase.auth.exchangeCodeForSession(code)
+    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    if (!error) {
+      return NextResponse.redirect(`${origin}${next}`)
+    }
   }
 
-  // 4. Redirigimos al usuario a la página que quieras después de verificar
-  // Normalmente al Dashboard o a la Home
-  return NextResponse.redirect(new URL('/', request.url))
+  // Si algo falla, mandamos al usuario a una página de error o al home
+  return NextResponse.redirect(`${origin}/auth/auth-code-error`)
 }
