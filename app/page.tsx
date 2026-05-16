@@ -4,6 +4,77 @@ import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { createBrowserClient } from '@supabase/ssr';
 
+// COMPONENTE DE GUÍA DE INSTALACIÓN (Añadido para PWA)
+function GuiaInstalacion() {
+  return (
+    <div className="w-full max-w-4xl mx-auto mt-20 mb-10 p-8 bg-zinc-900/30 border border-zinc-800/50 rounded-3xl backdrop-blur-sm animate-in fade-in duration-1000">
+      <h2 className="text-[10px] font-black uppercase tracking-[0.4em] mb-10 text-orange-600 italic text-center">
+        ⚡ DESPLIEGUE OPERATIVO: INSTALA LA APP EN TU MÓVIL
+      </h2>
+
+      <div className="grid md:grid-cols-2 gap-12 text-left">
+        {/* GUÍA PARA IPHONE */}
+        <div className="space-y-5">
+          <div className="flex items-center gap-3 border-b border-zinc-800 pb-3">
+            <span className="text-xl">🍎</span>
+            <h3 className="text-[10px] font-bold uppercase tracking-widest text-white">Usuarios iPhone (Safari)</h3>
+          </div>
+          <ol className="space-y-4 text-[9px] text-zinc-400 uppercase font-medium">
+            <li className="flex gap-3">
+              <span className="text-orange-600 font-black">01.</span> 
+              <span>Abre <strong className="text-zinc-200">mastesto.es</strong> en Safari</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="text-orange-600 font-black">02.</span> 
+              <span>Pulsa el botón <strong className="text-zinc-200">COMPARTIR</strong> (cuadrado con flecha)</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="text-orange-600 font-black">03.</span> 
+              <span>Busca <strong className="text-zinc-200">"AÑADIR A PANTALLA DE INICIO"</strong></span>
+            </li>
+            <li className="flex gap-3">
+              <span className="text-orange-600 font-black">04.</span> 
+              <span>Confirma pulsando <strong className="text-zinc-200">"AÑADIR"</strong></span>
+            </li>
+          </ol>
+        </div>
+
+        {/* GUÍA PARA ANDROID */}
+        <div className="space-y-5">
+          <div className="flex items-center gap-3 border-b border-zinc-800 pb-3">
+            <span className="text-xl">🤖</span>
+            <h3 className="text-[10px] font-bold uppercase tracking-widest text-white">Usuarios Android (Chrome)</h3>
+          </div>
+          <ol className="space-y-4 text-[9px] text-zinc-400 uppercase font-medium">
+            <li className="flex gap-3">
+              <span className="text-orange-600 font-black">01.</span> 
+              <span>Entra en la web desde Google Chrome</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="text-orange-600 font-black">02.</span> 
+              <span>Pulsa los <strong className="text-zinc-200">3 PUNTOS</strong> del navegador</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="text-orange-600 font-black">03.</span> 
+              <span>Selecciona <strong className="text-zinc-200">"INSTALAR APLICACIÓN"</strong></span>
+            </li>
+            <li className="flex gap-3">
+              <span className="text-orange-600 font-black">04.</span> 
+              <span>Acepta el despliegue en tu pantalla de inicio</span>
+            </li>
+          </ol>
+        </div>
+      </div>
+
+      <div className="mt-10 pt-6 border-t border-zinc-900 text-center">
+        <p className="text-[8px] text-zinc-600 italic uppercase tracking-[0.2em]">
+          Experiencia táctica optimizada para pantalla completa sin distracciones.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function Page() {
   const supabase = useMemo(
     () =>
@@ -116,7 +187,7 @@ export default function Page() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`, // Cambiado para pasar por el callback
+        redirectTo: `${window.location.origin}/auth/callback`,
       },
     });
 
@@ -163,12 +234,11 @@ export default function Page() {
         return;
       }
 
-      // --- CAMBIO CLAVE AQUÍ PARA LA VERIFICACIÓN ---
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`, // ESTO ES LO QUE ACTIVA EL FLUJO
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             nombre,
             apellidos,
@@ -187,14 +257,12 @@ export default function Page() {
         return;
       }
 
-      // Si Supabase devuelve sesión directa (porque la confirmación está apagada o es auto-confirm)
       if (data.session) {
         setCargando(false);
         window.location.href = '/perfil';
         return;
       }
 
-      // Si la confirmación está encendida (lo normal):
       setError('¡FORJA ACTIVADA! Revisa tu email para confirmar tu cuenta antes de entrar.');
       setEsLogin(true);
       setPassword('');
@@ -203,7 +271,6 @@ export default function Page() {
       return;
     }
 
-    // LOGIN NORMAL
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -391,8 +458,8 @@ export default function Page() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans">
-      {/* ... (resto de tu componente Home sin cambios) ... */}
+    <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6 relative overflow-x-hidden font-sans">
+      
       <div className="absolute top-6 left-6 z-50">
         <a
           href="https://discord.gg/q2rtc8PX"
@@ -452,7 +519,7 @@ export default function Page() {
         </Link>
       </div>
 
-      <div className="max-w-5xl w-full flex flex-col items-center space-y-12 z-10 text-center">
+      <div className="max-w-5xl w-full flex flex-col items-center space-y-12 z-10 text-center py-20">
         <div className="relative group">
           <div className="absolute -inset-1 bg-white/5 rounded-lg blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
           <img
@@ -479,7 +546,10 @@ export default function Page() {
           </div>
         )}
 
-        <p className="text-zinc-900 text-[8px] uppercase tracking-[0.8em] pt-20">
+        {/* COMPONENTE DE INSTALACIÓN AÑADIDO AQUÍ */}
+        <GuiaInstalacion />
+
+        <p className="text-zinc-900 text-[8px] uppercase tracking-[0.8em] pt-10">
           Mastesto Engineering • 2026
         </p>
       </div>
