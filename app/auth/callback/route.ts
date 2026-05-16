@@ -8,7 +8,9 @@ export async function GET(request: Request) {
   const next = searchParams.get('next') ?? '/'
 
   if (code) {
-    const cookieStore = cookies()
+    // AQUÍ EL CAMBIO: Añadimos await porque cookies() es asíncrono ahora
+    const cookieStore = await cookies()
+    
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -33,6 +35,6 @@ export async function GET(request: Request) {
     }
   }
 
-  // Si algo falla, mandamos al usuario a una página de error o al home
-  return NextResponse.redirect(`${origin}/auth/auth-code-error`)
+  // En caso de error, volvemos a la home
+  return NextResponse.redirect(`${origin}/`)
 }
