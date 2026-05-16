@@ -21,7 +21,7 @@ export default function PerfilPage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // 1. Obtener datos completos del usuario
+  // 1. Obtener datos del usuario
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -56,7 +56,7 @@ export default function PerfilPage() {
     return () => clearInterval(intervalo);
   }, [fechaInicio]);
 
-  // 3. Consulta a la IA (EL FORJADOR - ROL CONCISO)
+  // 3. Consulta a la IA (EL FORJADOR - ROL EXTENDIDO)
   const consultarMentor = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!mensaje.trim() || cargandoIA) return;
@@ -73,13 +73,13 @@ export default function PerfilPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           messages: historialActualizado,
-          contexto: `Eres EL FORJADOR. Máxima autoridad. Responde de forma EXTREMADAMENTE CONCISA (máximo 15 palabras). Sé severo. Socio: ${user.user_metadata?.nombre || 'Vicente'}. Tiempo: ${tiempo.dias}d.`
+          contexto: `Eres EL FORJADOR, mentor de disciplina inquebrantable y voluntad de hierro. Tu tono es firme, épico y autoritario, pero proporcionas consejos profundos, guías y motivación detallada para que el socio no caiga. Socio: ${user.user_metadata?.nombre || 'Vicente'}. Tiempo de resistencia: ${tiempo.dias} días.`
         }),
       });
       const data = await res.json();
       setChat([...historialActualizado, { role: 'assistant', content: data.content }]);
     } catch (error) {
-      setChat([...historialActualizado, { role: 'assistant', content: 'SISTEMA: ERROR EN LA FORJA.' }]);
+      setChat([...historialActualizado, { role: 'assistant', content: 'SISTEMA: ERROR DE COMUNICACIÓN CON LA FORJA.' }]);
     } finally {
       setCargandoIA(false);
       setTimeout(() => {
@@ -93,18 +93,26 @@ export default function PerfilPage() {
     router.push('/');
   };
 
-  if (!user) return <div className="bg-black min-h-screen text-white flex items-center justify-center font-black uppercase italic tracking-widest animate-pulse">Accediendo a la forja...</div>;
+  if (!user) return (
+    <div className="bg-black min-h-screen text-white flex items-center justify-center font-black uppercase italic tracking-widest animate-pulse">
+      Accediendo a la forja...
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-black text-white p-4 md:p-12 font-sans relative overflow-hidden">
       
-      {/* --- EXPEDIENTE LATERAL IZQUIERDA (COMPLETO) --- */}
+      {/* --- EXPEDIENTE LATERAL IZQUIERDA --- */}
       <div className="fixed top-12 left-12 w-64 hidden lg:block border-l border-orange-600 pl-6 py-2 opacity-80">
         <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 mb-6 italic">Expediente_Socio</h2>
         <p className="text-[7px] text-orange-600 uppercase font-black mb-1">Nombre</p>
-        <p className="text-[11px] font-black uppercase mb-4">{user.user_metadata?.nombre || user.user_metadata?.full_name || 'Socio'} {user.user_metadata?.apellido || ''}</p>
+        <p className="text-[11px] font-black uppercase mb-4">
+          {user.user_metadata?.nombre || 'Socio'} {user.user_metadata?.apellido || ''}
+        </p>
         <p className="text-[7px] text-orange-600 uppercase font-black mb-1">Datos</p>
-        <p className="text-[11px] font-black uppercase mb-4">{user.user_metadata?.edad || '--'} AÑOS | {user.user_metadata?.sexo || '--'}</p>
+        <p className="text-[11px] font-black uppercase mb-4">
+          {user.user_metadata?.edad || '--'} AÑOS | {user.user_metadata?.sexo || '--'}
+        </p>
         <p className="text-[7px] text-orange-600 uppercase font-black mb-1">Estatus</p>
         <p className="text-[11px] font-black uppercase text-green-500 mb-4 italic tracking-widest">En Batalla</p>
         <p className="text-[7px] text-orange-600 uppercase font-black mb-1">ID_Socio</p>
@@ -151,14 +159,14 @@ export default function PerfilPage() {
             </div>
             
             <div ref={scrollRef} className="h-80 overflow-y-auto p-6 font-mono text-[10px] uppercase bg-black text-orange-500 space-y-4">
-              {chat.length === 0 && <p className="opacity-40 italic">La forja está lista. ¿Qué necesitas, socio?</p>}
+              {chat.length === 0 && <p className="opacity-40 italic italic">El fuego de la forja te espera. Informa tu estado, socio.</p>}
               {chat.map((msg, i) => (
                 <div key={i} className={msg.role === 'assistant' ? 'border-l-2 border-orange-600 pl-4 py-1' : 'text-zinc-500 text-right italic'}>
-                   <span className="block text-[7px] opacity-30 mb-1">{msg.role === 'assistant' ? 'EL FORJADOR' : 'SOCIO'}</span>
+                  <span className="block text-[7px] opacity-30 mb-1">{msg.role === 'assistant' ? 'EL FORJADOR' : 'SOCIO'}</span>
                   {msg.content}
                 </div>
               ))}
-              {cargandoIA && <div className="animate-pulse text-orange-600 font-bold">FORJANDO...</div>}
+              {cargandoIA && <div className="animate-pulse text-orange-600 font-bold">MOLDEANDO RESPUESTA...</div>}
             </div>
 
             <form onSubmit={consultarMentor} className="p-4 bg-zinc-950 border-t border-zinc-900 flex gap-2">
