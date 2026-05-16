@@ -10,6 +10,7 @@ import { Suspense } from 'react'
 import './globals.css'
 
 // Configuración de metadatos profesional (SEO)
+// Actualizado para usar el gladiador de public/favicon.ico
 export const metadata: Metadata = {
   title: {
     default: '+TESTO | Forja de Voluntad',
@@ -17,15 +18,15 @@ export const metadata: Metadata = {
   },
   description: 'Plataforma de alta intensidad para la reconstrucción de hábitos, disciplina marcial y superación de vicios.',
   icons: {
-    icon: '/icon.png',
-    shortcut: '/icon.png',
-    apple: '/icon.png',
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+    apple: '/favicon.ico',
   },
   openGraph: {
     title: '+TESTO | Disciplina de Hierro',
     description: 'Domina tu voluntad. Erradica la debilidad.',
     type: 'website',
-    images: [{ url: '/icon.png' }], // Si tienes un logo más grande, cámbialo aquí
+    images: [{ url: '/favicon.ico' }], // Cambiado a favicon.ico para consistencia
   }
 };
 
