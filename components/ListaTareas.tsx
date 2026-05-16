@@ -21,7 +21,6 @@ export default function ListaTareas() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // CONFIGURACIÓN DE ADMIN CON EMAIL CORRECTO
   const ADMIN_EMAIL = 'altava.rubia@gmail.com'; 
   const esAdmin = user?.email === ADMIN_EMAIL;
 
@@ -59,8 +58,6 @@ export default function ListaTareas() {
       setNuevaTarea('');
       setSocioIdDestino(''); 
       cargarTareas();
-    } else {
-      alert("ERROR: El ID del socio no es válido o no tienes permisos.");
     }
   }
 
@@ -104,4 +101,42 @@ export default function ListaTareas() {
             />
             <button type="submit" className="bg-orange-600 text-black px-4 py-2 rounded-xl font-black text-[10px] hover:bg-white transition-all uppercase">
               Asignar
-            </button
+            </button>
+          </div>
+        </form>
+      )}
+
+      <div className="space-y-2 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+        {tareas.map((t) => (
+          <div key={t.id} className="flex items-center justify-between bg-black/40 p-3 rounded-xl border border-zinc-900 group transition-all hover:border-zinc-800">
+            <div className="flex items-center gap-3">
+              <input 
+                type="checkbox" 
+                checked={t.completada} 
+                onChange={() => toggleTarea(t.id, t.completada)}
+                className="w-4 h-4 accent-orange-600 rounded border-zinc-800 bg-black cursor-pointer"
+              />
+              <div className="flex flex-col">
+                <span className={`text-[10px] uppercase font-bold tracking-tight ${t.completada ? 'line-through text-zinc-600' : 'text-zinc-300'}`}>
+                  {t.texto}
+                </span>
+                {esAdmin && <span className="text-[6px] text-zinc-600 font-mono uppercase">ID: {t.user_id.slice(0,8)}</span>}
+              </div>
+            </div>
+            {esAdmin && (
+              <button 
+                onClick={() => eliminarTarea(t.id)}
+                className="opacity-0 group-hover:opacity-100 text-zinc-700 hover:text-red-500 text-[8px] font-black transition-all"
+              >
+                BORRAR
+              </button>
+            )}
+          </div>
+        ))}
+        {tareas.length === 0 && (
+          <p className="text-[9px] text-zinc-700 text-center uppercase italic py-4 tracking-widest">Sin misiones activas</p>
+        )}
+      </div>
+    </div>
+  );
+}
