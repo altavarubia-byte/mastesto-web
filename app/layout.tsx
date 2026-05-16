@@ -5,28 +5,42 @@ import { ErrorMonitor } from '@/components/error-monitor/error-monitor'
 import { SandboxState } from '@/components/modals/sandbox-state'
 import { Toaster } from '@/components/ui/sonner'
 import type { ReactNode } from 'react'
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Suspense } from 'react'
 import './globals.css'
 
-// Configuración de metadatos profesional (SEO)
-// Actualizado para usar el gladiador de public/favicon.ico
+// Configuración del viewport para PWA (color de la barra de estado)
+export const viewport: Viewport = {
+  themeColor: '#ea580c', // Naranja TESTO
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+}
+
+// Configuración de metadatos profesional (SEO y PWA)
 export const metadata: Metadata = {
   title: {
     default: '+TESTO | Forja de Voluntad',
     template: '%s | +TESTO'
   },
   description: 'Plataforma de alta intensidad para la reconstrucción de hábitos, disciplina marcial y superación de vicios.',
+  manifest: '/manifest.json', // ENLACE AL MANIFEST
   icons: {
     icon: '/favicon.ico',
     shortcut: '/favicon.ico',
-    apple: '/favicon.ico',
+    apple: '/icon-192x192.png', // Icono para iPhone
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: '+TESTO',
   },
   openGraph: {
     title: '+TESTO | Disciplina de Hierro',
     description: 'Domina tu voluntad. Erradica la debilidad.',
     type: 'website',
-    images: [{ url: '/favicon.ico' }], // Cambiado a favicon.ico para consistencia
+    images: [{ url: '/icon-512x512.png' }], // Imagen pro para compartir
   }
 };
 
