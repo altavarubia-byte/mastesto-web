@@ -15,6 +15,7 @@ export default function ListaTareas() {
   const [nuevaTarea, setNuevaTarea] = useState('');
   const [socioIdDestino, setSocioIdDestino] = useState(''); 
   const [user, setUser] = useState<any>(null);
+  const [mensajeExito, setMensajeExito] = useState(false); // Estado para el mensaje flotante
   
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -30,15 +31,24 @@ export default function ListaTareas() {
       setUser(user);
     };
     checkUser();
-    cargarTareas();
   }, []);
 
+  // Solo cargamos tareas si el usuario NO es admin o si queremos ver nuestras propias tareas
+  useEffect(() => {
+    if (user) {
+      cargarTareas();
+    }
+  }, [user]);
+
   async function cargarTareas() {
-    const { data, error } = await supabase
-      .from('tareas')
-      .select('*')
-      .order('created_at', { ascending: true });
+    let query = supabase.from('tareas').select('*').order('created_at', { ascending: true });
     
+    // Si eres admin, solo queremos ver TUS tareas personales, no las de todos los socios abajo
+    if (esAdmin) {
+      query = query.eq('user_id', user.id);
+    }
+
+    const { data } = await query;
     if (data) setTareas(data as Tarea[]);
   }
 
@@ -56,8 +66,16 @@ export default function ListaTareas() {
 
     if (!error) {
       setNuevaTarea('');
-      setSocioIdDestino(''); 
-      cargarTareas();
+      setSocioIdDestino('');
+      
+      // Mostrar mensaje de éxito y ocultarlo a los 3 segundos
+      setMensajeExito(true);
+      setTimeout(() => setMensajeExito(false), 3000);
+      
+      // Solo refrescamos la lista si nos hemos auto-asignado la tarea
+      if (asignadoA === user.id) {
+        cargarTareas();
+      }
     }
   }
 
@@ -76,7 +94,15 @@ export default function ListaTareas() {
   }
 
   return (
-    <div className="w-full max-w-md bg-zinc-900/50 border border-zinc-800 p-6 rounded-3xl backdrop-blur-sm shadow-2xl">
+    <div className="w-full max-w-md bg-zinc-900/50 border border-zinc-800 p-6 rounded-3xl backdrop-blur-sm shadow-2xl relative">
+      
+      {/* MENSAJE DE ÉXITO FLOTANTE */}
+      {mensajeExito && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-orange-600 text-black text-[9px] font-black px-4 py-2 rounded-full shadow-xl z-50 animate-bounce uppercase">
+          Misión enviada con éxito ⚔️
+        </div>
+      )}
+
       <h3 className="text-[10px] font-black uppercase tracking-[0.3em] mb-4 text-orange-600 italic">
         ⚔️ Objetivos de Batalla {esAdmin && <span className="text-white ml-2">[MODO FORJADOR]</span>}
       </h3>
@@ -107,6 +133,9 @@ export default function ListaTareas() {
       )}
 
       <div className="space-y-2 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+        <p className="text-[8px] text-zinc-500 uppercase font-black mb-2 px-1">
+          {esAdmin ? "Mis tareas personales" : "Tus misiones asignadas"}
+        </p>
         {tareas.map((t) => (
           <div key={t.id} className="flex items-center justify-between bg-black/40 p-3 rounded-xl border border-zinc-900 group transition-all hover:border-zinc-800">
             <div className="flex items-center gap-3">
@@ -116,21 +145,16 @@ export default function ListaTareas() {
                 onChange={() => toggleTarea(t.id, t.completada)}
                 className="w-4 h-4 accent-orange-600 rounded border-zinc-800 bg-black cursor-pointer"
               />
-              <div className="flex flex-col">
-                <span className={`text-[10px] uppercase font-bold tracking-tight ${t.completada ? 'line-through text-zinc-600' : 'text-zinc-300'}`}>
-                  {t.texto}
-                </span>
-                {esAdmin && <span className="text-[6px] text-zinc-600 font-mono uppercase">ID: {t.user_id.slice(0,8)}</span>}
-              </div>
+              <span className={`text-[10px] uppercase font-bold tracking-tight ${t.completada ? 'line-through text-zinc-600' : 'text-zinc-300'}`}>
+                {t.texto}
+              </span>
             </div>
-            {esAdmin && (
-              <button 
-                onClick={() => eliminarTarea(t.id)}
-                className="opacity-0 group-hover:opacity-100 text-zinc-700 hover:text-red-500 text-[8px] font-black transition-all"
-              >
-                BORRAR
-              </button>
-            )}
+            <button 
+              onClick={() => eliminarTarea(t.id)}
+              className="opacity-0 group-hover:opacity-100 text-zinc-700 hover:text-red-500 text-[8px] font-black transition-all"
+            >
+              BORRAR
+            </button>
           </div>
         ))}
         {tareas.length === 0 && (
