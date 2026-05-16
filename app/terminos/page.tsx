@@ -6,58 +6,64 @@ export default function TerminosPage() {
       <div className="max-w-4xl mx-auto">
         <div className="mb-12 border-b border-zinc-900 pb-8">
           <Link href="/" className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 hover:text-orange-600 transition-colors italic">
-            ← [ VOLVER_A_LA_FORJA ]
+            ← [ VOLVER ]
           </Link>
-          <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tighter mt-6 italic">
+          <h1 className="text-4xl font-black uppercase tracking-tighter mt-6 italic">
             Términos <span className="text-orange-600">.</span>
           </h1>
           <p className="text-[10px] font-mono text-zinc-500 mt-2 uppercase tracking-widest">
-            Código de conducta y condiciones v1.0.2026
+            Aviso Legal y Condiciones de Uso // v1.2.2026
           </p>
         </div>
 
-        <div className="space-y-12 text-sm md:text-base leading-relaxed text-zinc-400">
-          
+        <div className="space-y-10 text-sm leading-relaxed text-zinc-400">
           <section>
-            <h2 className="text-orange-600 font-black uppercase tracking-widest mb-4 italic text-xs">
-              01. Aceptación de la Disciplina
+            <h2 className="text-white font-bold uppercase mb-4 text-xs tracking-widest border-l-2 border-orange-600 pl-4 italic">
+              01. Condiciones de Uso
             </h2>
             <p>
-              Al acceder a **+TESTO**, el usuario acepta que esta plataforma es una herramienta de auto-superación. El uso de los sistemas de cronometraje y consulta a la IA implica el compromiso de trabajar en la propia VOLUNTAD.
+              +TESTO es una plataforma de gestión de hábitos y motivación. El acceso y uso del sitio atribuye la condición de socio, lo que implica la aceptación de estas condiciones. El usuario se compromete a hacer un uso lícito y diligente de las herramientas de IA y cronometraje.
+            </p>
+          </section>
+
+          <section className="bg-zinc-900/30 p-6 border border-zinc-800">
+            <h2 className="text-orange-600 font-bold uppercase mb-4 text-xs tracking-widest italic">
+              02. AVISO IMPORTANTE: EXENCIÓN MÉDICA
+            </h2>
+            <p className="text-zinc-300 font-semibold">
+              Los servicios proporcionados por +TESTO, incluyendo las respuestas generadas por la inteligencia artificial, tienen un fin puramente informativo y motivacional. **No constituyen consejo médico ni diagnóstico profesional.**
+            </p>
+            <p className="mt-4 italic">
+              Si usted padece una adicción grave o problemas de salud derivados del consumo de sustancias, debe consultar obligatoriamente con un profesional sanitario colegiado. +TESTO no se hace responsable de las decisiones de salud tomadas por el usuario.
             </p>
           </section>
 
           <section>
-            <h2 className="text-orange-600 font-black uppercase tracking-widest mb-4 italic text-xs">
-              02. Uso de la Plataforma
+            <h2 className="text-white font-bold uppercase mb-4 text-xs tracking-widest border-l-2 border-orange-600 pl-4 italic">
+              03. Propiedad Intelectual
             </h2>
             <p>
-              Queda prohibido cualquier intento de vulnerar los sistemas, manipular los registros de tiempo o utilizar el Mando de IA para fines que no sean el refuerzo de la disciplina personal. El acceso es personal e intransferible.
+              Todo el contenido, marcas, logos y código fuente de +TESTO son propiedad intelectual de Vicente Altava. Queda terminantemente prohibida la copia, distribución o ingeniería inversa de los sistemas de la plataforma sin autorización expresa.
             </p>
           </section>
 
           <section>
-            <h2 className="text-orange-600 font-black uppercase tracking-widest mb-4 italic text-xs">
-              03. Responsabilidad del Socio
+            <h2 className="text-white font-bold uppercase mb-4 text-xs tracking-widest border-l-2 border-orange-600 pl-4 italic">
+              04. Limitación de Responsabilidad
             </h2>
             <p>
-              **+TESTO** es un asistente motivacional y de gestión de hábitos. El éxito en la erradicación de vicios depende exclusivamente del usuario. No somos responsables de recaídas; el sistema solo forja la herramienta, el usuario maneja el acero.
+              El titular no garantiza la disponibilidad permanente del servicio debido a posibles fallos técnicos en los proveedores (Vercel, Supabase, Groq). Asimismo, no se hace responsable de posibles recaídas en hábitos negativos, ya que el éxito del programa depende íntegramente de la ejecución individual del socio.
             </p>
           </section>
 
           <section>
-            <h2 className="text-orange-600 font-black uppercase tracking-widest mb-4 italic text-xs">
-              04. Modificaciones del Servicio
+            <h2 className="text-white font-bold uppercase mb-4 text-xs tracking-widest border-l-2 border-orange-600 pl-4 italic">
+              05. Ley Aplicable y Jurisdicción
             </h2>
             <p>
-              Nos reservamos el derecho de actualizar el Código de Conducta o modificar las funciones de la plataforma para asegurar la máxima eficacia en la lucha contra la autocomplacencia.
+              Para cualquier litigio o controversia, será de aplicación la legislación española, siendo competentes los Juzgados y Tribunales de Castellón de la Plana, renunciando el usuario a cualquier otro fuero que pudiera corresponderle.
             </p>
           </section>
-
-        </div>
-
-        <div className="mt-20 pt-8 border-t border-zinc-900 text-[10px] font-mono text-zinc-700 uppercase tracking-widest">
-          Acuerdo: Vinculante // Disciplina: Obligatoria // Destino: Grandeza
         </div>
       </div>
     </div>
