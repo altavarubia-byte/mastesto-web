@@ -9,27 +9,27 @@ import type { Metadata, Viewport } from 'next'
 import { Suspense } from 'react'
 import './globals.css'
 
-// Configuración del viewport para PWA (color de la barra de estado)
+// Configuración del viewport para PWA
 export const viewport: Viewport = {
-  themeColor: '#ea580c', // Naranja TESTO
+  themeColor: '#ea580c',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
 }
 
-// Configuración de metadatos profesional (SEO y PWA)
+// Metadatos con instrucción de concisión (Máximo 40 palabras)
 export const metadata: Metadata = {
   title: {
     default: '+TESTO | Forja de Voluntad',
     template: '%s | +TESTO'
   },
-  description: 'Plataforma de alta intensidad para la reconstrucción de hábitos, disciplina marcial y superación de vicios.',
-  manifest: '/manifest.json', // ENLACE AL MANIFEST
+  description: 'Plataforma de alta intensidad para la reconstrucción de hábitos y disciplina. (Responde siempre en máximo 40 palabras, sé directo y conciso).',
+  manifest: '/manifest.json',
   icons: {
     icon: '/favicon.ico',
     shortcut: '/favicon.ico',
-    apple: '/icon-192x192.png', // Icono para iPhone
+    apple: '/icon-192x192.png',
   },
   appleWebApp: {
     capable: true,
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     title: '+TESTO | Disciplina de Hierro',
     description: 'Domina tu voluntad. Erradica la debilidad.',
     type: 'website',
-    images: [{ url: '/icon-512x512.png' }], // Imagen pro para compartir
+    images: [{ url: '/icon-512x512.png' }],
   }
 };
 
@@ -54,13 +54,11 @@ export default function RootLayout({
           <NuqsAdapter>
             <ChatProvider>
               <ErrorMonitor>
-                {/* Contenedor principal para empujar el footer abajo */}
                 <div className="flex flex-col min-h-screen">
                   <main className="flex-grow">
                     {children}
                   </main>
 
-                  {/* FOOTER PROFESIONAL */}
                   <footer className="bg-black border-t border-zinc-900 py-12 px-6">
                     <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
                       <div className="flex flex-col items-center md:items-start">
