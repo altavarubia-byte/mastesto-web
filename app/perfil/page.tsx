@@ -91,8 +91,10 @@ export default function PerfilPage() {
   const [socioId, setSocioId] = useState('');
   const [statusMsg, setStatusMsg] = useState<{ text: string, type: 'success' | 'error' | null }>({ text: '', type: null });
 
+  // Estados Personalización IA (RESTAURADOS)
   const [temp, setTemp] = useState(0.7);
   const [words, setWords] = useState(40);
+  
   const [confirmarReinicio, setConfirmarReinicio] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -192,7 +194,7 @@ export default function PerfilPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           messages: historialActualizado, temp, words,
-          contexto: `SOCIO: ${user?.user_metadata?.nombre || 'Socio'}.`
+          contexto: `SOCIO: ${user?.user_metadata?.nombre || 'Socio'}. PROGRESO: ${tiempo.dias} DÍAS.`
         }),
       });
       const data = await res.json();
@@ -201,7 +203,7 @@ export default function PerfilPage() {
       console.error(e);
     } finally {
       setCargandoIA(false);
-      if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      setTimeout(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, 100);
     }
   };
 
@@ -288,7 +290,7 @@ export default function PerfilPage() {
         </div>
       </div>
 
-      {/* IA CHAT */}
+      {/* EL FORJADOR (IA CHAT WITH RESTORED BARS) */}
       <div className="fixed bottom-10 right-10 z-50 flex flex-col items-end">
         {isOpen && (
           <div className="mb-6 w-80 md:w-96 bg-zinc-950 border-2 border-orange-600 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col animate-in slide-in-from-bottom-4">
@@ -296,6 +298,36 @@ export default function PerfilPage() {
               <span>EL FORJADOR</span>
               <button onClick={() => setIsOpen(false)} className="hover:rotate-90 transition-all px-2">✕</button>
             </div>
+
+            {/* --- CONTROLES DE IA RESTAURADOS --- */}
+            <div className="p-4 bg-zinc-900 border-b border-zinc-800 space-y-3">
+              <div>
+                <div className="flex justify-between text-[7px] font-black uppercase mb-1 text-zinc-500">
+                  <span>Fuego de la Forja (Temp)</span>
+                  <span className="text-orange-600">{temp}</span>
+                </div>
+                <input 
+                  type="range" min="0.1" max="1.5" step="0.1" 
+                  value={temp} 
+                  onChange={(e) => setTemp(parseFloat(e.target.value))}
+                  className="w-full h-1 bg-black rounded-lg appearance-none cursor-pointer accent-orange-600"
+                />
+              </div>
+              <div>
+                <div className="flex justify-between text-[7px] font-black uppercase mb-1 text-zinc-500">
+                  <span>Rango de Palabras</span>
+                  <span className="text-orange-600">{words}</span>
+                </div>
+                <input 
+                  type="range" min="10" max="100" step="5" 
+                  value={words} 
+                  onChange={(e) => setWords(parseInt(e.target.value))}
+                  className="w-full h-1 bg-black rounded-lg appearance-none cursor-pointer accent-orange-600"
+                />
+              </div>
+            </div>
+
+            {/* --- ÁREA DE CHAT --- */}
             <div ref={scrollRef} className="h-64 overflow-y-auto p-6 font-mono text-[10px] uppercase bg-black text-orange-500 space-y-4 border-b border-zinc-900 scroll-smooth custom-scrollbar">
               {chat.length === 0 && <p className="text-center opacity-30 italic py-10">Esperando informe de batalla...</p>}
               {chat.map((msg: any, i: number) => (
@@ -304,8 +336,9 @@ export default function PerfilPage() {
                   {msg.content}
                 </div>
               ))}
-              {cargandoIA && <div className="animate-pulse font-black">MOLDEANDO...</div>}
+              {cargandoIA && <div className="animate-pulse font-black text-[8px]">MOLDEANDO RESPUESTA...</div>}
             </div>
+
             <form onSubmit={consultarMentor} className="p-4 bg-zinc-950 flex gap-2">
               <input type="text" value={mensaje} onChange={e => setMensaje(e.target.value)} placeholder="ESCRIBE TU INFORME..." className="flex-1 bg-black border border-zinc-800 rounded-xl p-3 text-[10px] text-white outline-none focus:border-orange-600 uppercase" />
               <button type="submit" className="bg-orange-600 text-black px-5 rounded-xl font-black text-[10px] hover:bg-white transition-all">OK</button>
