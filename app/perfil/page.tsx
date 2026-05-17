@@ -5,7 +5,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 import ListaTareas from '@/components/ListaTareas';
 
-// --- COMPONENTE DE TAREA CON TEMPORIZADOR ---
+// --- COMPONENTE DE TAREA CON TEMPORIZADOR PARA SOCIOS ---
 function CardTarea({ tarea, userNick, supabase }: any) {
   const [segundos, setSegundos] = useState(tarea.duracion_minutos * 60);
   const [activo, setActivo] = useState(false);
@@ -24,6 +24,7 @@ function CardTarea({ tarea, userNick, supabase }: any) {
   const finalizarMision = async () => {
     setActivo(false);
     setCompletada(true);
+    // Llama a la función RPC que creamos en el SQL Editor
     await supabase.rpc('array_append_completada', { 
       tarea_id: tarea.id, 
       nuevo_nick: userNick 
@@ -35,7 +36,7 @@ function CardTarea({ tarea, userNick, supabase }: any) {
   return (
     <div className={`p-6 rounded-[2rem] border ${completada ? 'border-green-500/30 bg-green-500/5' : 'border-zinc-800 bg-zinc-900/20'} transition-all mb-4`}>
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-[10px] font-black uppercase tracking-widest">{tarea.titulo}</h3>
+        <h3 className="text-[10px] font-black uppercase tracking-widest leading-none">{tarea.titulo}</h3>
         <span className={`text-[9px] font-bold px-3 py-1 rounded-full border ${completada ? 'border-green-500 text-green-500 bg-green-500/10' : 'border-zinc-800 text-zinc-500'}`}>
           {completada ? `● ${userNick}` : `○ ${userNick}`}
         </span>
@@ -43,7 +44,7 @@ function CardTarea({ tarea, userNick, supabase }: any) {
 
       {!completada ? (
         <div className="space-y-4">
-          <div className="text-3xl font-black font-mono text-center text-orange-600">
+          <div className="text-3xl font-black font-mono text-center text-orange-600 tracking-tighter">
             {formatear(segundos)}
           </div>
           <button
@@ -52,7 +53,7 @@ function CardTarea({ tarea, userNick, supabase }: any) {
               activo ? 'bg-zinc-800 text-white' : 'bg-white text-black'
             }`}
           >
-            {activo ? 'DETENER MISION' : 'INICIAR TAREA'}
+            {activo ? 'DETENER MISIÓN' : 'INICIAR TAREA'}
           </button>
         </div>
       ) : (
@@ -64,7 +65,14 @@ function CardTarea({ tarea, userNick, supabase }: any) {
   );
 }
 
+// --- PÁGINA PRINCIPAL DE PERFIL ---
 export default function PerfilPage() {
+  // Configuración de Supabase
+  const supabase = useMemo(() => createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  ), []);
+
   const [user, setUser] = useState<any>(null);
   const [tareas, setTareas] = useState<any[]>([]);
   const [fechaInicio, setFechaInicio] = useState<string | null>(null);
@@ -74,11 +82,12 @@ export default function PerfilPage() {
   const [cargandoIA, setCargandoIA] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   
-  // Estados Admin
+  // Estados para Administrador
   const [tituloTarea, setTituloTarea] = useState('');
   const [minutosTarea, setMinutosTarea] = useState(30);
   const [socioId, setSocioId] = useState('');
 
+  // Estados Personalización IA
   const [temp, setTemp] = useState(0.7);
   const [words, setWords] = useState(40);
   const [tareasReales, setTareasReales] = useState<string>("");
@@ -86,11 +95,6 @@ export default function PerfilPage() {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-  
-  const supabase = useMemo(() => createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  ), []);
 
   const isAdmin = user?.email === 'altava.rubia@gmail.com';
 
@@ -105,7 +109,7 @@ export default function PerfilPage() {
       const metaFecha = user.user_metadata?.fecha_dejo_fumar || user.created_at;
       if (metaFecha) setFechaInicio(metaFecha);
 
-      // Cargar tareas de la DB
+      // Cargar tareas desde Supabase
       const { data: tasks } = await supabase
         .from('tareas')
         .select('*')
@@ -133,16 +137,31 @@ export default function PerfilPage() {
     return () => clearInterval(intervalo);
   }, [fechaInicio]);
 
+  // FUNCIÓN PARA ENVIAR TAREA (SOLO ADMIN)
   const enviarTareaAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!tituloTarea || !socioId) return;
+    if (!tituloTarea || !socioId) {
+      alert("RELLENA TÍTULO Y UUID DEL SOCIO");
+      return;
+    }
+
     const { error } = await supabase.from('tareas').insert([
-      { titulo: tituloTarea, duracion_minutos: minutosTarea, user_id: socioId }
+      { 
+        titulo: tituloTarea, 
+        duracion_minutos: minutosTarea, 
+        user_id: socioId,
+        completada: false,
+        completada_por: []
+      }
     ]);
+
     if (!error) {
-      alert("MISIÓN DESPLEGADA");
+      alert("DESPLIEGUE OPERATIVO LANZADO");
       setTituloTarea('');
+      setSocioId('');
       window.location.reload();
+    } else {
+      alert("ERROR: " + error.message);
     }
   };
 
@@ -181,6 +200,7 @@ export default function PerfilPage() {
       setChat([...historialActualizado, { role: 'assistant', content: 'SISTEMA: ERROR.' }]);
     } finally {
       setCargandoIA(false);
+      setTimeout(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, 100);
     }
   };
 
@@ -192,36 +212,54 @@ export default function PerfilPage() {
   return (
     <div className="min-h-screen bg-black text-white p-4 md:p-12 font-sans relative overflow-hidden">
       
-      {/* EXPEDIENTE SOCIO (IZQUIERDA) */}
+      {/* EXPEDIENTE SOCIO (Lado Izquierdo) */}
       <div className="fixed top-12 left-12 w-64 hidden xl:block border-l border-orange-600 pl-6 py-2 opacity-80">
         <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 mb-6 italic">Expediente_Socio</h2>
+        <p className="text-[7px] text-orange-600 uppercase font-black mb-1">Nombre</p>
+        <p className="text-[11px] font-black uppercase mb-4">{user.user_metadata?.nombre || 'Socio'}</p>
         <p className="text-[7px] text-orange-600 uppercase font-black mb-1">Estatus</p>
         <p className="text-[11px] font-black uppercase text-green-500 mb-4 italic tracking-widest">En Batalla</p>
-        {isAdmin && <p className="text-[10px] bg-orange-600 text-black px-2 py-0.5 inline-block font-black">ADMINISTRADOR</p>}
+        {isAdmin && <span className="text-[9px] bg-orange-600 text-black px-2 py-0.5 font-black uppercase">ADMINISTRADOR</span>}
       </div>
 
-      {/* LISTA DE TAREAS (DERECHA) */}
-      <div className="fixed top-12 right-12 w-80 hidden xl:block opacity-90 z-20 overflow-y-auto max-h-[80vh]">
-        <div className="mb-8">
-          <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-4">Misiones Activas</h2>
-          {tareas.map(t => (
+      {/* PANEL DE MISIONES (Lado Derecho) */}
+      <div className="fixed top-12 right-12 w-80 hidden xl:block opacity-90 z-20 overflow-y-auto max-h-[85vh] pr-2 custom-scrollbar">
+        <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-4">Misiones Activas</h2>
+        {tareas.length > 0 ? (
+          tareas.map(t => (
             <CardTarea key={t.id} tarea={t} userNick={user.user_metadata?.nombre || user.email} supabase={supabase} />
-          ))}
-        </div>
+          ))
+        ) : (
+          <p className="text-[9px] text-zinc-700 uppercase font-bold">Sin órdenes pendientes.</p>
+        )}
       </div>
 
       <div className="flex flex-col items-center justify-center min-h-screen">
         <div className="w-full max-w-2xl bg-zinc-950 border border-zinc-900 rounded-[3rem] p-12 md:p-20 text-center shadow-2xl relative z-10">
           
-          {/* VISTA ADMIN: FORMULARIO ENVÍO */}
+          {/* VISTA ADMINISTRADOR: FORMULARIO SECRETO */}
           {isAdmin && (
-            <div className="mb-12 p-6 border border-orange-600/20 rounded-2xl bg-black">
-              <h3 className="text-[10px] font-black text-orange-600 uppercase mb-4">Desplegar Tarea</h3>
-              <form onSubmit={enviarTareaAdmin} className="flex flex-col gap-2">
-                <input value={tituloTarea} onChange={e => setTituloTarea(e.target.value)} placeholder="TÍTULO" className="bg-zinc-900 border border-zinc-800 p-2 rounded-lg text-[10px] uppercase font-bold" />
-                <input type="number" value={minutosTarea} onChange={e => setMinutosTarea(Number(e.target.value))} placeholder="MINUTOS" className="bg-zinc-900 border border-zinc-800 p-2 rounded-lg text-[10px] font-bold" />
-                <input value={socioId} onChange={e => setSocioId(e.target.value)} placeholder="ID SOCIO (UUID)" className="bg-zinc-900 border border-zinc-800 p-2 rounded-lg text-[10px] font-bold" />
-                <button type="submit" className="bg-orange-600 text-black font-black text-[9px] py-2 rounded-lg uppercase mt-2">Enviar Misión</button>
+            <div className="mb-12 p-8 border border-orange-600/20 rounded-[2rem] bg-black text-left">
+              <h3 className="text-[10px] font-black text-orange-600 uppercase mb-6 tracking-widest text-center">Desplegar Tarea Administrativa</h3>
+              <form onSubmit={enviarTareaAdmin} className="flex flex-col gap-3">
+                <input 
+                  value={tituloTarea} onChange={e => setTituloTarea(e.target.value)} 
+                  placeholder="TÍTULO DE LA MISIÓN" 
+                  className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl text-[10px] uppercase font-bold outline-none focus:border-orange-600 transition-all" 
+                />
+                <input 
+                  type="number" value={minutosTarea} onChange={e => setMinutosTarea(Number(e.target.value))} 
+                  placeholder="DURACIÓN (MINUTOS)" 
+                  className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl text-[10px] font-bold outline-none focus:border-orange-600 transition-all" 
+                />
+                <input 
+                  value={socioId} onChange={e => setSocioId(e.target.value)} 
+                  placeholder="UUID DEL SOCIO (DE SUPABASE)" 
+                  className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl text-[10px] font-bold outline-none focus:border-orange-600 transition-all" 
+                />
+                <button type="submit" className="bg-orange-600 text-black font-black text-[10px] py-3 rounded-xl uppercase mt-2 hover:bg-white transition-all shadow-[0_0_20px_rgba(234,88,12,0.3)]">
+                  Lanzar Misión
+                </button>
               </form>
             </div>
           )}
@@ -237,19 +275,21 @@ export default function PerfilPage() {
 
           <div className="mb-10">
             {!confirmarReinicio ? (
-              <button onClick={() => setConfirmarReinicio(true)} className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 hover:text-red-600 italic">[ Declarar Fallo ]</button>
+              <button onClick={() => setConfirmarReinicio(true)} className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 hover:text-red-600 italic transition-colors">
+                [ Declarar Fallo / Reiniciar ]
+              </button>
             ) : (
               <div className="flex flex-col items-center gap-3 animate-in zoom-in duration-300">
-                <p className="text-red-600 font-black text-[10px] italic uppercase">¿CONFIRMAS EL FRACASO?</p>
+                <p className="text-red-600 font-black text-[10px] italic uppercase tracking-tighter">¿CONFIRMAS EL FRACASO, SOCIO?</p>
                 <div className="flex gap-4">
-                  <button onClick={reiniciarCronometro} className="bg-red-600 text-black px-4 py-1 rounded-full font-black text-[9px] uppercase">SÍ, HE FALLADO</button>
-                  <button onClick={() => setConfirmarReinicio(false)} className="border border-zinc-700 text-zinc-400 px-4 py-1 rounded-full font-black text-[9px] uppercase">NO, RESISTIRÉ</button>
+                  <button onClick={reiniciarCronometro} className="bg-red-600 text-black px-6 py-2 rounded-full font-black text-[9px] uppercase">SÍ, HE FALLADO</button>
+                  <button onClick={() => setConfirmarReinicio(false)} className="border border-zinc-700 text-zinc-400 px-6 py-2 rounded-full font-black text-[9px] uppercase hover:border-white transition-all">NO, RESISTIRÉ</button>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Misiones en Móvil */}
+          {/* Misiones en Dispositivos Móviles */}
           <div className="xl:hidden mb-10 text-left space-y-4">
              <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-4">Misiones Activas</h2>
              {tareas.map(t => (
@@ -261,30 +301,54 @@ export default function PerfilPage() {
         </div>
       </div>
 
-      {/* EL FORJADOR (IA) */}
+      {/* EL FORJADOR (IA CHAT) */}
       <div className="fixed bottom-10 right-10 z-50 flex flex-col items-end">
         {isOpen && (
-          <div className="mb-6 w-80 md:w-96 bg-zinc-950 border-2 border-orange-600 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col">
-            <div className="p-4 bg-orange-600 text-black font-black uppercase italic text-[10px] flex justify-between items-center">
+          <div className="mb-6 w-80 md:w-96 bg-zinc-950 border-2 border-orange-600 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col animate-in slide-in-from-bottom-4">
+            <div className="p-4 bg-orange-600 text-black font-black uppercase italic text-[10px] flex justify-between items-center tracking-widest">
               <span>SISTEMA: EL FORJADOR</span>
-              <button onClick={() => setIsOpen(false)}>✕</button>
+              <button onClick={() => setIsOpen(false)} className="hover:rotate-90 transition-all">✕</button>
             </div>
-            <div ref={scrollRef} className="h-64 overflow-y-auto p-6 font-mono text-[10px] uppercase bg-black text-orange-500 space-y-4 border-b border-zinc-900">
+            
+            {/* Controles IA */}
+            <div className="p-4 bg-zinc-900 border-b border-zinc-800 space-y-3">
+              <div className="flex justify-between text-[7px] font-black uppercase text-zinc-500">
+                <span>Fuego (Temp): {temp}</span>
+                <span>Palabras: {words}</span>
+              </div>
+              <div className="flex gap-4">
+                <input type="range" min="0.1" max="1.5" step="0.1" value={temp} onChange={e => setTemp(parseFloat(e.target.value))} className="w-full h-1 bg-black accent-orange-600 appearance-none rounded-lg" />
+                <input type="range" min="10" max="100" step="5" value={words} onChange={e => setWords(parseInt(e.target.value))} className="w-full h-1 bg-black accent-orange-600 appearance-none rounded-lg" />
+              </div>
+            </div>
+
+            <div ref={scrollRef} className="h-64 overflow-y-auto p-6 font-mono text-[10px] uppercase bg-black text-orange-500 space-y-4 border-b border-zinc-900 scroll-smooth">
+              {chat.length === 0 && <p className="opacity-40 italic text-center text-[8px] py-10 tracking-widest">OBSERVANDO TU DISCIPLINA...</p>}
               {chat.map((msg, i) => (
                 <div key={i} className={msg.role === 'assistant' ? 'border-l-2 border-orange-600 pl-4 py-1' : 'text-zinc-500 text-right italic'}>
+                  <span className="block text-[6px] opacity-30 mb-1">{msg.role === 'assistant' ? 'EL FORJADOR' : 'SOCIO'}</span>
                   {msg.content}
                 </div>
               ))}
-              {cargandoIA && <div className="animate-pulse">MOLDEANDO...</div>}
+              {cargandoIA && <div className="animate-pulse font-black text-orange-600 tracking-widest text-[8px]">MOLDEANDO RESPUESTA...</div>}
             </div>
+
             <form onSubmit={consultarMentor} className="p-4 bg-zinc-950 flex gap-2">
-              <input type="text" value={mensaje} onChange={(e) => setMensaje(e.target.value)} placeholder="INFORME..." className="flex-1 bg-black border border-zinc-800 rounded-xl p-3 text-[10px] text-white outline-none focus:border-orange-600" />
-              <button type="submit" className="bg-orange-600 text-black px-5 rounded-xl font-black text-[10px]">OK</button>
+              <input 
+                type="text" value={mensaje} onChange={e => setMensaje(e.target.value)} 
+                placeholder="INFORME DE BATALLA..." 
+                className="flex-1 bg-black border border-zinc-800 rounded-xl p-3 text-[10px] text-white outline-none focus:border-orange-600 uppercase" 
+              />
+              <button type="submit" className="bg-orange-600 text-black px-5 rounded-xl font-black text-[10px] hover:bg-white transition-all">OK</button>
             </form>
           </div>
         )}
-        <button onClick={() => setIsOpen(!isOpen)} className="w-20 h-20 bg-orange-600 rounded-full border-4 border-black shadow-lg flex items-center justify-center hover:scale-110 transition-all">
-          <span className="text-black font-black text-2xl italic">IA</span>
+
+        <button 
+          onClick={() => setIsOpen(!isOpen)} 
+          className="w-20 h-20 bg-orange-600 rounded-full border-4 border-black shadow-[0_0_40px_rgba(234,88,12,0.4)] flex items-center justify-center hover:scale-110 active:scale-95 transition-all group"
+        >
+          <span className="text-black font-black text-2xl italic group-hover:rotate-12 transition-all">IA</span>
         </button>
       </div>
     </div>
