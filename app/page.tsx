@@ -234,6 +234,7 @@ export default function Page() {
         return;
       }
 
+      // PROCESO DE REGISTRO EN SUPABASE
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -256,6 +257,21 @@ export default function Page() {
         setCargando(false);
         return;
       }
+
+      // --- CÓDIGO AÑADIDO: AVISO AL CORREO POR NUEVO REGISTRO ---
+      try {
+        await fetch('/api/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            email: email, 
+            nombre: nombre 
+          }),
+        });
+      } catch (err) {
+        console.error("Error al enviar notificación:", err);
+      }
+      // ---------------------------------------------------------
 
       if (data.session) {
         setCargando(false);
