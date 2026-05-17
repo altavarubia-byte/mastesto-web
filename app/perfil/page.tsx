@@ -3,7 +3,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
-// 1. IMPORTAMOS EL COMPONENTE DE TAREAS
 import ListaTareas from '@/components/ListaTareas';
 
 export default function PerfilPage() {
@@ -14,6 +13,10 @@ export default function PerfilPage() {
   const [chat, setChat] = useState<{ role: string, content: string }[]>([]);
   const [cargandoIA, setCargandoIA] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+
+  // --- NUEVOS ESTADOS PARA LOS CONTROLES ---
+  const [temp, setTemp] = useState(0.7);
+  const [words, setWords] = useState(40);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -72,7 +75,10 @@ export default function PerfilPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           messages: historialActualizado,
-          context: `Eres EL FORJADOR, mentor de disciplina inquebrantable... Socio: ${user.user_metadata?.nombre || 'Vicente'}.`
+          // ENVIAMOS LOS VALORES DE LAS BARRAS
+          temp,
+          words,
+          contexto: `Eres EL FORJADOR, mentor de disciplina inquebrantable... Socio: ${user.user_metadata?.nombre || 'Vicente'}.`
         }),
       });
       const data = await res.json();
@@ -101,7 +107,7 @@ export default function PerfilPage() {
   return (
     <div className="min-h-screen bg-black text-white p-4 md:p-12 font-sans relative overflow-hidden">
       
-      {/* --- EXPEDIENTE LATERAL IZQUIERDA --- */}
+      {/* Expediente Lateral */}
       <div className="fixed top-12 left-12 w-64 hidden xl:block border-l border-orange-600 pl-6 py-2 opacity-80">
         <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 mb-6 italic">Expediente_Socio</h2>
         <p className="text-[7px] text-orange-600 uppercase font-black mb-1">Nombre</p>
@@ -110,12 +116,10 @@ export default function PerfilPage() {
         <p className="text-[11px] font-black uppercase text-green-500 mb-4 italic tracking-widest">En Batalla</p>
       </div>
 
-      {/* --- NUEVA COLUMNA: OBJETIVOS LATERAL DERECHA --- */}
       <div className="fixed top-12 right-12 w-80 hidden xl:block opacity-90 z-20">
         <ListaTareas />
       </div>
 
-      {/* --- CONTENIDO CENTRAL: CRONÓMETRO --- */}
       <div className="flex flex-col items-center justify-center min-h-screen">
         <div className="w-full max-w-2xl bg-zinc-950 border border-zinc-900 rounded-[3rem] p-12 md:p-20 text-center shadow-2xl relative z-10">
           <p className="text-[10px] font-black uppercase tracking-[0.5em] text-orange-600 mb-12 opacity-60 italic">Tiempo de Disciplina</p>
@@ -139,7 +143,6 @@ export default function PerfilPage() {
             </div>
           </div>
 
-          {/* Versión móvil de las tareas (se oculta en pantallas grandes) */}
           <div className="xl:hidden mb-10 text-left">
             <ListaTareas />
           </div>
@@ -158,8 +161,36 @@ export default function PerfilPage() {
               <span>SISTEMA: EL FORJADOR</span>
               <button onClick={() => setIsOpen(false)} className="font-bold">✕</button>
             </div>
+
+            {/* --- NUEVA SECCIÓN DE CONTROLES (BARRAS) --- */}
+            <div className="p-4 bg-zinc-900 border-b border-zinc-800 space-y-4">
+              <div>
+                <div className="flex justify-between text-[8px] font-black mb-1 text-zinc-400 uppercase">
+                  <span>Fuego de la Forja (Temp)</span>
+                  <span className="text-orange-600">{temp}</span>
+                </div>
+                <input 
+                  type="range" min="0.1" max="1.5" step="0.1" 
+                  value={temp} 
+                  onChange={(e) => setTemp(parseFloat(e.target.value))}
+                  className="w-full h-1 bg-black rounded-lg appearance-none cursor-pointer accent-orange-600"
+                />
+              </div>
+              <div>
+                <div className="flex justify-between text-[8px] font-black mb-1 text-zinc-400 uppercase">
+                  <span>Rango de Palabras</span>
+                  <span className="text-orange-600">{words}</span>
+                </div>
+                <input 
+                  type="range" min="10" max="100" step="5" 
+                  value={words} 
+                  onChange={(e) => setWords(parseInt(e.target.value))}
+                  className="w-full h-1 bg-black rounded-lg appearance-none cursor-pointer accent-orange-600"
+                />
+              </div>
+            </div>
             
-            <div ref={scrollRef} className="h-80 overflow-y-auto p-6 font-mono text-[10px] uppercase bg-black text-orange-500 space-y-4">
+            <div ref={scrollRef} className="h-64 overflow-y-auto p-6 font-mono text-[10px] uppercase bg-black text-orange-500 space-y-4">
               {chat.length === 0 && <p className="opacity-40 italic">El fuego de la forja te espera.</p>}
               {chat.map((msg, i) => (
                 <div key={i} className={msg.role === 'assistant' ? 'border-l-2 border-orange-600 pl-4 py-1' : 'text-zinc-500 text-right italic'}>
