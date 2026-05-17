@@ -10,12 +10,17 @@ interface Tarea {
   user_id: string;
 }
 
-export default function ListaTareas() {
+// 1. Definimos la interfaz para recibir la función del padre
+interface ListaTareasProps {
+  onTareasChange?: (tareasTexto: string) => void;
+}
+
+export default function ListaTareas({ onTareasChange }: ListaTareasProps) {
   const [tareas, setTareas] = useState<Tarea[]>([]);
   const [nuevaTarea, setNuevaTarea] = useState('');
   const [socioIdDestino, setSocioIdDestino] = useState(''); 
   const [user, setUser] = useState<any>(null);
-  const [mensajeExito, setMensajeExito] = useState(false); // Estado para el mensaje flotante
+  const [mensajeExito, setMensajeExito] = useState(false);
   
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -33,17 +38,28 @@ export default function ListaTareas() {
     checkUser();
   }, []);
 
-  // Solo cargamos tareas si el usuario NO es admin o si queremos ver nuestras propias tareas
   useEffect(() => {
     if (user) {
       cargarTareas();
     }
   }, [user]);
 
+  // --- 2. EFECTO PARA ENVIAR TAREAS AL PERFIL (CONTEXTO IA) ---
+  useEffect(() => {
+    if (onTareasChange) {
+      // Filtramos solo las misiones que NO están completadas
+      const pendientes = tareas
+        .filter(t => !t.completada)
+        .map(t => t.texto)
+        .join(", ");
+      
+      onTareasChange(pendientes || "No tiene misiones pendientes.");
+    }
+  }, [tareas, onTareasChange]);
+
   async function cargarTareas() {
     let query = supabase.from('tareas').select('*').order('created_at', { ascending: true });
     
-    // Si eres admin, solo queremos ver TUS tareas personales, no las de todos los socios abajo
     if (esAdmin) {
       query = query.eq('user_id', user.id);
     }
@@ -67,12 +83,9 @@ export default function ListaTareas() {
     if (!error) {
       setNuevaTarea('');
       setSocioIdDestino('');
-      
-      // Mostrar mensaje de éxito y ocultarlo a los 3 segundos
       setMensajeExito(true);
       setTimeout(() => setMensajeExito(false), 3000);
       
-      // Solo refrescamos la lista si nos hemos auto-asignado la tarea
       if (asignadoA === user.id) {
         cargarTareas();
       }
@@ -96,7 +109,6 @@ export default function ListaTareas() {
   return (
     <div className="w-full max-w-md bg-zinc-900/50 border border-zinc-800 p-6 rounded-3xl backdrop-blur-sm shadow-2xl relative">
       
-      {/* MENSAJE DE ÉXITO FLOTANTE */}
       {mensajeExito && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-orange-600 text-black text-[9px] font-black px-4 py-2 rounded-full shadow-xl z-50 animate-bounce uppercase">
           Misión enviada con éxito ⚔️
