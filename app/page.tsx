@@ -460,14 +460,23 @@ export default function Page() {
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6 relative overflow-x-hidden font-sans">
       
-      <div className="absolute top-6 left-6 z-50">
+      {/* SECCIÓN DE REDES / ACCESOS IZQUIERDA */}
+      <div className="absolute top-6 left-6 z-50 flex flex-col gap-3">
         <a
           href="https://discord.gg/q2rtc8PX"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-[10px] border border-zinc-800 bg-zinc-900/50 px-4 py-2 rounded-full uppercase font-bold text-zinc-400"
+          className="text-[10px] border border-zinc-800 bg-zinc-900/50 px-4 py-2 rounded-full uppercase font-bold text-zinc-400 hover:text-white transition-colors"
         >
           Discord
+        </a>
+        <a
+          href="https://www.tiktok.com/@mastesto"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[10px] border border-zinc-800 bg-zinc-900/50 px-4 py-2 rounded-full uppercase font-bold text-zinc-400 hover:text-white transition-colors"
+        >
+          TikTok
         </a>
       </div>
 
