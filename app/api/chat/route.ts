@@ -2,8 +2,11 @@ import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
   try {
-    // Recibimos los valores dinámicos del body enviados por el ChatProvider
-    const { messages, contexto, temp, words } = await req.json();
+    const { messages, contexto } = await req.json();
+    
+    // EXTRAER CONFIGURACIÓN DE LOS HEADERS
+    const temp = parseFloat(req.headers.get('x-temp') || '0.7');
+    const words = parseInt(req.headers.get('x-words') || '40');
 
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -18,8 +21,8 @@ export async function POST(req: Request) {
             role: 'system', 
             content: `Eres EL LÍDER SUPREMO de +TESTO. Tono dictatorial, marcial y severo.
 
-            REGLA DE EXTENSIÓN: Tu respuesta debe tener aproximadamente ${words || 40} palabras.
-            Ni más, ni menos. Sé denso, autoritario y directo. No uses saludos.
+            REGLA DE EXTENSIÓN: Tu respuesta debe tener aproximadamente ${words} palabras.
+            Sé denso, autoritario y directo. No uses saludos.
 
             ESTRUCTURA DE PODER:
             1. Sentencia fiera sobre el estado del socio.
@@ -32,8 +35,7 @@ export async function POST(req: Request) {
           },
           ...messages,
         ],
-        // Aplicamos la temperatura de la barra (0.0 a 1.0)
-        temperature: temp ?? 0.7,
+        temperature: temp,
       }),
     });
 
