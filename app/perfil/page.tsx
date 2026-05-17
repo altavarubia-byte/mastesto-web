@@ -18,6 +18,9 @@ export default function PerfilPage() {
   const [temp, setTemp] = useState(0.7);
   const [words, setWords] = useState(40);
   const [tareasReales, setTareasReales] = useState<string>("");
+  
+  // ESTADO PARA LA CONFIRMACIÓN DEL REINICIO
+  const [confirmarReinicio, setConfirmarReinicio] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -60,7 +63,22 @@ export default function PerfilPage() {
     return () => clearInterval(intervalo);
   }, [fechaInicio]);
 
-  // --- FUNCIÓN CONSULTAR MENTOR CON CONTEXTO COMPLETO ---
+  // --- FUNCIÓN PARA REINICIAR EL CRONÓMETRO ---
+  const reiniciarCronometro = async () => {
+    const nuevaFecha = new Date().toISOString();
+    
+    const { error } = await supabase.auth.updateUser({
+      data: { fecha_dejo_fumar: nuevaFecha }
+    });
+
+    if (!error) {
+      setFechaInicio(nuevaFecha);
+      setConfirmarReinicio(false);
+      // Feedback opcional en el chat
+      setChat(prev => [...prev, { role: 'assistant', content: 'CONTADOR REINICIADO. LA DISCIPLINA NO ENTIENDE DE EXCUSAS. EMPIEZA OTRA VEZ.' }]);
+    }
+  };
+
   const consultarMentor = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!mensaje.trim() || cargandoIA) return;
@@ -71,7 +89,6 @@ export default function PerfilPage() {
     setMensaje('');
     setCargandoIA(true);
 
-    // Construimos el contexto con tus datos reales
     const contextoTotal = `
       SOCIO: ${user.user_metadata?.nombre || 'Vicente'}.
       PROGRESO REAL: ${tiempo.dias} días, ${tiempo.horas} horas y ${tiempo.minutos} minutos.
@@ -116,7 +133,6 @@ export default function PerfilPage() {
   return (
     <div className="min-h-screen bg-black text-white p-4 md:p-12 font-sans relative overflow-hidden">
       
-      {/* Expediente Lateral */}
       <div className="fixed top-12 left-12 w-64 hidden xl:block border-l border-orange-600 pl-6 py-2 opacity-80">
         <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 mb-6 italic">Expediente_Socio</h2>
         <p className="text-[7px] text-orange-600 uppercase font-black mb-1">Nombre</p>
@@ -125,7 +141,6 @@ export default function PerfilPage() {
         <p className="text-[11px] font-black uppercase text-green-500 mb-4 italic tracking-widest">En Batalla</p>
       </div>
 
-      {/* Lista de Tareas con captura de contexto */}
       <div className="fixed top-12 right-12 w-80 hidden xl:block opacity-90 z-20">
         <ListaTareas onTareasChange={(t: string) => setTareasReales(t)} />
       </div>
@@ -151,6 +166,36 @@ export default function PerfilPage() {
               <p className="text-5xl md:text-7xl font-black tracking-tighter text-orange-600">{tiempo.segundos.toString().padStart(2, '0')}</p>
               <p className="text-[8px] uppercase font-bold text-zinc-600 mt-2">Segundos</p>
             </div>
+          </div>
+
+          {/* --- BOTÓN DE REINICIO CON CONFIRMACIÓN --- */}
+          <div className="mb-10 flex flex-col items-center gap-4">
+            {!confirmarReinicio ? (
+              <button 
+                onClick={() => setConfirmarReinicio(true)}
+                className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 hover:text-red-600 transition-colors italic"
+              >
+                [ Declarar Fallo / Reiniciar ]
+              </button>
+            ) : (
+              <div className="flex flex-col items-center gap-3 animate-in fade-in zoom-in duration-300">
+                <p className="text-red-600 font-black text-[10px] uppercase tracking-tighter italic">¿ESTÁS SEGURO, SOCIO? EL ACERO SE VOLVERÁ FRÁGIL.</p>
+                <div className="flex gap-4">
+                  <button 
+                    onClick={reiniciarCronometro} 
+                    className="bg-red-600 text-black px-4 py-1 rounded-full font-black text-[9px] uppercase hover:bg-white transition-all"
+                  >
+                    SÍ, HE FALLADO
+                  </button>
+                  <button 
+                    onClick={() => setConfirmarReinicio(false)} 
+                    className="border border-zinc-700 text-zinc-400 px-4 py-1 rounded-full font-black text-[9px] uppercase hover:border-white transition-all"
+                  >
+                    NO, RESISTIRÉ
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="xl:hidden mb-10 text-left">
