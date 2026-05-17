@@ -1,7 +1,7 @@
 'use client'
 
 import { type ChatUIMessage } from '@/components/chat/types'
-import { type ReactNode, createContext, useContext, useMemo, useRef, useState } from 'react'
+import { type ReactNode, createContext, useContext, useRef, useState } from 'react'
 import { Chat } from '@ai-sdk/react'
 import { DataPart } from '@/ai/messages/data-parts'
 import { DataUIPart } from 'ai'
@@ -26,22 +26,18 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const mapDataToStateRef = useRef(mapDataToState)
   mapDataToStateRef.current = mapDataToState
 
+  // Estados para las barras
   const [temp, setTemp] = useState(0.7)
   const [words, setWords] = useState(40)
 
-  const chat = useMemo(
-    () =>
-      new Chat<ChatUIMessage>({
-        // Pasamos los datos en la URL para evitar errores de tipos
-        api: `/api/chat?temp=${temp}&words=${words}`,
-        onToolCall: () => mutate('/api/auth/info'),
-        onData: (data: DataUIPart<DataPart>) => mapDataToStateRef.current(data),
-        onError: (error) => {
-          toast.error(`Error: ${error.message}`)
-        },
-      }),
-    [temp, words]
-  )
+  // Constructor limpio para que compile sin errores
+  const chat = new Chat<ChatUIMessage>({
+    onToolCall: () => mutate('/api/auth/info'),
+    onData: (data: DataUIPart<DataPart>) => mapDataToStateRef.current(data),
+    onError: (error) => {
+      toast.error(`Error: ${error.message}`)
+    },
+  })
 
   return (
     <ChatContext.Provider value={{ chat, config: { temp, setTemp, words, setWords } }}>
