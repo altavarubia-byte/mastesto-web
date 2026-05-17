@@ -14,7 +14,6 @@ export default function PerfilPage() {
   const [cargandoIA, setCargandoIA] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
-  // --- NUEVOS ESTADOS PARA LOS CONTROLES ---
   const [temp, setTemp] = useState(0.7);
   const [words, setWords] = useState(40);
 
@@ -59,6 +58,7 @@ export default function PerfilPage() {
     return () => clearInterval(intervalo);
   }, [fechaInicio]);
 
+  // --- FUNCIÓN ACTUALIZADA CON CONTEXTO PERSONALIZADO ---
   const consultarMentor = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!mensaje.trim() || cargandoIA) return;
@@ -69,16 +69,27 @@ export default function PerfilPage() {
     setMensaje('');
     setCargandoIA(true);
 
+    // Definimos el perfil del socio para enviárselo a la IA
+    const perfilSocio = {
+      nombre: user.user_metadata?.nombre || 'Socio',
+      progreso: `${tiempo.dias} días, ${tiempo.horas} horas y ${tiempo.minutos} minutos de disciplina total.`,
+      mision: "+TESTO: Forja de acero, dejar atrás los vicios y maximizar la disciplina."
+    };
+
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           messages: historialActualizado,
-          // ENVIAMOS LOS VALORES DE LAS BARRAS
           temp,
           words,
-          contexto: `Eres EL FORJADOR, mentor de disciplina inquebrantable... Socio: ${user.user_metadata?.nombre || 'Vicente'}.`
+          // ENVIAMOS EL CONTEXTO DETALLADO
+          contexto: `ESTÁS HABLANDO CON EL SOCIO: ${perfilSocio.nombre}.
+                     PROGRESO ACTUAL: ${perfilSocio.progreso}.
+                     MISIÓN PRINCIPAL: ${perfilSocio.mision}.
+                     IMPORTANTE: Usa estos datos para castigar su debilidad o reforzar su victoria. 
+                     Si lleva poco tiempo, sé implacable. Si lleva mucho, recuérdale que la caída será más dura.`
         }),
       });
       const data = await res.json();
@@ -153,7 +164,7 @@ export default function PerfilPage() {
         </div>
       </div>
 
-      {/* --- EL FORJADOR (IA DESPLEGABLE) --- */}
+      {/* --- EL FORJADOR --- */}
       <div className="fixed bottom-10 right-10 z-50 flex flex-col items-end">
         {isOpen && (
           <div className="mb-6 w-80 md:w-96 bg-zinc-950 border-2 border-orange-600 rounded-[2.5rem] overflow-hidden shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
@@ -162,7 +173,6 @@ export default function PerfilPage() {
               <button onClick={() => setIsOpen(false)} className="font-bold">✕</button>
             </div>
 
-            {/* --- NUEVA SECCIÓN DE CONTROLES (BARRAS) --- */}
             <div className="p-4 bg-zinc-900 border-b border-zinc-800 space-y-4">
               <div>
                 <div className="flex justify-between text-[8px] font-black mb-1 text-zinc-400 uppercase">
@@ -190,26 +200,26 @@ export default function PerfilPage() {
               </div>
             </div>
             
-            <div ref={scrollRef} className="h-64 overflow-y-auto p-6 font-mono text-[10px] uppercase bg-black text-orange-500 space-y-4">
-              {chat.length === 0 && <p className="opacity-40 italic">El fuego de la forja te espera.</p>}
+            <div ref={scrollRef} className="h-64 overflow-y-auto p-6 font-mono text-[10px] uppercase bg-black text-orange-500 space-y-4 border-b border-zinc-900">
+              {chat.length === 0 && <p className="opacity-40 italic text-center">EL FORJADOR ESTÁ OBSERVANDO TU PROGRESO.</p>}
               {chat.map((msg, i) => (
                 <div key={i} className={msg.role === 'assistant' ? 'border-l-2 border-orange-600 pl-4 py-1' : 'text-zinc-500 text-right italic'}>
                   <span className="block text-[7px] opacity-30 mb-1">{msg.role === 'assistant' ? 'EL FORJADOR' : 'SOCIO'}</span>
                   {msg.content}
                 </div>
               ))}
-              {cargandoIA && <div className="animate-pulse text-orange-600 font-bold">MOLDEANDO...</div>}
+              {cargandoIA && <div className="animate-pulse text-orange-600 font-bold">PROCESANDO DEBILIDAD...</div>}
             </div>
 
-            <form onSubmit={consultarMentor} className="p-4 bg-zinc-950 border-t border-zinc-900 flex gap-2">
+            <form onSubmit={consultarMentor} className="p-4 bg-zinc-950 flex gap-2">
               <input 
                 type="text" 
                 value={mensaje} 
                 onChange={(e) => setMensaje(e.target.value)} 
-                placeholder="INFORME..." 
-                className="flex-1 bg-black border border-zinc-800 rounded-xl p-3 text-[10px] text-white outline-none focus:border-orange-600 uppercase" 
+                placeholder="INFORME DE BATALLA..." 
+                className="flex-1 bg-black border border-zinc-800 rounded-xl p-3 text-[10px] text-white outline-none focus:border-orange-600 uppercase placeholder:text-zinc-800" 
               />
-              <button type="submit" className="bg-orange-600 text-black px-5 rounded-xl font-black text-[10px]">OK</button>
+              <button type="submit" className="bg-orange-600 text-black px-5 rounded-xl font-black text-[10px] hover:bg-orange-500 transition-colors">OK</button>
             </form>
           </div>
         )}
