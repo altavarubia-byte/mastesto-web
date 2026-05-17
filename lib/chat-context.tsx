@@ -32,18 +32,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const chat = useMemo(
     () =>
       new Chat<ChatUIMessage>({
-        // Pasamos los valores en los headers para que lleguen a la API
-        headers: {
-          'x-temp': temp.toString(),
-          'x-words': words.toString(),
-        },
+        // Pasamos los datos en la URL para evitar errores de tipos
+        api: `/api/chat?temp=${temp}&words=${words}`,
         onToolCall: () => mutate('/api/auth/info'),
         onData: (data: DataUIPart<DataPart>) => mapDataToStateRef.current(data),
         onError: (error) => {
           toast.error(`Error: ${error.message}`)
         },
       }),
-    [temp, words] // Se recrea el chat al cambiar los valores
+    [temp, words]
   )
 
   return (
