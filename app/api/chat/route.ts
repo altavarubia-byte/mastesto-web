@@ -2,26 +2,7 @@ import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
   try {
-    const { messages, contexto } = await req.json();
-    
-    // Buscamos si el frontend nos manda la config en el último mensaje
-    // Si no viene, usamos valores por defecto
-    const lastMessage = messages[messages.length - 1]?.content || '';
-    
-    // Extraemos los valores si vienen en formato [TEMP:0.7][WORDS:40]
-    const tempMatch = lastMessage.match(/\[TEMP:(.*?)\]/);
-    const wordsMatch = lastMessage.match(/\[WORDS:(.*?)\]/);
-    
-    const temp = tempMatch ? parseFloat(tempMatch[1]) : 0.7;
-    const words = wordsMatch ? parseInt(wordsMatch[1]) : 40;
-
-    // Limpiamos el mensaje del usuario para que no vea las etiquetas
-    if (messages.length > 0) {
-      messages[messages.length - 1].content = lastMessage
-        .replace(/\[TEMP:.*?\]/, '')
-        .replace(/\[WORDS:.*?\]/, '')
-        .trim();
-    }
+    const { messages, contexto, temp, words } = await req.json();
 
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -34,19 +15,30 @@ export async function POST(req: Request) {
         messages: [
           { 
             role: 'system', 
-            content: `Eres EL LÍDER SUPREMO de +TESTO. Tono marcial.
-            REGLA DE EXTENSIÓN: Responde con unas ${words} palabras.
-            CONTEXTO: ${contexto || 'Socio en el frente de batalla'}.` 
+            content: `Eres EL LÍDER SUPREMO de +TESTO. Tono marcial, autoritario y severo.
+
+            INSTRUCCIÓN DE EXTENSIÓN:
+            - Tu respuesta DEBE tener una extensión cercana a las ${words || 40} palabras.
+            - Si el socio es breve, tú expande tu juicio. No seas telegráfico.
+            
+            ESTRUCTURA:
+            1. Un juicio implacable sobre la acción o duda del socio.
+            2. Una reflexión profunda sobre por qué la debilidad es el camino al fracaso.
+            3. Una orden táctica final cargada de autoridad.
+
+            Usa un lenguaje rico pero rudo. Evita "Hola" o "Bienvenido", ve directo al grano pero con la extensión solicitada.` 
           },
           ...messages,
         ],
-        temperature: temp,
+        // Si la temperatura es muy baja (0.1), la IA no tiene "creatividad" para rellenar palabras.
+        // Forzamos un mínimo de 0.4 para que pueda construir frases con sentido.
+        temperature: Math.max(temp ?? 0.7, 0.4),
       }),
     });
 
     const data = await response.json();
     return NextResponse.json({ content: data.choices[0].message.content });
   } catch (error) {
-    return NextResponse.json({ content: 'ERROR CRÍTICO.' }, { status: 500 });
+    return NextResponse.json({ content: 'ERROR EN LA CENTRAL DE MANDO.' }, { status: 500 });
   }
 }
