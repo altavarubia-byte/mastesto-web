@@ -23,19 +23,25 @@ function CardTarea({ tarea, userNick, supabase }: any) {
   const finalizarMision = async () => {
     setActivo(false);
     setCompletada(true);
-    await supabase.rpc('array_append_completada', { 
+    // Ejecuta la función del SQL Editor
+    const { error } = await supabase.rpc('array_append_completada', { 
       tarea_id: tarea.id, 
       nuevo_nick: userNick 
     });
+    
+    if (!error) {
+       // Refrescamos para que el Nick Verde se consolide
+       window.location.reload();
+    }
   };
 
   const formatear = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
 
   return (
-    <div className={`p-6 rounded-[2rem] border ${completada ? 'border-green-500/30 bg-green-500/5' : 'border-zinc-800 bg-zinc-900/20'} transition-all mb-4`}>
+    <div className={`p-6 rounded-[2rem] border ${completada ? 'border-green-500/30 bg-green-500/5 shadow-[0_0_20px_rgba(34,197,94,0.1)]' : 'border-zinc-800 bg-zinc-900/20'} transition-all mb-4`}>
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-[10px] font-black uppercase tracking-widest leading-none">{tarea.titulo}</h3>
-        <span className={`text-[9px] font-bold px-3 py-1 rounded-full border ${completada ? 'border-green-500 text-green-500 bg-green-500/10' : 'border-zinc-800 text-zinc-500'}`}>
+        <span className={`text-[9px] font-bold px-3 py-1 rounded-full border transition-all ${completada ? 'border-green-500 text-green-500 bg-green-500/10' : 'border-zinc-800 text-zinc-500'}`}>
           {completada ? `● ${userNick}` : `○ ${userNick}`}
         </span>
       </div>
@@ -80,7 +86,6 @@ export default function PerfilPage() {
   const [cargandoIA, setCargandoIA] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   
-  // Estados para Administrador y Notificaciones
   const [tituloTarea, setTituloTarea] = useState('');
   const [minutosTarea, setMinutosTarea] = useState(30);
   const [socioId, setSocioId] = useState('');
@@ -156,11 +161,8 @@ export default function PerfilPage() {
       setStatusMsg({ text: 'MISIÓN LANZADA CON ÉXITO', type: 'success' });
       setTituloTarea('');
       setSocioId('');
-      // Recargar tareas para que aparezca la nueva sin refrescar página entera
       const { data: tasks } = await supabase.from('tareas').select('*').order('created_at', { ascending: false });
       if (tasks) setTareas(tasks);
-      
-      // Limpiar mensaje después de 5 segundos
       setTimeout(() => setStatusMsg({ text: '', type: null }), 5000);
     } else {
       setStatusMsg({ text: `FALLO EN SISTEMA: ${error.message}`, type: 'error' });
@@ -199,6 +201,7 @@ export default function PerfilPage() {
       console.error(e);
     } finally {
       setCargandoIA(false);
+      if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   };
 
@@ -222,31 +225,24 @@ export default function PerfilPage() {
       </div>
 
       {/* MISIONES DERECHA (PC) */}
-      <div className="fixed top-12 right-12 w-80 hidden xl:block opacity-90 z-20 overflow-y-auto max-h-[85vh] pr-2">
+      <div className="fixed top-12 right-12 w-80 hidden xl:block opacity-90 z-20 overflow-y-auto max-h-[85vh] pr-2 custom-scrollbar">
         <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-4 text-center">Misiones Activas</h2>
         {tareas.map((t: any) => (
-          <CardTarea key={t.id} tarea={t} userNick={user?.user_metadata?.nombre || user?.email} supabase={supabase} />
+          <CardTarea key={t.id} tarea={t} userNick={user?.user_metadata?.nombre || user?.email || 'Socio'} supabase={supabase} />
         ))}
       </div>
 
       <div className="flex flex-col items-center justify-center min-h-screen">
         <div className="w-full max-w-2xl bg-zinc-950 border border-zinc-900 rounded-[3rem] p-12 md:p-20 text-center shadow-2xl relative z-10">
           
-          {/* PANEL ADMINISTRADOR CON MENSAJES DE ESTADO */}
           {isAdmin && (
             <div className="mb-12 p-8 border border-orange-600/20 rounded-[2rem] bg-black text-left">
               <h3 className="text-[10px] font-black text-orange-600 uppercase mb-4 text-center tracking-widest">Desplegar Nueva Tarea</h3>
-              
               <form onSubmit={enviarTareaAdmin} className="flex flex-col gap-2">
                 <input value={tituloTarea} onChange={e => setTituloTarea(e.target.value)} placeholder="TÍTULO DE LA MISIÓN" className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl text-[10px] uppercase font-bold outline-none focus:border-orange-600 transition-all" />
                 <input type="number" value={minutosTarea} onChange={e => setMinutosTarea(Number(e.target.value))} placeholder="DURACIÓN (MIN)" className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl text-[10px] font-bold outline-none focus:border-orange-600 transition-all" />
                 <input value={socioId} onChange={e => setSocioId(e.target.value)} placeholder="UUID DEL SOCIO" className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl text-[10px] font-bold outline-none focus:border-orange-600 transition-all" />
-                
-                <button type="submit" className="bg-orange-600 text-black font-black text-[10px] py-3 rounded-xl uppercase mt-2 hover:bg-white transition-all">
-                  Lanzar Misión
-                </button>
-
-                {/* MENSAJE DE ESTADO DINÁMICO */}
+                <button type="submit" className="bg-orange-600 text-black font-black text-[10px] py-3 rounded-xl uppercase mt-2 hover:bg-white transition-all">Lanzar Misión</button>
                 {statusMsg.text && (
                   <div className={`mt-4 text-[9px] font-black uppercase text-center p-2 rounded-lg border animate-in fade-in zoom-in duration-300 ${
                     statusMsg.type === 'success' ? 'text-green-500 border-green-500/20 bg-green-500/5' : 'text-red-600 border-red-600/20 bg-red-600/5'
@@ -274,22 +270,21 @@ export default function PerfilPage() {
               <div className="flex flex-col items-center gap-3 animate-in zoom-in duration-300">
                 <p className="text-red-600 font-black text-[10px] uppercase">¿CONFIRMAS EL FRACASO?</p>
                 <div className="flex gap-4">
-                  <button onClick={reiniciarCronometro} className="bg-red-600 text-black px-6 py-2 rounded-full font-black text-[9px] uppercase">SÍ, HE FALLADO</button>
-                  <button onClick={() => setConfirmarReinicio(false)} className="border border-zinc-700 text-zinc-400 px-6 py-2 rounded-full font-black text-[9px] uppercase">VOLVER</button>
+                  <button onClick={reiniciarCronometro} className="bg-red-600 text-black px-6 py-2 rounded-full font-black text-[9px] uppercase hover:scale-105 transition-all">SÍ, HE FALLADO</button>
+                  <button onClick={() => setConfirmarReinicio(false)} className="border border-zinc-700 text-zinc-400 px-6 py-2 rounded-full font-black text-[9px] uppercase hover:border-white transition-all">VOLVER</button>
                 </div>
               </div>
             )}
           </div>
 
-          {/* MISIONES MÓVIL */}
           <div className="xl:hidden mb-10 space-y-4">
              <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 text-center">Misiones Activas</h2>
              {tareas.map((t: any) => (
-               <CardTarea key={t.id} tarea={t} userNick={user?.user_metadata?.nombre || user?.email} supabase={supabase} />
+               <CardTarea key={t.id} tarea={t} userNick={user?.user_metadata?.nombre || user?.email || 'Socio'} supabase={supabase} />
              ))}
           </div>
 
-          <button onClick={() => supabase.auth.signOut().then(() => router.push('/'))} className="text-[9px] font-black uppercase text-zinc-800 hover:text-orange-600 italic">[ Finalizar Sesión ]</button>
+          <button onClick={() => supabase.auth.signOut().then(() => router.push('/'))} className="text-[9px] font-black uppercase text-zinc-800 hover:text-orange-600 italic transition-colors">[ Finalizar Sesión ]</button>
         </div>
       </div>
 
@@ -297,26 +292,28 @@ export default function PerfilPage() {
       <div className="fixed bottom-10 right-10 z-50 flex flex-col items-end">
         {isOpen && (
           <div className="mb-6 w-80 md:w-96 bg-zinc-950 border-2 border-orange-600 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col animate-in slide-in-from-bottom-4">
-            <div className="p-4 bg-orange-600 text-black font-black uppercase text-[10px] flex justify-between items-center">
+            <div className="p-4 bg-orange-600 text-black font-black uppercase text-[10px] flex justify-between items-center tracking-[0.1em]">
               <span>EL FORJADOR</span>
-              <button onClick={() => setIsOpen(false)}>✕</button>
+              <button onClick={() => setIsOpen(false)} className="hover:rotate-90 transition-all px-2">✕</button>
             </div>
-            <div ref={scrollRef} className="h-64 overflow-y-auto p-6 font-mono text-[10px] uppercase bg-black text-orange-500 space-y-4 border-b border-zinc-900">
+            <div ref={scrollRef} className="h-64 overflow-y-auto p-6 font-mono text-[10px] uppercase bg-black text-orange-500 space-y-4 border-b border-zinc-900 scroll-smooth custom-scrollbar">
+              {chat.length === 0 && <p className="text-center opacity-30 italic py-10">Esperando informe de batalla...</p>}
               {chat.map((msg: any, i: number) => (
                 <div key={i} className={msg.role === 'assistant' ? 'border-l-2 border-orange-600 pl-4 py-1' : 'text-zinc-500 text-right italic'}>
+                  <span className="block text-[6px] opacity-30 mb-1">{msg.role === 'assistant' ? 'FORJADOR' : 'SOCIO'}</span>
                   {msg.content}
                 </div>
               ))}
-              {cargandoIA && <div className="animate-pulse">MOLDEANDO...</div>}
+              {cargandoIA && <div className="animate-pulse font-black">MOLDEANDO...</div>}
             </div>
             <form onSubmit={consultarMentor} className="p-4 bg-zinc-950 flex gap-2">
-              <input type="text" value={mensaje} onChange={e => setMensaje(e.target.value)} placeholder="INFORME..." className="flex-1 bg-black border border-zinc-800 rounded-xl p-3 text-[10px] text-white outline-none focus:border-orange-600 uppercase" />
-              <button type="submit" className="bg-orange-600 text-black px-5 rounded-xl font-black text-[10px]">OK</button>
+              <input type="text" value={mensaje} onChange={e => setMensaje(e.target.value)} placeholder="ESCRIBE TU INFORME..." className="flex-1 bg-black border border-zinc-800 rounded-xl p-3 text-[10px] text-white outline-none focus:border-orange-600 uppercase" />
+              <button type="submit" className="bg-orange-600 text-black px-5 rounded-xl font-black text-[10px] hover:bg-white transition-all">OK</button>
             </form>
           </div>
         )}
-        <button onClick={() => setIsOpen(!isOpen)} className="w-20 h-20 bg-orange-600 rounded-full border-4 border-black shadow-lg flex items-center justify-center hover:scale-110 transition-all">
-          <span className="text-black font-black text-2xl italic">IA</span>
+        <button onClick={() => setIsOpen(!isOpen)} className="w-20 h-20 bg-orange-600 rounded-full border-4 border-black shadow-[0_0_30px_rgba(234,88,12,0.3)] flex items-center justify-center hover:scale-110 active:scale-95 transition-all group">
+          <span className="text-black font-black text-2xl italic group-hover:rotate-6 transition-all">IA</span>
         </button>
       </div>
     </div>
