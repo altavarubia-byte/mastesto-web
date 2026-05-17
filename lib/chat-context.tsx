@@ -26,27 +26,36 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const mapDataToStateRef = useRef(mapDataToState)
   mapDataToStateRef.current = mapDataToState
 
-  // Estados para las barras de control
   const [temp, setTemp] = useState(0.7)
   const [words, setWords] = useState(40)
 
   const chat = useMemo(
     () =>
       new Chat<ChatUIMessage>({
-        // Enviamos la configuración dinámicamente en el cuerpo de la petición
-        body: { temp, words },
+        // ELIMINADO 'body' de aquí para evitar el error de tipos
         onToolCall: () => mutate('/api/auth/info'),
         onData: (data: DataUIPart<DataPart>) => mapDataToStateRef.current(data),
         onError: (error) => {
-          toast.error(`Error de comunicación con la IA: ${error.message}`)
-          console.error('Error enviando mensaje:', error)
+          toast.error(`Error de comunicación: ${error.message}`)
         },
       }),
-    [temp, words] // El chat se refresca cuando mueves las barras
+    [] 
   )
 
+  // Inyectamos los valores en la llamada antes de enviar
+  const chatWithConfig = useMemo(() => {
+    const originalAppend = chat.append;
+    chat.append = async (message, options) => {
+      return originalAppend(message, {
+        ...options,
+        body: { ...options?.body, temp, words }, // Se pasan aquí los valores
+      });
+    };
+    return chat;
+  }, [chat, temp, words]);
+
   return (
-    <ChatContext.Provider value={{ chat, config: { temp, setTemp, words, setWords } }}>
+    <ChatContext.Provider value={{ chat: chatWithConfig, config: { temp, setTemp, words, setWords } }}>
       {children}
     </ChatContext.Provider>
   )
@@ -54,8 +63,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
 export function useSharedChatContext() {
   const context = useContext(ChatContext)
-  if (!context) {
-    throw new Error('useSharedChatContext debe usarse dentro de ChatProvider')
-  }
+  if (!context) throw new Error('ChatProvider faltante');
   return context
 }
