@@ -32,30 +32,22 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const chat = useMemo(
     () =>
       new Chat<ChatUIMessage>({
-        // ELIMINADO 'body' de aquí para evitar el error de tipos
+        // Pasamos los valores en los headers para que lleguen a la API
+        headers: {
+          'x-temp': temp.toString(),
+          'x-words': words.toString(),
+        },
         onToolCall: () => mutate('/api/auth/info'),
         onData: (data: DataUIPart<DataPart>) => mapDataToStateRef.current(data),
         onError: (error) => {
-          toast.error(`Error de comunicación: ${error.message}`)
+          toast.error(`Error: ${error.message}`)
         },
       }),
-    [] 
+    [temp, words] // Se recrea el chat al cambiar los valores
   )
 
-  // Inyectamos los valores en la llamada antes de enviar
-  const chatWithConfig = useMemo(() => {
-    const originalAppend = chat.append;
-    chat.append = async (message, options) => {
-      return originalAppend(message, {
-        ...options,
-        body: { ...options?.body, temp, words }, // Se pasan aquí los valores
-      });
-    };
-    return chat;
-  }, [chat, temp, words]);
-
   return (
-    <ChatContext.Provider value={{ chat: chatWithConfig, config: { temp, setTemp, words, setWords } }}>
+    <ChatContext.Provider value={{ chat, config: { temp, setTemp, words, setWords } }}>
       {children}
     </ChatContext.Provider>
   )
@@ -63,6 +55,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
 export function useSharedChatContext() {
   const context = useContext(ChatContext)
-  if (!context) throw new Error('ChatProvider faltante');
+  if (!context) throw new Error('ChatProvider faltante')
   return context
 }
