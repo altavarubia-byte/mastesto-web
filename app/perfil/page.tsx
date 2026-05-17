@@ -3,7 +3,6 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
-import ListaTareas from '@/components/ListaTareas';
 
 // --- COMPONENTE DE TAREA CON TEMPORIZADOR PARA SOCIOS ---
 function CardTarea({ tarea, userNick, supabase }: any) {
@@ -14,7 +13,7 @@ function CardTarea({ tarea, userNick, supabase }: any) {
   useEffect(() => {
     let timer: any;
     if (activo && segundos > 0) {
-      timer = setInterval(() => setSegundos(s => s - 1), 1000);
+      timer = setInterval(() => setSegundos((s: number) => s - 1), 1000);
     } else if (segundos === 0 && activo) {
       finalizarMision();
     }
@@ -24,7 +23,6 @@ function CardTarea({ tarea, userNick, supabase }: any) {
   const finalizarMision = async () => {
     setActivo(false);
     setCompletada(true);
-    // Llama a la función RPC que creamos en el SQL Editor
     await supabase.rpc('array_append_completada', { 
       tarea_id: tarea.id, 
       nuevo_nick: userNick 
@@ -50,7 +48,7 @@ function CardTarea({ tarea, userNick, supabase }: any) {
           <button
             onClick={() => setActivo(!activo)}
             className={`w-full py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-              activo ? 'bg-zinc-800 text-white' : 'bg-white text-black'
+              activo ? 'bg-zinc-800 text-white' : 'bg-white text-black hover:scale-[1.02]'
             }`}
           >
             {activo ? 'DETENER MISIÓN' : 'INICIAR TAREA'}
@@ -67,13 +65,13 @@ function CardTarea({ tarea, userNick, supabase }: any) {
 
 // --- PÁGINA PRINCIPAL DE PERFIL ---
 export default function PerfilPage() {
-  // Configuración de Supabase
   const supabase = useMemo(() => createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   ), []);
 
   const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [tareas, setTareas] = useState<any[]>([]);
   const [fechaInicio, setFechaInicio] = useState<string | null>(null);
   const [tiempo, setTiempo] = useState({ dias: 0, horas: 0, minutos: 0, segundos: 0 });
@@ -82,20 +80,18 @@ export default function PerfilPage() {
   const [cargandoIA, setCargandoIA] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   
-  // Estados para Administrador
   const [tituloTarea, setTituloTarea] = useState('');
   const [minutosTarea, setMinutosTarea] = useState(30);
   const [socioId, setSocioId] = useState('');
 
-  // Estados Personalización IA
   const [temp, setTemp] = useState(0.7);
   const [words, setWords] = useState(40);
-  const [tareasReales, setTareasReales] = useState<string>("");
   const [confirmarReinicio, setConfirmarReinicio] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
+  // Control de Administrador
   const isAdmin = user?.email === 'altava.rubia@gmail.com';
 
   useEffect(() => {
@@ -109,12 +105,13 @@ export default function PerfilPage() {
       const metaFecha = user.user_metadata?.fecha_dejo_fumar || user.created_at;
       if (metaFecha) setFechaInicio(metaFecha);
 
-      // Cargar tareas desde Supabase
       const { data: tasks } = await supabase
         .from('tareas')
         .select('*')
         .order('created_at', { ascending: false });
       if (tasks) setTareas(tasks);
+      
+      setLoading(false);
     };
     getData();
   }, [supabase, router]);
@@ -137,31 +134,15 @@ export default function PerfilPage() {
     return () => clearInterval(intervalo);
   }, [fechaInicio]);
 
-  // FUNCIÓN PARA ENVIAR TAREA (SOLO ADMIN)
   const enviarTareaAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!tituloTarea || !socioId) {
-      alert("RELLENA TÍTULO Y UUID DEL SOCIO");
-      return;
-    }
-
+    if (!tituloTarea || !socioId) return;
     const { error } = await supabase.from('tareas').insert([
-      { 
-        titulo: tituloTarea, 
-        duracion_minutos: minutosTarea, 
-        user_id: socioId,
-        completada: false,
-        completada_por: []
-      }
+      { titulo: tituloTarea, duracion_minutos: minutosTarea, user_id: socioId, completada: false, completada_por: [] }
     ]);
-
     if (!error) {
-      alert("DESPLIEGUE OPERATIVO LANZADO");
-      setTituloTarea('');
-      setSocioId('');
+      alert("MISIÓN LANZADA");
       window.location.reload();
-    } else {
-      alert("ERROR: " + error.message);
     }
   };
 
@@ -171,15 +152,13 @@ export default function PerfilPage() {
     if (!error) {
       setFechaInicio(nuevaFecha);
       setConfirmarReinicio(false);
-      setChat(prev => [...prev, { role: 'assistant', content: 'CONTADOR REINICIADO. LA DISCIPLINA NO ENTIENDE DE EXCUSAS.' }]);
     }
   };
 
   const consultarMentor = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!mensaje.trim() || cargandoIA) return;
-    const nuevoMensaje = { role: 'user', content: mensaje };
-    const historialActualizado = [...chat, nuevoMensaje];
+    const historialActualizado = [...chat, { role: 'user', content: mensaje }];
     setChat(historialActualizado);
     setMensaje('');
     setCargandoIA(true);
@@ -189,82 +168,64 @@ export default function PerfilPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          messages: historialActualizado,
-          temp, words,
-          contexto: `SOCIO: ${user.user_metadata?.nombre || 'Vicente'}. PROGRESO: ${tiempo.dias}d. TAREAS: ${tareasReales}.`
+          messages: historialActualizado, temp, words,
+          contexto: `SOCIO: ${user?.user_metadata?.nombre || 'Socio'}.`
         }),
       });
       const data = await res.json();
       setChat([...historialActualizado, { role: 'assistant', content: data.content }]);
-    } catch (error) {
-      setChat([...historialActualizado, { role: 'assistant', content: 'SISTEMA: ERROR.' }]);
+    } catch (e) {
+      console.error(e);
     } finally {
       setCargandoIA(false);
-      setTimeout(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, 100);
     }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/');
-  };
+  // PANTALLA DE CARGA PARA EVITAR ERRORES DE LECTURA
+  if (loading) {
+    return (
+      <div className="bg-black min-h-screen text-white flex items-center justify-center font-black uppercase italic tracking-widest animate-pulse">
+        Sincronizando sistemas...
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black text-white p-4 md:p-12 font-sans relative overflow-hidden">
       
-      {/* EXPEDIENTE SOCIO (Lado Izquierdo) */}
+      {/* EXPEDIENTE IZQUIERDA */}
       <div className="fixed top-12 left-12 w-64 hidden xl:block border-l border-orange-600 pl-6 py-2 opacity-80">
         <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 mb-6 italic">Expediente_Socio</h2>
         <p className="text-[7px] text-orange-600 uppercase font-black mb-1">Nombre</p>
-        <p className="text-[11px] font-black uppercase mb-4">{user.user_metadata?.nombre || 'Socio'}</p>
-        <p className="text-[7px] text-orange-600 uppercase font-black mb-1">Estatus</p>
-        <p className="text-[11px] font-black uppercase text-green-500 mb-4 italic tracking-widest">En Batalla</p>
+        <p className="text-[11px] font-black uppercase mb-4">{user?.user_metadata?.nombre || 'Socio'}</p>
         {isAdmin && <span className="text-[9px] bg-orange-600 text-black px-2 py-0.5 font-black uppercase">ADMINISTRADOR</span>}
       </div>
 
-      {/* PANEL DE MISIONES (Lado Derecho) */}
-      <div className="fixed top-12 right-12 w-80 hidden xl:block opacity-90 z-20 overflow-y-auto max-h-[85vh] pr-2 custom-scrollbar">
-        <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-4">Misiones Activas</h2>
-        {tareas.length > 0 ? (
-          tareas.map(t => (
-            <CardTarea key={t.id} tarea={t} userNick={user.user_metadata?.nombre || user.email} supabase={supabase} />
-          ))
-        ) : (
-          <p className="text-[9px] text-zinc-700 uppercase font-bold">Sin órdenes pendientes.</p>
-        )}
+      {/* MISIONES DERECHA */}
+      <div className="fixed top-12 right-12 w-80 hidden xl:block opacity-90 z-20 overflow-y-auto max-h-[85vh] pr-2">
+        <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-4 text-center">Misiones Activas</h2>
+        {tareas.map((t: any) => (
+          <CardTarea key={t.id} tarea={t} userNick={user?.user_metadata?.nombre || user?.email} supabase={supabase} />
+        ))}
       </div>
 
       <div className="flex flex-col items-center justify-center min-h-screen">
         <div className="w-full max-w-2xl bg-zinc-950 border border-zinc-900 rounded-[3rem] p-12 md:p-20 text-center shadow-2xl relative z-10">
           
-          {/* VISTA ADMINISTRADOR: FORMULARIO SECRETO */}
+          {/* FORMULARIO ADMIN */}
           {isAdmin && (
             <div className="mb-12 p-8 border border-orange-600/20 rounded-[2rem] bg-black text-left">
-              <h3 className="text-[10px] font-black text-orange-600 uppercase mb-6 tracking-widest text-center">Desplegar Tarea Administrativa</h3>
-              <form onSubmit={enviarTareaAdmin} className="flex flex-col gap-3">
-                <input 
-                  value={tituloTarea} onChange={e => setTituloTarea(e.target.value)} 
-                  placeholder="TÍTULO DE LA MISIÓN" 
-                  className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl text-[10px] uppercase font-bold outline-none focus:border-orange-600 transition-all" 
-                />
-                <input 
-                  type="number" value={minutosTarea} onChange={e => setMinutosTarea(Number(e.target.value))} 
-                  placeholder="DURACIÓN (MINUTOS)" 
-                  className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl text-[10px] font-bold outline-none focus:border-orange-600 transition-all" 
-                />
-                <input 
-                  value={socioId} onChange={e => setSocioId(e.target.value)} 
-                  placeholder="UUID DEL SOCIO (DE SUPABASE)" 
-                  className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl text-[10px] font-bold outline-none focus:border-orange-600 transition-all" 
-                />
-                <button type="submit" className="bg-orange-600 text-black font-black text-[10px] py-3 rounded-xl uppercase mt-2 hover:bg-white transition-all shadow-[0_0_20px_rgba(234,88,12,0.3)]">
-                  Lanzar Misión
-                </button>
+              <h3 className="text-[10px] font-black text-orange-600 uppercase mb-4 text-center">Desplegar Tarea</h3>
+              <form onSubmit={enviarTareaAdmin} className="flex flex-col gap-2">
+                <input value={tituloTarea} onChange={e => setTituloTarea(e.target.value)} placeholder="TÍTULO" className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl text-[10px] uppercase font-bold outline-none" />
+                <input type="number" value={minutosTarea} onChange={e => setMinutosTarea(Number(e.target.value))} placeholder="MINUTOS" className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl text-[10px] font-bold outline-none" />
+                <input value={socioId} onChange={e => setSocioId(e.target.value)} placeholder="ID SOCIO (UUID)" className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl text-[10px] font-bold outline-none" />
+                <button type="submit" className="bg-orange-600 text-black font-black text-[10px] py-3 rounded-xl uppercase mt-2">Lanzar Misión</button>
               </form>
             </div>
           )}
 
-          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-orange-600 mb-12 opacity-60 italic">Tiempo de Disciplina</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-orange-600 mb-12 opacity-60 italic text-center">Tiempo de Disciplina</p>
           
           <div className="grid grid-cols-4 gap-4 md:gap-8 mb-12">
             <div><p className="text-5xl md:text-7xl font-black tracking-tighter">{tiempo.dias}</p><p className="text-[8px] uppercase font-bold text-zinc-600 mt-2">Días</p></div>
@@ -275,80 +236,53 @@ export default function PerfilPage() {
 
           <div className="mb-10">
             {!confirmarReinicio ? (
-              <button onClick={() => setConfirmarReinicio(true)} className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 hover:text-red-600 italic transition-colors">
-                [ Declarar Fallo / Reiniciar ]
-              </button>
+              <button onClick={() => setConfirmarReinicio(true)} className="text-[10px] font-black uppercase text-zinc-600 hover:text-red-600 italic">[ Declarar Fallo ]</button>
             ) : (
               <div className="flex flex-col items-center gap-3 animate-in zoom-in duration-300">
-                <p className="text-red-600 font-black text-[10px] italic uppercase tracking-tighter">¿CONFIRMAS EL FRACASO, SOCIO?</p>
+                <p className="text-red-600 font-black text-[10px] uppercase">¿CONFIRMAS EL FRACASO?</p>
                 <div className="flex gap-4">
                   <button onClick={reiniciarCronometro} className="bg-red-600 text-black px-6 py-2 rounded-full font-black text-[9px] uppercase">SÍ, HE FALLADO</button>
-                  <button onClick={() => setConfirmarReinicio(false)} className="border border-zinc-700 text-zinc-400 px-6 py-2 rounded-full font-black text-[9px] uppercase hover:border-white transition-all">NO, RESISTIRÉ</button>
+                  <button onClick={() => setConfirmarReinicio(false)} className="border border-zinc-700 text-zinc-400 px-6 py-2 rounded-full font-black text-[9px] uppercase">NO</button>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Misiones en Dispositivos Móviles */}
-          <div className="xl:hidden mb-10 text-left space-y-4">
-             <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-4">Misiones Activas</h2>
-             {tareas.map(t => (
-               <CardTarea key={t.id} tarea={t} userNick={user.user_metadata?.nombre || user.email} supabase={supabase} />
+          <div className="xl:hidden mb-10 space-y-4">
+             <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Misiones Activas</h2>
+             {tareas.map((t: any) => (
+               <CardTarea key={t.id} tarea={t} userNick={user?.user_metadata?.nombre || user?.email} supabase={supabase} />
              ))}
           </div>
 
-          <button onClick={handleLogout} className="text-[9px] font-black uppercase tracking-[0.4em] text-zinc-800 hover:text-orange-600 transition-colors italic">[ Finalizar Sesión ]</button>
+          <button onClick={() => supabase.auth.signOut().then(() => router.push('/'))} className="text-[9px] font-black uppercase text-zinc-800 hover:text-orange-600 italic">[ Finalizar Sesión ]</button>
         </div>
       </div>
 
-      {/* EL FORJADOR (IA CHAT) */}
+      {/* IA CHAT */}
       <div className="fixed bottom-10 right-10 z-50 flex flex-col items-end">
         {isOpen && (
           <div className="mb-6 w-80 md:w-96 bg-zinc-950 border-2 border-orange-600 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col animate-in slide-in-from-bottom-4">
-            <div className="p-4 bg-orange-600 text-black font-black uppercase italic text-[10px] flex justify-between items-center tracking-widest">
+            <div className="p-4 bg-orange-600 text-black font-black uppercase text-[10px] flex justify-between items-center">
               <span>SISTEMA: EL FORJADOR</span>
-              <button onClick={() => setIsOpen(false)} className="hover:rotate-90 transition-all">✕</button>
+              <button onClick={() => setIsOpen(false)}>✕</button>
             </div>
-            
-            {/* Controles IA */}
-            <div className="p-4 bg-zinc-900 border-b border-zinc-800 space-y-3">
-              <div className="flex justify-between text-[7px] font-black uppercase text-zinc-500">
-                <span>Fuego (Temp): {temp}</span>
-                <span>Palabras: {words}</span>
-              </div>
-              <div className="flex gap-4">
-                <input type="range" min="0.1" max="1.5" step="0.1" value={temp} onChange={e => setTemp(parseFloat(e.target.value))} className="w-full h-1 bg-black accent-orange-600 appearance-none rounded-lg" />
-                <input type="range" min="10" max="100" step="5" value={words} onChange={e => setWords(parseInt(e.target.value))} className="w-full h-1 bg-black accent-orange-600 appearance-none rounded-lg" />
-              </div>
-            </div>
-
-            <div ref={scrollRef} className="h-64 overflow-y-auto p-6 font-mono text-[10px] uppercase bg-black text-orange-500 space-y-4 border-b border-zinc-900 scroll-smooth">
-              {chat.length === 0 && <p className="opacity-40 italic text-center text-[8px] py-10 tracking-widest">OBSERVANDO TU DISCIPLINA...</p>}
-              {chat.map((msg, i) => (
+            <div ref={scrollRef} className="h-64 overflow-y-auto p-6 font-mono text-[10px] uppercase bg-black text-orange-500 space-y-4 border-b border-zinc-900">
+              {chat.map((msg: any, i: number) => (
                 <div key={i} className={msg.role === 'assistant' ? 'border-l-2 border-orange-600 pl-4 py-1' : 'text-zinc-500 text-right italic'}>
-                  <span className="block text-[6px] opacity-30 mb-1">{msg.role === 'assistant' ? 'EL FORJADOR' : 'SOCIO'}</span>
                   {msg.content}
                 </div>
               ))}
-              {cargandoIA && <div className="animate-pulse font-black text-orange-600 tracking-widest text-[8px]">MOLDEANDO RESPUESTA...</div>}
+              {cargandoIA && <div className="animate-pulse">MOLDEANDO...</div>}
             </div>
-
             <form onSubmit={consultarMentor} className="p-4 bg-zinc-950 flex gap-2">
-              <input 
-                type="text" value={mensaje} onChange={e => setMensaje(e.target.value)} 
-                placeholder="INFORME DE BATALLA..." 
-                className="flex-1 bg-black border border-zinc-800 rounded-xl p-3 text-[10px] text-white outline-none focus:border-orange-600 uppercase" 
-              />
-              <button type="submit" className="bg-orange-600 text-black px-5 rounded-xl font-black text-[10px] hover:bg-white transition-all">OK</button>
+              <input type="text" value={mensaje} onChange={e => setMensaje(e.target.value)} placeholder="INFORME..." className="flex-1 bg-black border border-zinc-800 rounded-xl p-3 text-[10px] text-white outline-none focus:border-orange-600 uppercase" />
+              <button type="submit" className="bg-orange-600 text-black px-5 rounded-xl font-black text-[10px]">OK</button>
             </form>
           </div>
         )}
-
-        <button 
-          onClick={() => setIsOpen(!isOpen)} 
-          className="w-20 h-20 bg-orange-600 rounded-full border-4 border-black shadow-[0_0_40px_rgba(234,88,12,0.4)] flex items-center justify-center hover:scale-110 active:scale-95 transition-all group"
-        >
-          <span className="text-black font-black text-2xl italic group-hover:rotate-12 transition-all">IA</span>
+        <button onClick={() => setIsOpen(!isOpen)} className="w-20 h-20 bg-orange-600 rounded-full border-4 border-black shadow-lg flex items-center justify-center hover:scale-110 transition-all">
+          <span className="text-black font-black text-2xl italic italic">IA</span>
         </button>
       </div>
     </div>
