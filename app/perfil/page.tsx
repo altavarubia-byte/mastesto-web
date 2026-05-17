@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useMemo } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 
-// --- COMPONENTE DE TAREA CON TEMPORIZADOR PARA SOCIOS ---
+// --- COMPONENTE DE TAREA (PRIVADO) ---
 function CardTarea({ tarea, userNick, supabase }: any) {
   const [segundos, setSegundos] = useState(tarea.duracion_minutos * 60);
   const [activo, setActivo] = useState(false);
@@ -23,14 +23,12 @@ function CardTarea({ tarea, userNick, supabase }: any) {
   const finalizarMision = async () => {
     setActivo(false);
     setCompletada(true);
-    // Ejecuta la función del SQL Editor
     const { error } = await supabase.rpc('array_append_completada', { 
       tarea_id: tarea.id, 
       nuevo_nick: userNick 
     });
     
     if (!error) {
-       // Refrescamos para que el Nick Verde se consolide
        window.location.reload();
     }
   };
@@ -89,12 +87,10 @@ export default function PerfilPage() {
   const [tituloTarea, setTituloTarea] = useState('');
   const [minutosTarea, setMinutosTarea] = useState(30);
   const [socioId, setSocioId] = useState('');
-  const [statusMsg, setStatusMsg] = useState<{ text: string, type: 'success' | 'error' | null }>({ text: '', type: null });
+  const [statusMsg, setStatusMsg] = useState('');
 
-  // Estados Personalización IA (RESTAURADOS)
   const [temp, setTemp] = useState(0.7);
   const [words, setWords] = useState(40);
-  
   const [confirmarReinicio, setConfirmarReinicio] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -113,12 +109,14 @@ export default function PerfilPage() {
       const metaFecha = user.user_metadata?.fecha_dejo_fumar || user.created_at;
       if (metaFecha) setFechaInicio(metaFecha);
 
+      // FILTRO CRUCIAL: Solo traemos las tareas del usuario actual
       const { data: tasks } = await supabase
         .from('tareas')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
-      if (tasks) setTareas(tasks);
       
+      if (tasks) setTareas(tasks);
       setLoading(false);
     };
     getData();
@@ -144,30 +142,22 @@ export default function PerfilPage() {
 
   const enviarTareaAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!tituloTarea || !socioId) {
-      setStatusMsg({ text: 'ERROR: FALTAN DATOS CRÍTICOS', type: 'error' });
-      return;
-    }
+    if (!tituloTarea || !socioId) return;
 
     const { error } = await supabase.from('tareas').insert([
-      { 
-        titulo: tituloTarea, 
-        duracion_minutos: minutosTarea, 
-        user_id: socioId, 
-        completada: false, 
-        completada_por: [] 
-      }
+      { titulo: tituloTarea, duracion_minutos: minutosTarea, user_id: socioId }
     ]);
 
     if (!error) {
-      setStatusMsg({ text: 'MISIÓN LANZADA CON ÉXITO', type: 'success' });
+      setStatusMsg('LA TAREA SE HA ENVIADO CORRECTAMENTE');
       setTituloTarea('');
       setSocioId('');
-      const { data: tasks } = await supabase.from('tareas').select('*').order('created_at', { ascending: false });
-      if (tasks) setTareas(tasks);
-      setTimeout(() => setStatusMsg({ text: '', type: null }), 5000);
-    } else {
-      setStatusMsg({ text: `FALLO EN SISTEMA: ${error.message}`, type: 'error' });
+      // Si el admin se envía una tarea a sí mismo, refrescamos la lista
+      if (socioId === user.id) {
+        const { data: tasks } = await supabase.from('tareas').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
+        if (tasks) setTareas(tasks);
+      }
+      setTimeout(() => setStatusMsg(''), 5000);
     }
   };
 
@@ -199,21 +189,13 @@ export default function PerfilPage() {
       });
       const data = await res.json();
       setChat([...historialActualizado, { role: 'assistant', content: data.content }]);
-    } catch (e) {
-      console.error(e);
-    } finally {
+    } catch (e) { console.error(e); } finally {
       setCargandoIA(false);
       setTimeout(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, 100);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="bg-black min-h-screen text-white flex items-center justify-center font-black uppercase italic tracking-widest animate-pulse">
-        Sincronizando sistemas...
-      </div>
-    );
-  }
+  if (loading) return <div className="bg-black min-h-screen text-white flex items-center justify-center font-black uppercase italic animate-pulse">Sincronizando sistemas...</div>;
 
   return (
     <div className="min-h-screen bg-black text-white p-4 md:p-12 font-sans relative overflow-hidden">
@@ -226,12 +208,16 @@ export default function PerfilPage() {
         {isAdmin && <span className="text-[9px] bg-orange-600 text-black px-2 py-0.5 font-black uppercase">MODO ADMINISTRADOR</span>}
       </div>
 
-      {/* MISIONES DERECHA (PC) */}
+      {/* MISIONES PRIVADAS (DERECHA) */}
       <div className="fixed top-12 right-12 w-80 hidden xl:block opacity-90 z-20 overflow-y-auto max-h-[85vh] pr-2 custom-scrollbar">
-        <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-4 text-center">Misiones Activas</h2>
-        {tareas.map((t: any) => (
-          <CardTarea key={t.id} tarea={t} userNick={user?.user_metadata?.nombre || user?.email || 'Socio'} supabase={supabase} />
-        ))}
+        <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-4 text-center">Tus Misiones</h2>
+        {tareas.length > 0 ? (
+          tareas.map((t: any) => (
+            <CardTarea key={t.id} tarea={t} userNick={user?.user_metadata?.nombre || 'Socio'} supabase={supabase} />
+          ))
+        ) : (
+          <p className="text-[8px] text-zinc-800 text-center uppercase font-black italic">Sin objetivos asignados</p>
+        )}
       </div>
 
       <div className="flex flex-col items-center justify-center min-h-screen">
@@ -239,17 +225,15 @@ export default function PerfilPage() {
           
           {isAdmin && (
             <div className="mb-12 p-8 border border-orange-600/20 rounded-[2rem] bg-black text-left">
-              <h3 className="text-[10px] font-black text-orange-600 uppercase mb-4 text-center tracking-widest">Desplegar Nueva Tarea</h3>
+              <h3 className="text-[10px] font-black text-orange-600 uppercase mb-4 text-center tracking-widest">Desplegar Tarea</h3>
               <form onSubmit={enviarTareaAdmin} className="flex flex-col gap-2">
-                <input value={tituloTarea} onChange={e => setTituloTarea(e.target.value)} placeholder="TÍTULO DE LA MISIÓN" className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl text-[10px] uppercase font-bold outline-none focus:border-orange-600 transition-all" />
-                <input type="number" value={minutosTarea} onChange={e => setMinutosTarea(Number(e.target.value))} placeholder="DURACIÓN (MIN)" className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl text-[10px] font-bold outline-none focus:border-orange-600 transition-all" />
-                <input value={socioId} onChange={e => setSocioId(e.target.value)} placeholder="UUID DEL SOCIO" className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl text-[10px] font-bold outline-none focus:border-orange-600 transition-all" />
-                <button type="submit" className="bg-orange-600 text-black font-black text-[10px] py-3 rounded-xl uppercase mt-2 hover:bg-white transition-all">Lanzar Misión</button>
-                {statusMsg.text && (
-                  <div className={`mt-4 text-[9px] font-black uppercase text-center p-2 rounded-lg border animate-in fade-in zoom-in duration-300 ${
-                    statusMsg.type === 'success' ? 'text-green-500 border-green-500/20 bg-green-500/5' : 'text-red-600 border-red-600/20 bg-red-600/5'
-                  }`}>
-                    {statusMsg.text}
+                <input value={tituloTarea} onChange={e => setTituloTarea(e.target.value)} placeholder="TÍTULO" className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl text-[10px] uppercase font-bold outline-none focus:border-orange-600 transition-all text-white" />
+                <input type="number" value={minutosTarea} onChange={e => setMinutosTarea(Number(e.target.value))} className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl text-[10px] font-bold outline-none text-white" />
+                <input value={socioId} onChange={e => setSocioId(e.target.value)} placeholder="UUID DEL SOCIO" className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl text-[10px] font-bold outline-none text-white" />
+                <button type="submit" className="bg-orange-600 text-black font-black text-[10px] py-3 rounded-xl uppercase mt-2 hover:bg-white transition-all">Lanzar</button>
+                {statusMsg && (
+                  <div className="mt-4 text-[9px] font-black uppercase text-center text-green-500 animate-pulse">
+                    {statusMsg}
                   </div>
                 )}
               </form>
@@ -280,9 +264,8 @@ export default function PerfilPage() {
           </div>
 
           <div className="xl:hidden mb-10 space-y-4">
-             <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 text-center">Misiones Activas</h2>
              {tareas.map((t: any) => (
-               <CardTarea key={t.id} tarea={t} userNick={user?.user_metadata?.nombre || user?.email || 'Socio'} supabase={supabase} />
+               <CardTarea key={t.id} tarea={t} userNick={user?.user_metadata?.nombre || 'Socio'} supabase={supabase} />
              ))}
           </div>
 
@@ -290,63 +273,47 @@ export default function PerfilPage() {
         </div>
       </div>
 
-      {/* EL FORJADOR (IA CHAT WITH RESTORED BARS) */}
+      {/* IA CON BARRAS RESTAURADAS */}
       <div className="fixed bottom-10 right-10 z-50 flex flex-col items-end">
         {isOpen && (
           <div className="mb-6 w-80 md:w-96 bg-zinc-950 border-2 border-orange-600 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col animate-in slide-in-from-bottom-4">
             <div className="p-4 bg-orange-600 text-black font-black uppercase text-[10px] flex justify-between items-center tracking-[0.1em]">
               <span>EL FORJADOR</span>
-              <button onClick={() => setIsOpen(false)} className="hover:rotate-90 transition-all px-2">✕</button>
+              <button onClick={() => setIsOpen(false)} className="px-2">✕</button>
             </div>
 
-            {/* --- CONTROLES DE IA RESTAURADOS --- */}
             <div className="p-4 bg-zinc-900 border-b border-zinc-800 space-y-3">
               <div>
                 <div className="flex justify-between text-[7px] font-black uppercase mb-1 text-zinc-500">
-                  <span>Fuego de la Forja (Temp)</span>
-                  <span className="text-orange-600">{temp}</span>
+                  <span>Fuego (Temp): {temp}</span>
                 </div>
-                <input 
-                  type="range" min="0.1" max="1.5" step="0.1" 
-                  value={temp} 
-                  onChange={(e) => setTemp(parseFloat(e.target.value))}
-                  className="w-full h-1 bg-black rounded-lg appearance-none cursor-pointer accent-orange-600"
-                />
+                <input type="range" min="0.1" max="1.5" step="0.1" value={temp} onChange={(e) => setTemp(parseFloat(e.target.value))} className="w-full h-1 bg-black rounded-lg appearance-none accent-orange-600" />
               </div>
               <div>
                 <div className="flex justify-between text-[7px] font-black uppercase mb-1 text-zinc-500">
-                  <span>Rango de Palabras</span>
-                  <span className="text-orange-600">{words}</span>
+                  <span>Palabras: {words}</span>
                 </div>
-                <input 
-                  type="range" min="10" max="100" step="5" 
-                  value={words} 
-                  onChange={(e) => setWords(parseInt(e.target.value))}
-                  className="w-full h-1 bg-black rounded-lg appearance-none cursor-pointer accent-orange-600"
-                />
+                <input type="range" min="10" max="100" step="5" value={words} onChange={(e) => setWords(parseInt(e.target.value))} className="w-full h-1 bg-black rounded-lg appearance-none accent-orange-600" />
               </div>
             </div>
 
-            {/* --- ÁREA DE CHAT --- */}
-            <div ref={scrollRef} className="h-64 overflow-y-auto p-6 font-mono text-[10px] uppercase bg-black text-orange-500 space-y-4 border-b border-zinc-900 scroll-smooth custom-scrollbar">
-              {chat.length === 0 && <p className="text-center opacity-30 italic py-10">Esperando informe de batalla...</p>}
+            <div ref={scrollRef} className="h-64 overflow-y-auto p-6 font-mono text-[10px] uppercase bg-black text-orange-500 space-y-4 scroll-smooth">
               {chat.map((msg: any, i: number) => (
                 <div key={i} className={msg.role === 'assistant' ? 'border-l-2 border-orange-600 pl-4 py-1' : 'text-zinc-500 text-right italic'}>
-                  <span className="block text-[6px] opacity-30 mb-1">{msg.role === 'assistant' ? 'FORJADOR' : 'SOCIO'}</span>
                   {msg.content}
                 </div>
               ))}
-              {cargandoIA && <div className="animate-pulse font-black text-[8px]">MOLDEANDO RESPUESTA...</div>}
+              {cargandoIA && <div className="animate-pulse text-[8px]">...</div>}
             </div>
 
             <form onSubmit={consultarMentor} className="p-4 bg-zinc-950 flex gap-2">
-              <input type="text" value={mensaje} onChange={e => setMensaje(e.target.value)} placeholder="ESCRIBE TU INFORME..." className="flex-1 bg-black border border-zinc-800 rounded-xl p-3 text-[10px] text-white outline-none focus:border-orange-600 uppercase" />
-              <button type="submit" className="bg-orange-600 text-black px-5 rounded-xl font-black text-[10px] hover:bg-white transition-all">OK</button>
+              <input type="text" value={mensaje} onChange={e => setMensaje(e.target.value)} placeholder="INFORME..." className="flex-1 bg-black border border-zinc-800 rounded-xl p-3 text-[10px] text-white outline-none focus:border-orange-600 uppercase" />
+              <button type="submit" className="bg-orange-600 text-black px-5 rounded-xl font-black text-[10px]">OK</button>
             </form>
           </div>
         )}
-        <button onClick={() => setIsOpen(!isOpen)} className="w-20 h-20 bg-orange-600 rounded-full border-4 border-black shadow-[0_0_30px_rgba(234,88,12,0.3)] flex items-center justify-center hover:scale-110 active:scale-95 transition-all group">
-          <span className="text-black font-black text-2xl italic group-hover:rotate-6 transition-all">IA</span>
+        <button onClick={() => setIsOpen(!isOpen)} className="w-20 h-20 bg-orange-600 rounded-full border-4 border-black shadow-[0_0_30px_rgba(234,88,12,0.3)] flex items-center justify-center hover:scale-110 active:scale-95 transition-all">
+          <span className="text-black font-black text-2xl italic">IA</span>
         </button>
       </div>
     </div>
