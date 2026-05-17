@@ -18,13 +18,13 @@ export const viewport: Viewport = {
   userScalable: false,
 }
 
-// Metadatos con instrucción de concisión (Máximo 40 palabras)
+// Metadatos con instrucción de concisión
 export const metadata: Metadata = {
   title: {
     default: '+TESTO | Forja de Voluntad',
     template: '%s | +TESTO'
   },
-  description: 'Plataforma de alta intensidad para la reconstrucción de hábitos y disciplina. (Responde siempre en máximo 40 palabras, sé directo y conciso).',
+  description: 'Plataforma de alta intensidad para la reconstrucción de hábitos y disciplina.',
   manifest: '/manifest.json',
   icons: {
     icon: '/favicon.ico',
@@ -69,6 +69,8 @@ export default function RootLayout({
                       <div className="flex gap-8 text-[10px] font-black uppercase tracking-widest text-zinc-500">
                         <a href="/privacidad" className="hover:text-orange-600 transition-colors">Privacidad</a>
                         <a href="/terminos" className="hover:text-orange-600 transition-colors">Términos</a>
+                        
+                        {/* REDIRECCIÓN A TU NUEVA PÁGINA DE CONTACTO */}
                         <a href="/contacto" className="hover:text-orange-600 transition-colors">Contacto</a>
                       </div>
 
