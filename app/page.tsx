@@ -5,12 +5,12 @@ import Link from 'next/link';
 import { createBrowserClient } from '@supabase/ssr'; 
 
 // --- COMPONENTE: OFERTA FLASH TÁCTICA (70% OFF) ---
-// Ahora recibe funciones para abrir el registro directamente
 function OfertaFlash({ alistarse }: { alistarse: () => void }) {
   const [timeLeft, setTimeLeft] = useState({ days: 3, hours: 0, minutes: 0, seconds: 0 });
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
+    // Temporizador táctico de 3 días
     const targetDate = new Date();
     targetDate.setDate(targetDate.getDate() + 3);
 
@@ -57,7 +57,7 @@ function OfertaFlash({ alistarse }: { alistarse: () => void }) {
               onClick={alistarse}
               className="bg-orange-600 hover:bg-orange-500 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95 shadow-lg shadow-orange-900/40"
             >
-              Alistarse Ahora
+              Obtener Acceso
             </button>
           </div>
         </div>
@@ -240,10 +240,16 @@ export default function Page() {
     window.location.href = '/perfil'; 
   }; 
 
-  // Función para abrir el registro desde la oferta
-  const abrirRegistro = () => {
-    setEsLogin(false);
-    setMostrarLogin(true);
+  // Lógica inteligente para el botón de la oferta
+  const manejarAccesoOferta = () => {
+    if (autorizado) {
+      // Si ya está logueado, lo mandamos al panel donde configurarás el pago
+      window.location.href = '/perfil';
+    } else {
+      // Si no, abrimos el modal en modo registro
+      setEsLogin(false);
+      setMostrarLogin(true);
+    }
   };
 
   return ( 
@@ -277,8 +283,8 @@ export default function Page() {
           <img src="/logoweb.jpeg" alt="Logo" className="relative w-[500px] md:w-[700px] mx-auto rounded-3xl border border-zinc-900 shadow-2xl transition-all duration-700 hover:border-zinc-700" /> 
         </div> 
 
-        {/* OFERTA FLASH TÁCTICA - Ahora vinculada a abrir el registro */}
-        {!autorizado && <OfertaFlash alistarse={abrirRegistro} />}
+        {/* LA OFERTA SIEMPRE VISIBLE */}
+        <OfertaFlash alistarse={manejarAccesoOferta} />
 
         <p className="text-[10px] font-medium text-zinc-500 uppercase tracking-[0.4em] max-w-md italic mb-10 leading-loose"> 
           Forjando la <span className="text-white">disciplina absoluta</span>. <br/>Ingeniería de rendimiento humano. 
