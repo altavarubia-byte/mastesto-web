@@ -66,15 +66,17 @@ export default function PerfilPage() {
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [confirmarReinicio, setConfirmarReinicio] = useState(false);
   
+  // Estados de la IA
   const [isOpen, setIsOpen] = useState(false);
   const [mensaje, setMensaje] = useState('');
   const [chat, setChat] = useState<{ role: string, content: string }[]>([]);
   const [cargandoIA, setCargandoIA] = useState(false);
+  const [temperatura, setTemperatura] = useState(0.7);
+  const [brevedad, setBrevedad] = useState(40);
 
   const [tituloTarea, setTituloTarea] = useState('');
   const [minutosTarea, setMinutosTarea] = useState(30);
   const [socioId, setSocioId] = useState('');
-  const [statusMsg, setStatusMsg] = useState('');
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -130,7 +132,10 @@ export default function PerfilPage() {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: historial, contexto: `SOCIO: ${user?.user_metadata?.nombre}. RACHA: ${tiempo.dias} DÍAS.` }),
+        body: JSON.stringify({ 
+          messages: historial, 
+          contexto: `SOCIO: ${user?.user_metadata?.nombre}. RACHA: ${tiempo.dias} DÍAS. TEMP: ${temperatura}. LIMIT: ${brevedad} PALABRAS.` 
+        }),
       });
       const data = await res.json();
       setChat([...historial, { role: 'assistant', content: data.content }]);
@@ -140,26 +145,15 @@ export default function PerfilPage() {
     }
   };
 
-  const enviarTareaAdmin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!tituloTarea || !socioId) return;
-    const { error } = await supabase.from('tareas').insert([{ titulo: tituloTarea, duracion_minutos: minutosTarea, user_id: socioId }]);
-    if (!error) {
-      setStatusMsg('DESPLEGADA');
-      setTituloTarea(''); setSocioId('');
-      setTimeout(() => setStatusMsg(''), 3000);
-    }
-  };
-
   if (loading) return <div className="bg-black min-h-screen text-orange-600 flex items-center justify-center font-black uppercase tracking-[1em] animate-pulse">Sincronizando...</div>;
 
   return (
     <div className="min-h-screen bg-black text-white p-4 md:p-8 font-sans selection:bg-orange-600">
       
-      {/* NAVBAR CON MENÚ EXPANDIDO */}
+      {/* NAVBAR */}
       <nav className="fixed top-0 left-0 w-full h-16 border-b border-zinc-900 bg-black/90 backdrop-blur-xl z-[100] flex items-center justify-between px-8">
         <div className="flex items-center gap-6">
-          <span className="text-xl font-black italic text-orange-600 tracking-tighter hover:scale-105 transition-transform cursor-pointer">+TESTO</span>
+          <span className="text-xl font-black italic text-orange-600 tracking-tighter cursor-pointer">+TESTO</span>
         </div>
 
         <div className="relative">
@@ -168,7 +162,7 @@ export default function PerfilPage() {
           </button>
 
           {menuAbierto && (
-            <div className="absolute top-14 right-0 w-72 bg-zinc-950 border border-zinc-800 rounded-3xl p-6 shadow-2xl animate-in fade-in slide-in-from-top-2 z-[110]">
+            <div className="absolute top-14 right-0 w-72 bg-zinc-950 border border-zinc-800 rounded-3xl p-6 shadow-2xl z-[110]">
                <div className="mb-6">
                  <p className="text-[8px] font-black text-zinc-600 uppercase tracking-widest mb-1">Identidad Conectada</p>
                  <p className="text-[10px] font-bold text-orange-600 truncate">{user?.email}</p>
@@ -189,9 +183,9 @@ export default function PerfilPage() {
         </div>
       </nav>
 
-      <main className="mt-20 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <main className="mt-20 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 pb-20">
         
-        {/* COLUMNA IZQUIERDA: BIOMETRÍA (Simplificada) */}
+        {/* COLUMNA IZQUIERDA: BIOMETRÍA */}
         <div className="lg:col-span-3 space-y-6">
           <div className="bg-zinc-950 border border-zinc-900 p-6 rounded-[2rem]">
             <p className="text-[8px] text-zinc-500 uppercase font-black mb-4 tracking-[0.2em]">Estado del Socio</p>
@@ -215,18 +209,9 @@ export default function PerfilPage() {
               </div>
             </div>
           </div>
-          
-          <div className="bg-zinc-950 border border-zinc-900 p-6 rounded-[2rem] font-mono">
-            <p className="text-[8px] text-zinc-500 uppercase font-black mb-4 tracking-widest">Núcleo Terminal</p>
-            <div className="space-y-1">
-              <p className="text-[7px] text-zinc-600">› SISTEMA: ONLINE</p>
-              <p className="text-[7px] text-zinc-600">› CIFRADO: AES-256</p>
-              <p className="text-[7px] text-orange-600 animate-pulse italic">› MONITORIZANDO CONSTANTES...</p>
-            </div>
-          </div>
         </div>
 
-        {/* COLUMNA CENTRAL: CRONÓMETRO Y ADMIN */}
+        {/* COLUMNA CENTRAL: CRONÓMETRO */}
         <div className="lg:col-span-6 space-y-6">
           <div className="bg-zinc-950 border border-zinc-900 rounded-[3.5rem] p-12 text-center shadow-2xl relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-orange-600 to-transparent" />
@@ -253,24 +238,10 @@ export default function PerfilPage() {
               )}
             </div>
           </div>
-
-          {isAdmin && (
-            <div className="bg-zinc-900/40 border border-orange-600/20 p-8 rounded-[3rem]">
-               <h4 className="text-[10px] font-black text-orange-600 uppercase mb-6 text-center tracking-[0.4em] italic">Centro de Mando de Misiones</h4>
-               <form onSubmit={enviarTareaAdmin} className="space-y-4">
-                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                   <input value={tituloTarea} onChange={e => setTituloTarea(e.target.value)} placeholder="TÍTULO" className="md:col-span-2 bg-black border border-zinc-800 p-4 rounded-2xl text-[10px] text-white focus:border-orange-600 outline-none transition-all" />
-                   <input type="number" value={minutosTarea} onChange={e => setMinutosTarea(parseInt(e.target.value))} placeholder="MIN" className="bg-black border border-zinc-800 p-4 rounded-2xl text-[10px] text-white focus:border-orange-600 outline-none transition-all" />
-                 </div>
-                 <input value={socioId} onChange={e => setSocioId(e.target.value)} placeholder="ID DEL SOCIO (UUID)" className="w-full bg-black border border-zinc-800 p-4 rounded-2xl text-[10px] text-white focus:border-orange-600 outline-none transition-all" />
-                 <button className="w-full bg-orange-600 text-black py-4 rounded-2xl font-black text-[10px] uppercase hover:bg-orange-500 transition-all tracking-[0.2em]">Lanzar Objetivo</button>
-               </form>
-            </div>
-          )}
         </div>
 
-        {/* COLUMNA DERECHA: OBJETIVOS ACTIVOS E IA */}
-        <div className="lg:col-span-3 space-y-6">
+        {/* COLUMNA DERECHA: MISIONES */}
+        <div className="lg:col-span-3">
           <div className="bg-zinc-950 border border-zinc-900 p-6 rounded-[2.5rem] min-h-[350px]">
             <p className="text-[8px] text-zinc-500 uppercase font-black mb-6 tracking-widest text-center italic">Misiones_Asignadas</p>
             {tareas.length > 0 ? (
@@ -281,35 +252,54 @@ export default function PerfilPage() {
               </div>
             )}
           </div>
-          
-          <div className="bg-orange-600 p-6 rounded-[2.5rem] text-black relative overflow-hidden group">
-             <div className="absolute -right-4 -bottom-4 text-7xl opacity-10 font-black italic select-none">IA</div>
-             <p className="text-[8px] font-black uppercase mb-1 tracking-tighter">Diagnóstico del Forjador</p>
-             <p className="text-[10px] font-bold leading-tight italic">"Tu consistencia es del 100%. Sigue operando según el protocolo."</p>
-          </div>
         </div>
       </main>
 
-      {/* BOTÓN IA MODAL (Mismo comportamiento) */}
+      {/* MODAL IA CON BARRAS RESTAURADAS */}
       <div className="fixed bottom-8 left-8 z-[120]">
         <button onClick={() => setIsOpen(!isOpen)} className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all shadow-2xl ${isOpen ? 'bg-orange-600 rotate-90 text-white' : 'bg-white text-black hover:bg-orange-600 hover:text-white'}`}>
           <span className="font-black text-xs">IA</span>
         </button>
         {isOpen && (
           <div className="absolute bottom-20 left-0 w-80 bg-zinc-950 border-2 border-orange-600 rounded-[2.5rem] overflow-hidden shadow-2xl animate-in slide-in-from-bottom-4">
-            <div className="p-4 bg-orange-600 text-black font-black text-[10px] flex justify-between italic">
+            <div className="p-4 bg-orange-600 text-black font-black text-[10px] flex justify-between italic items-center">
               <span>EL FORJADOR v1.0</span>
-              <button onClick={()=>setIsOpen(false)}>✕</button>
+              <button onClick={()=>setIsOpen(false)} className="hover:scale-110 transition-transform">✕</button>
             </div>
+            
+            {/* CONTROLES (BARRAS) */}
+            <div className="p-5 border-b border-zinc-900 space-y-4">
+              <div>
+                <div className="flex justify-between text-[7px] font-black text-zinc-500 uppercase mb-2 tracking-widest">
+                  <span>Temperatura (Fuego)</span>
+                  <span className="text-orange-600">{temperatura}</span>
+                </div>
+                <input type="range" min="0" max="1" step="0.1" value={temperatura} onChange={(e)=>setTemperatura(parseFloat(e.target.value))} className="w-full h-1 bg-zinc-900 rounded-lg appearance-none cursor-pointer accent-orange-600" />
+              </div>
+              <div>
+                <div className="flex justify-between text-[7px] font-black text-zinc-500 uppercase mb-2 tracking-widest">
+                  <span>Brevedad (Palabras)</span>
+                  <span className="text-orange-600">{brevedad}</span>
+                </div>
+                <input type="range" min="10" max="100" step="5" value={brevedad} onChange={(e)=>setBrevedad(parseInt(e.target.value))} className="w-full h-1 bg-zinc-900 rounded-lg appearance-none cursor-pointer accent-orange-600" />
+              </div>
+            </div>
+
+            {/* CHAT */}
             <div ref={scrollRef} className="h-48 overflow-y-auto p-5 font-mono text-[10px] uppercase text-orange-500 space-y-4 bg-black">
+              {chat.length === 0 && <p className="text-zinc-800 italic">Esperando reporte de estado...</p>}
               {chat.map((msg, i) => (
-                <div key={i} className={msg.role === 'assistant' ? 'border-l-2 border-orange-600 pl-3 py-1' : 'text-zinc-600 text-right italic'}>{msg.content}</div>
+                <div key={i} className={msg.role === 'assistant' ? 'border-l-2 border-orange-600 pl-3 py-1 bg-orange-600/5' : 'text-zinc-600 text-right italic'}>
+                  {msg.content}
+                </div>
               ))}
-              {cargandoIA && <p className="animate-pulse">PROCESANDO...</p>}
+              {cargandoIA && <p className="animate-pulse">SINTETIZANDO...</p>}
             </div>
+
+            {/* INPUT */}
             <form onSubmit={consultarMentor} className="p-4 bg-zinc-950 flex gap-2 border-t border-zinc-900">
               <input type="text" value={mensaje} onChange={e => setMensaje(e.target.value)} className="flex-1 bg-black border border-zinc-900 p-3 text-[10px] text-white rounded-xl outline-none focus:border-orange-600" placeholder="Reporte de estado..." />
-              <button className="bg-orange-600 text-black px-4 rounded-xl font-black text-[10px]">ENVIAR</button>
+              <button className="bg-orange-600 text-black px-4 rounded-xl font-black text-[10px] hover:bg-white transition-colors">ENVIAR</button>
             </form>
           </div>
         )}
