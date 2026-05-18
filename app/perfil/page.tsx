@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useMemo } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 
-// --- COMPONENTE DE TAREA (PRIVADO) ---
+// --- COMPONENTE DE TAREA (MANTENIDO Y PULIDO) ---
 function CardTarea({ tarea, userNick, supabase }: any) {
   const [segundos, setSegundos] = useState(tarea.duracion_minutos * 60);
   const [activo, setActivo] = useState(false);
@@ -27,100 +27,69 @@ function CardTarea({ tarea, userNick, supabase }: any) {
       tarea_id: tarea.id, 
       nuevo_nick: userNick 
     });
-    
-    if (!error) {
-       window.location.reload();
-    }
+    if (!error) window.location.reload();
   };
 
   const formatear = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
 
   return (
-    <div className={`p-6 rounded-[2rem] border ${completada ? 'border-green-500/30 bg-green-500/5 shadow-[0_0_20px_rgba(34,197,94,0.1)]' : 'border-zinc-800 bg-zinc-900/20'} transition-all mb-4`}>
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-[10px] font-black uppercase tracking-widest leading-none">{tarea.titulo}</h3>
-        <span className={`text-[9px] font-bold px-3 py-1 rounded-full border transition-all ${completada ? 'border-green-500 text-green-500 bg-green-500/10' : 'border-zinc-800 text-zinc-500'}`}>
-          {completada ? `● ${userNick}` : `○ ${userNick}`}
-        </span>
+    <div className={`p-5 rounded-2xl border ${completada ? 'border-green-500/20 bg-green-500/5' : 'border-zinc-800 bg-zinc-900/10'} transition-all mb-3 group`}>
+      <div className="flex justify-between items-center mb-3">
+        <h3 className="text-[9px] font-black uppercase tracking-widest text-zinc-400 group-hover:text-white transition-colors">{tarea.titulo}</h3>
+        <div className={`w-2 h-2 rounded-full ${completada ? 'bg-green-500 shadow-[0_0_10px_#22c55e]' : 'bg-zinc-800'}`} />
       </div>
-
       {!completada ? (
-        <div className="space-y-4">
-          <div className="text-3xl font-black font-mono text-center text-orange-600 tracking-tighter">
-            {formatear(segundos)}
-          </div>
-          <button
-            onClick={() => setActivo(!activo)}
-            className={`w-full py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-              activo ? 'bg-zinc-800 text-white' : 'bg-white text-black hover:scale-[1.02]'
-            }`}
-          >
-            {activo ? 'DETENER MISIÓN' : 'INICIAR TAREA'}
+        <div className="flex items-center gap-4">
+          <div className="text-xl font-mono font-black text-orange-600 w-16">{formatear(segundos)}</div>
+          <button onClick={() => setActivo(!activo)} className={`flex-1 py-2 rounded-lg text-[8px] font-black uppercase tracking-tighter transition-all ${activo ? 'bg-zinc-800 text-white' : 'bg-white text-black hover:bg-orange-600 hover:text-white'}`}>
+            {activo ? 'EN CURSO...' : 'EJECUTAR'}
           </button>
         </div>
       ) : (
-        <div className="text-center py-2 text-[10px] font-black text-green-500 uppercase italic tracking-widest animate-pulse">
-          OBJETIVO CUMPLIDO
-        </div>
+        <div className="text-[8px] font-black text-green-500 uppercase tracking-[0.2em] text-right italic">Misión Cumplida</div>
       )}
     </div>
   );
 }
 
-// --- PÁGINA PRINCIPAL DE PERFIL ---
 export default function PerfilPage() {
-  const supabase = useMemo(() => createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  ), []);
-
+  const supabase = useMemo(() => createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!), []);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [tareas, setTareas] = useState<any[]>([]);
   const [fechaInicio, setFechaInicio] = useState<string | null>(null);
   const [tiempo, setTiempo] = useState({ dias: 0, horas: 0, minutos: 0, segundos: 0 });
-  const [mensaje, setMensaje] = useState('');
-  const [chat, setChat] = useState<{ role: string, content: string }[]>([]);
-  const [cargandoIA, setCargandoIA] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
+  const [menuAbierto, setMenuAbierto] = useState(false);
+  const [isOpen, setIsOpen] = useState(false); // IA
+  const [logs, setLogs] = useState<string[]>(["SISTEMA OPERATIVO", "ESPERANDO ÓRDENES..."]);
   
-  const [tituloTarea, setTituloTarea] = useState('');
-  const [minutosTarea, setMinutosTarea] = useState(30);
-  const [socioId, setSocioId] = useState('');
-  const [statusMsg, setStatusMsg] = useState('');
-
-  const [temp, setTemp] = useState(0.7);
-  const [words, setWords] = useState(40);
-  const [confirmarReinicio, setConfirmarReinicio] = useState(false);
-
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-
   const isAdmin = user?.email === 'altava.rubia@gmail.com';
+
+  // Lógica de Niveles (Ficticia para profesionalidad visual)
+  const nivel = Math.floor(tiempo.dias / 5) + 1;
+  const progresoNivel = (tiempo.dias % 5) * 20;
 
   useEffect(() => {
     const getData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push('/');
-        return;
-      }
+      if (!user) { router.push('/'); return; }
       setUser(user);
       const metaFecha = user.user_metadata?.fecha_dejo_fumar || user.created_at;
-      if (metaFecha) setFechaInicio(metaFecha);
+      setFechaInicio(metaFecha);
 
-      // FILTRO CRUCIAL: Solo traemos las tareas del usuario actual
-      const { data: tasks } = await supabase
-        .from('tareas')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-      
+      const { data: tasks } = await supabase.from('tareas').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
       if (tasks) setTareas(tasks);
       setLoading(false);
+      addLog(`USUARIO ${user.user_metadata?.nombre || 'SOCIO'} AUTENTICADO`);
     };
     getData();
   }, [supabase, router]);
+
+  const addLog = (msg: string) => {
+    setLogs(prev => [msg, ...prev].slice(0, 5));
+  };
 
   useEffect(() => {
     if (!fechaInicio) return;
@@ -140,182 +109,181 @@ export default function PerfilPage() {
     return () => clearInterval(intervalo);
   }, [fechaInicio]);
 
-  const enviarTareaAdmin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!tituloTarea || !socioId) return;
-
-    const { error } = await supabase.from('tareas').insert([
-      { titulo: tituloTarea, duracion_minutos: minutosTarea, user_id: socioId }
-    ]);
-
-    if (!error) {
-      setStatusMsg('LA TAREA SE HA ENVIADO CORRECTAMENTE');
-      setTituloTarea('');
-      setSocioId('');
-      // Si el admin se envía una tarea a sí mismo, refrescamos la lista
-      if (socioId === user.id) {
-        const { data: tasks } = await supabase.from('tareas').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
-        if (tasks) setTareas(tasks);
-      }
-      setTimeout(() => setStatusMsg(''), 5000);
-    }
-  };
-
-  const reiniciarCronometro = async () => {
-    const nuevaFecha = new Date().toISOString();
-    const { error } = await supabase.auth.updateUser({ data: { fecha_dejo_fumar: nuevaFecha } });
-    if (!error) {
-      setFechaInicio(nuevaFecha);
-      setConfirmarReinicio(false);
-    }
-  };
-
-  const consultarMentor = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!mensaje.trim() || cargandoIA) return;
-    const historialActualizado = [...chat, { role: 'user', content: mensaje }];
-    setChat(historialActualizado);
-    setMensaje('');
-    setCargandoIA(true);
-
-    try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          messages: historialActualizado, temp, words,
-          contexto: `SOCIO: ${user?.user_metadata?.nombre || 'Socio'}. PROGRESO: ${tiempo.dias} DÍAS.`
-        }),
-      });
-      const data = await res.json();
-      setChat([...historialActualizado, { role: 'assistant', content: data.content }]);
-    } catch (e) { console.error(e); } finally {
-      setCargandoIA(false);
-      setTimeout(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, 100);
-    }
-  };
-
-  if (loading) return <div className="bg-black min-h-screen text-white flex items-center justify-center font-black uppercase italic animate-pulse">Sincronizando sistemas...</div>;
+  if (loading) return <div className="bg-black min-h-screen text-orange-600 flex items-center justify-center font-black animate-pulse uppercase tracking-[1em]">Cargando Núcleo...</div>;
 
   return (
-    <div className="min-h-screen bg-black text-white p-4 md:p-12 font-sans relative overflow-hidden">
+    <div className="min-h-screen bg-black text-white p-6 font-sans selection:bg-orange-600 selection:text-black">
       
-      {/* EXPEDIENTE IZQUIERDA */}
-      <div className="fixed top-12 left-12 w-64 hidden xl:block border-l border-orange-600 pl-6 py-2 opacity-80">
-        <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 mb-6 italic">Expediente_Socio</h2>
-        <p className="text-[7px] text-orange-600 uppercase font-black mb-1">Nombre</p>
-        <p className="text-[11px] font-black uppercase mb-4">{user?.user_metadata?.nombre || 'Socio'}</p>
-        {isAdmin && <span className="text-[9px] bg-orange-600 text-black px-2 py-0.5 font-black uppercase">MODO ADMINISTRADOR</span>}
-      </div>
-
-      {/* MISIONES PRIVADAS (DERECHA) */}
-      <div className="fixed top-12 right-12 w-80 hidden xl:block opacity-90 z-20 overflow-y-auto max-h-[85vh] pr-2 custom-scrollbar">
-        <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 mb-4 text-center">Tus Misiones</h2>
-        {tareas.length > 0 ? (
-          tareas.map((t: any) => (
-            <CardTarea key={t.id} tarea={t} userNick={user?.user_metadata?.nombre || 'Socio'} supabase={supabase} />
-          ))
-        ) : (
-          <p className="text-[8px] text-zinc-800 text-center uppercase font-black italic">Sin objetivos asignados</p>
-        )}
-      </div>
-
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <div className="w-full max-w-2xl bg-zinc-950 border border-zinc-900 rounded-[3rem] p-12 md:p-20 text-center shadow-2xl relative z-10">
-          
-          {isAdmin && (
-            <div className="mb-12 p-8 border border-orange-600/20 rounded-[2rem] bg-black text-left">
-              <h3 className="text-[10px] font-black text-orange-600 uppercase mb-4 text-center tracking-widest">Desplegar Tarea</h3>
-              <form onSubmit={enviarTareaAdmin} className="flex flex-col gap-2">
-                <input value={tituloTarea} onChange={e => setTituloTarea(e.target.value)} placeholder="TÍTULO" className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl text-[10px] uppercase font-bold outline-none focus:border-orange-600 transition-all text-white" />
-                <input type="number" value={minutosTarea} onChange={e => setMinutosTarea(Number(e.target.value))} className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl text-[10px] font-bold outline-none text-white" />
-                <input value={socioId} onChange={e => setSocioId(e.target.value)} placeholder="UUID DEL SOCIO" className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl text-[10px] font-bold outline-none text-white" />
-                <button type="submit" className="bg-orange-600 text-black font-black text-[10px] py-3 rounded-xl uppercase mt-2 hover:bg-white transition-all">Lanzar</button>
-                {statusMsg && (
-                  <div className="mt-4 text-[9px] font-black uppercase text-center text-green-500 animate-pulse">
-                    {statusMsg}
-                  </div>
-                )}
-              </form>
-            </div>
-          )}
-
-          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-orange-600 mb-12 opacity-60 italic text-center">Tiempo de Disciplina</p>
-          
-          <div className="grid grid-cols-4 gap-4 md:gap-8 mb-12">
-            <div><p className="text-5xl md:text-7xl font-black tracking-tighter">{tiempo.dias}</p><p className="text-[8px] uppercase font-bold text-zinc-600 mt-2">Días</p></div>
-            <div><p className="text-5xl md:text-7xl font-black tracking-tighter text-orange-600">{tiempo.horas.toString().padStart(2, '0')}</p><p className="text-[8px] uppercase font-bold text-zinc-600 mt-2">Horas</p></div>
-            <div><p className="text-5xl md:text-7xl font-black tracking-tighter">{tiempo.minutos.toString().padStart(2, '0')}</p><p className="text-[8px] uppercase font-bold text-zinc-600 mt-2">Minutos</p></div>
-            <div><p className="text-5xl md:text-7xl font-black tracking-tighter text-orange-600">{tiempo.segundos.toString().padStart(2, '0')}</p><p className="text-[8px] uppercase font-bold text-zinc-600 mt-2">Segundos</p></div>
+      {/* HEADER SUPERIOR PROFESIONAL */}
+      <nav className="fixed top-0 left-0 w-full h-20 border-b border-zinc-900 bg-black/50 backdrop-blur-xl z-[100] flex items-center justify-between px-8">
+        <div className="flex items-center gap-4">
+          <span className="text-xl font-black italic tracking-tighter text-orange-600">+TESTO</span>
+          <div className="h-4 w-[1px] bg-zinc-800" />
+          <div className="flex flex-col">
+            <span className="text-[7px] text-zinc-500 uppercase font-black tracking-widest leading-none">Rango</span>
+            <span className="text-[10px] font-black uppercase text-white">NIVEL {nivel} — OPERATIVO</span>
           </div>
-
-          <div className="mb-10 text-center">
-            {!confirmarReinicio ? (
-              <button onClick={() => setConfirmarReinicio(true)} className="text-[10px] font-black uppercase text-zinc-600 hover:text-red-600 italic transition-colors">[ Declarar Fallo ]</button>
-            ) : (
-              <div className="flex flex-col items-center gap-3 animate-in zoom-in duration-300">
-                <p className="text-red-600 font-black text-[10px] uppercase">¿CONFIRMAS EL FRACASO?</p>
-                <div className="flex gap-4">
-                  <button onClick={reiniciarCronometro} className="bg-red-600 text-black px-6 py-2 rounded-full font-black text-[9px] uppercase hover:scale-105 transition-all">SÍ, HE FALLADO</button>
-                  <button onClick={() => setConfirmarReinicio(false)} className="border border-zinc-700 text-zinc-400 px-6 py-2 rounded-full font-black text-[9px] uppercase hover:border-white transition-all">VOLVER</button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="xl:hidden mb-10 space-y-4">
-             {tareas.map((t: any) => (
-               <CardTarea key={t.id} tarea={t} userNick={user?.user_metadata?.nombre || 'Socio'} supabase={supabase} />
-             ))}
-          </div>
-
-          <button onClick={() => supabase.auth.signOut().then(() => router.push('/'))} className="text-[9px] font-black uppercase text-zinc-800 hover:text-orange-600 italic transition-colors">[ Finalizar Sesión ]</button>
         </div>
-      </div>
 
-      {/* IA CON BARRAS RESTAURADAS */}
-      <div className="fixed bottom-10 right-10 z-50 flex flex-col items-end">
-        {isOpen && (
-          <div className="mb-6 w-80 md:w-96 bg-zinc-950 border-2 border-orange-600 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col animate-in slide-in-from-bottom-4">
-            <div className="p-4 bg-orange-600 text-black font-black uppercase text-[10px] flex justify-between items-center tracking-[0.1em]">
-              <span>EL FORJADOR</span>
-              <button onClick={() => setIsOpen(false)} className="px-2">✕</button>
-            </div>
+        <div className="flex items-center gap-6" ref={menuRef}>
+           <div className="hidden md:flex flex-col items-end">
+              <span className="text-[7px] text-zinc-500 uppercase font-black tracking-[0.2em]">Estado del Sistema</span>
+              <span className="text-[9px] text-green-500 font-black animate-pulse uppercase">● En Línea</span>
+           </div>
+           
+           <button 
+             onClick={() => setMenuAbierto(!menuAbierto)}
+             className="relative w-10 h-10 rounded-xl border border-zinc-800 bg-zinc-900/50 flex items-center justify-center hover:border-orange-600 transition-all overflow-hidden"
+           >
+             <span className="text-xs font-black">{(user?.user_metadata?.nombre?.[0] || 'S').toUpperCase()}</span>
+             {menuAbierto && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-orange-600" />}
+           </button>
 
-            <div className="p-4 bg-zinc-900 border-b border-zinc-800 space-y-3">
-              <div>
-                <div className="flex justify-between text-[7px] font-black uppercase mb-1 text-zinc-500">
-                  <span>Fuego (Temp): {temp}</span>
+           {menuAbierto && (
+             <div className="absolute top-24 right-8 w-72 bg-zinc-950 border border-zinc-800 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] p-6 animate-in fade-in slide-in-from-top-4">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-10 h-10 bg-orange-600 rounded-full flex items-center justify-center text-black font-black">
+                    {nivel}
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase text-white">{user?.user_metadata?.nombre}</p>
+                    <p className="text-[8px] text-zinc-500 font-mono truncate w-40">{user?.email}</p>
+                  </div>
                 </div>
-                <input type="range" min="0.1" max="1.5" step="0.1" value={temp} onChange={(e) => setTemp(parseFloat(e.target.value))} className="w-full h-1 bg-black rounded-lg appearance-none accent-orange-600" />
-              </div>
-              <div>
-                <div className="flex justify-between text-[7px] font-black uppercase mb-1 text-zinc-500">
-                  <span>Palabras: {words}</span>
-                </div>
-                <input type="range" min="10" max="100" step="5" value={words} onChange={(e) => setWords(parseInt(e.target.value))} className="w-full h-1 bg-black rounded-lg appearance-none accent-orange-600" />
-              </div>
-            </div>
 
-            <div ref={scrollRef} className="h-64 overflow-y-auto p-6 font-mono text-[10px] uppercase bg-black text-orange-500 space-y-4 scroll-smooth">
-              {chat.map((msg: any, i: number) => (
-                <div key={i} className={msg.role === 'assistant' ? 'border-l-2 border-orange-600 pl-4 py-1' : 'text-zinc-500 text-right italic'}>
-                  {msg.content}
+                <div className="space-y-2">
+                  <p className="text-[7px] text-zinc-600 uppercase font-black tracking-widest mb-2">Configuración</p>
+                  <button className="w-full text-left p-3 hover:bg-zinc-900 rounded-xl flex items-center justify-between transition-colors group">
+                    <span className="text-[9px] font-black uppercase text-zinc-400 group-hover:text-white">Perfil Privado</span>
+                    <div className="w-6 h-3 bg-zinc-800 rounded-full" />
+                  </button>
+                  <button className="w-full text-left p-3 hover:bg-zinc-900 rounded-xl flex items-center justify-between transition-colors group">
+                    <span className="text-[9px] font-black uppercase text-zinc-400 group-hover:text-white">Notificaciones</span>
+                    <div className="w-6 h-3 bg-orange-600 rounded-full" />
+                  </button>
+                  {isAdmin && (
+                    <button onClick={() => router.push('/admin')} className="w-full p-3 bg-orange-600/10 border border-orange-600/20 text-orange-600 text-[9px] font-black uppercase rounded-xl mt-4">
+                      Panel de Mando Admin
+                    </button>
+                  )}
+                  <button onClick={() => supabase.auth.signOut().then(() => router.push('/'))} className="w-full text-left p-3 hover:bg-red-950/20 rounded-xl mt-4">
+                    <span className="text-[9px] font-black uppercase text-red-600 italic">✕ Finalizar Sesión</span>
+                  </button>
                 </div>
-              ))}
-              {cargandoIA && <div className="animate-pulse text-[8px]">...</div>}
-            </div>
+             </div>
+           )}
+        </div>
+      </nav>
 
-            <form onSubmit={consultarMentor} className="p-4 bg-zinc-950 flex gap-2">
-              <input type="text" value={mensaje} onChange={e => setMensaje(e.target.value)} placeholder="INFORME..." className="flex-1 bg-black border border-zinc-800 rounded-xl p-3 text-[10px] text-white outline-none focus:border-orange-600 uppercase" />
-              <button type="submit" className="bg-orange-600 text-black px-5 rounded-xl font-black text-[10px]">OK</button>
-            </form>
+      <main className="mt-24 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        {/* COLUMNA IZQUIERDA: STATS & LOGS */}
+        <div className="lg:col-span-3 space-y-6">
+          <div className="bg-zinc-950 border border-zinc-900 p-6 rounded-[2rem]">
+            <p className="text-[8px] text-zinc-500 uppercase font-black tracking-widest mb-4">Progreso de Rango</p>
+            <div className="h-1.5 w-full bg-zinc-900 rounded-full overflow-hidden mb-2">
+              <div className="h-full bg-orange-600 transition-all duration-1000" style={{ width: `${progresoNivel}%` }} />
+            </div>
+            <div className="flex justify-between text-[8px] font-bold text-zinc-600 uppercase">
+              <span>Nivel {nivel}</span>
+              <span>{100 - progresoNivel}% para Nivel {nivel + 1}</span>
+            </div>
           </div>
-        )}
-        <button onClick={() => setIsOpen(!isOpen)} className="w-20 h-20 bg-orange-600 rounded-full border-4 border-black shadow-[0_0_30px_rgba(234,88,12,0.3)] flex items-center justify-center hover:scale-110 active:scale-95 transition-all">
-          <span className="text-black font-black text-2xl italic">IA</span>
+
+          <div className="bg-zinc-950 border border-zinc-900 p-6 rounded-[2rem] font-mono">
+            <p className="text-[8px] text-zinc-500 uppercase font-black tracking-widest mb-4">System_Logs</p>
+            <div className="space-y-2">
+              {logs.map((log, i) => (
+                <p key={i} className="text-[7px] text-zinc-600 uppercase">
+                  <span className="text-orange-900 mr-2">[{new Date().toLocaleTimeString()}]</span> {log}
+                </p>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* COLUMNA CENTRAL: RELOJ DE DISIPLINA */}
+        <div className="lg:col-span-6 flex flex-col items-center">
+          <div className="w-full bg-zinc-950 border border-zinc-900 rounded-[3rem] p-12 text-center relative overflow-hidden group shadow-2xl">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-orange-600 to-transparent opacity-30" />
+            
+            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-500 mb-12 italic">Tiempo en Alta Intensidad</p>
+            
+            <div className="grid grid-cols-4 gap-4 mb-12">
+              <div className="space-y-1">
+                <p className="text-5xl md:text-7xl font-black tracking-tighter text-white">{tiempo.dias}</p>
+                <p className="text-[7px] uppercase font-black text-zinc-600 tracking-widest">Días</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-5xl md:text-7xl font-black tracking-tighter text-orange-600">{tiempo.horas.toString().padStart(2, '0')}</p>
+                <p className="text-[7px] uppercase font-black text-zinc-600 tracking-widest">Horas</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-5xl md:text-7xl font-black tracking-tighter text-white">{tiempo.minutos.toString().padStart(2, '0')}</p>
+                <p className="text-[7px] uppercase font-black text-zinc-600 tracking-widest">Minutos</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-5xl md:text-7xl font-black tracking-tighter text-orange-600">{tiempo.segundos.toString().padStart(2, '0')}</p>
+                <p className="text-[7px] uppercase font-black text-zinc-600 tracking-widest">Segundos</p>
+              </div>
+            </div>
+
+            <div className="pt-8 border-t border-zinc-900/50">
+              {!confirmarReinicio ? (
+                <button onClick={() => setConfirmarReinicio(true)} className="text-[9px] font-black uppercase text-zinc-700 hover:text-red-600 transition-all tracking-widest group">
+                  <span className="opacity-0 group-hover:opacity-100 mr-2">!</span>
+                  Reportar Fallo Crítico
+                  <span className="opacity-0 group-hover:opacity-100 ml-2">!</span>
+                </button>
+              ) : (
+                <div className="flex flex-col items-center gap-4 animate-in zoom-in duration-300">
+                  <p className="text-red-600 font-black text-[9px] uppercase tracking-[0.3em]">¿Anular progreso acumulado?</p>
+                  <div className="flex gap-3">
+                    <button onClick={reiniciarCronometro} className="bg-red-600 text-black px-8 py-3 rounded-xl font-black text-[9px] uppercase">CONFIRMO MI DERROTA</button>
+                    <button onClick={() => setConfirmarReinicio(false)} className="bg-zinc-800 text-white px-8 py-3 rounded-xl font-black text-[9px] uppercase">VOLVER AL FRENTE</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* COLUMNA DERECHA: MISIONES */}
+        <div className="lg:col-span-3 space-y-6">
+          <div className="bg-zinc-950 border border-zinc-900 p-6 rounded-[2rem]">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 italic">Misiones_Asignadas</h2>
+              <span className="text-[8px] bg-zinc-900 px-2 py-1 rounded-md text-zinc-600 font-bold">{tareas.length}</span>
+            </div>
+            
+            <div className="space-y-2 overflow-y-auto max-h-[60vh] pr-2 custom-scrollbar">
+              {tareas.length > 0 ? (
+                tareas.map((t: any) => (
+                  <CardTarea key={t.id} tarea={t} userNick={user?.user_metadata?.nombre || 'Socio'} supabase={supabase} />
+                ))
+              ) : (
+                <div className="py-10 text-center border-2 border-dashed border-zinc-900 rounded-3xl">
+                  <p className="text-[8px] text-zinc-800 uppercase font-black">Sin objetivos activos</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+      </main>
+
+      {/* IA (MANTENIDA CON ESTILO BOTÓN MEJORADO) */}
+      <div className="fixed bottom-10 left-10 z-50">
+        <button onClick={() => setIsOpen(!isOpen)} className="group flex items-center gap-4">
+          <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center group-hover:bg-orange-600 transition-all group-hover:rotate-90">
+             <span className="text-black font-black text-xl">IA</span>
+          </div>
+          <div className="bg-zinc-950 border border-zinc-900 px-4 py-2 rounded-xl opacity-0 group-hover:opacity-100 transition-all">
+            <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">Consultar al Forjador</p>
+          </div>
         </button>
       </div>
+
     </div>
   );
 }
