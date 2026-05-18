@@ -4,7 +4,80 @@ import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link'; 
 import { createBrowserClient } from '@supabase/ssr'; 
 
-// --- COMPONENTE: CONTADOR TÁCTICO (Mejorado con nueva identidad) --- 
+// --- COMPONENTE: OFERTA FLASH TÁCTICA (70% OFF) ---
+function OfertaFlash() {
+  const [timeLeft, setTimeLeft] = useState({ days: 3, hours: 0, minutes: 0, seconds: 0 });
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    // Establecemos la fecha límite (3 días desde hoy)
+    const targetDate = new Date();
+    targetDate.setDate(targetDate.getDate() + 3);
+
+    const timer = setInterval(() => {
+      const now = new Date().getTime();
+      const distance = targetDate.getTime() - now;
+
+      if (distance < 0) {
+        clearInterval(timer);
+        setVisible(false);
+      } else {
+        setTimeLeft({
+          days: Math.floor(distance / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+          minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
+          seconds: Math.floor((distance % (1000 * 60)) / 1000),
+        });
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  if (!visible) return null;
+
+  return (
+    <div className="w-full max-w-4xl mx-auto mb-12 p-[1px] bg-gradient-to-r from-orange-600 via-orange-400 to-orange-600 rounded-[2.5rem] shadow-[0_0_40px_-10px_rgba(234,88,12,0.3)] animate-in fade-in slide-in-from-bottom-4 duration-1000">
+      <div className="bg-black rounded-[2.45rem] p-8 flex flex-col md:flex-row items-center justify-between gap-8 overflow-hidden relative">
+        <div className="absolute top-0 right-0 p-2 opacity-[0.03] font-black text-8xl italic -z-10 tracking-tighter text-white">70% OFF</div>
+        
+        <div className="text-left space-y-2 relative z-10">
+          <div className="flex items-center gap-2">
+            <span className="h-1.5 w-1.5 rounded-full bg-orange-600 animate-pulse"></span>
+            <h3 className="text-orange-500 text-[9px] font-black uppercase tracking-[0.4em] italic">Venta de Despliegue Inicial</h3>
+          </div>
+          <p className="text-3xl font-black italic tracking-tighter uppercase leading-none">Protocolo de Acceso Total</p>
+          <div className="flex items-center gap-4 mt-4">
+            <div className="flex flex-col">
+              <span className="text-zinc-600 line-through text-[10px] font-bold decoration-orange-600/40">29,99€</span>
+              <span className="text-4xl font-black text-white italic tracking-tighter leading-none">8,99€</span>
+            </div>
+            <div className="h-10 w-[1px] bg-zinc-900 mx-2"></div>
+            <button className="bg-orange-600 hover:bg-orange-500 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95 shadow-lg shadow-orange-900/40">
+              Alistarse Ahora
+            </button>
+          </div>
+        </div>
+
+        <div className="flex gap-3 relative z-10">
+          {[
+            { label: 'DÍAS', val: timeLeft.days },
+            { label: 'HRS', val: timeLeft.hours },
+            { label: 'MIN', val: timeLeft.minutes },
+            { label: 'SEG', val: timeLeft.seconds }
+          ].map((item, i) => (
+            <div key={i} className="flex flex-col items-center bg-zinc-950/50 border border-zinc-900 w-16 py-4 rounded-[1.5rem] backdrop-blur-sm">
+              <span className="text-2xl font-black italic text-white tracking-tighter">{String(item.val).padStart(2, '0')}</span>
+              <span className="text-[6px] font-black text-zinc-500 tracking-[0.2em] mt-1">{item.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- COMPONENTE: CONTADOR TÁCTICO --- 
 function ContadorSocios({ total }: { total: number }) { 
   return ( 
     <div className="flex flex-col items-center space-y-2 mb-10 animate-in fade-in zoom-in duration-1000 text-center"> 
@@ -33,7 +106,7 @@ function ContadorSocios({ total }: { total: number }) {
 // --- COMPONENTE: GUÍA DE INSTALACIÓN --- 
 function GuiaInstalacion() { 
   return ( 
-    <div className="w-full max-w-4xl mx-auto mt-20 mb-10 p-10 bg-zinc-950 border border-zinc-900 rounded-[3rem] relative overflow-hidden group"> 
+    <div className="w-full max-w-4xl mx-auto mt-20 mb-10 p-10 bg-zinc-950 border border-zinc-900 rounded-[3rem] relative overflow-hidden group shadow-2xl"> 
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-orange-600/20 to-transparent" /> 
       <h2 className="text-[9px] font-black uppercase tracking-[0.5em] mb-12 text-orange-600 italic text-center"> 
         ⚡ DESPLIEGUE TÁCTICO: INSTALACIÓN MOBILE 
@@ -77,7 +150,6 @@ export default function Page() {
   const [esLogin, setEsLogin] = useState(true); 
   const [totalSocios, setTotalSocios] = useState(0); 
 
-  // --- TUS ESTADOS ORIGINALES --- 
   const [email, setEmail] = useState(''); 
   const [password, setPassword] = useState(''); 
   const [nombre, setNombre] = useState(''); 
@@ -167,13 +239,11 @@ export default function Page() {
 
   return ( 
     <div className="min-h-screen bg-black text-white flex flex-col items-center p-6 font-sans"> 
-       
-      {/* NAVBAR REDISEÑADO CON ENLACE CORRECTO */} 
+      
       <nav className="w-full max-w-7xl flex justify-between items-center py-6 z-50"> 
         <div className="flex gap-6 italic"> 
           <a href="https://discord.gg/q2rtc8PX" target="_blank" className="text-[9px] font-black uppercase tracking-widest text-zinc-500 hover:text-orange-600 transition-all">Discord</a> 
           <a href="https://www.tiktok.com/@mastesto" target="_blank" className="text-[9px] font-black uppercase tracking-widest text-zinc-500 hover:text-orange-600 transition-all">TikTok</a> 
-          {/* ENLACE MEJORADO A TU PÁGINA DE NOSOTROS */}
           <Link href="/nosotros" className="text-[9px] font-black uppercase tracking-widest text-zinc-500 hover:text-white transition-all underline decoration-zinc-800 underline-offset-4">
             Conócenos más
           </Link>
@@ -198,6 +268,9 @@ export default function Page() {
           <img src="/logoweb.jpeg" alt="Logo" className="relative w-[500px] md:w-[700px] mx-auto rounded-3xl border border-zinc-900 shadow-2xl transition-all duration-700 hover:border-zinc-700" /> 
         </div> 
 
+        {/* OFERTA FLASH TÁCTICA */}
+        <OfertaFlash />
+
         <p className="text-[10px] font-medium text-zinc-500 uppercase tracking-[0.4em] max-w-md italic mb-10 leading-loose"> 
           Forjando la <span className="text-white">disciplina absoluta</span>. <br/>Ingeniería de rendimiento humano. 
         </p> 
@@ -209,12 +282,11 @@ export default function Page() {
         </footer> 
       </main> 
 
-      {/* MODAL MANTENIENDO TODOS TUS CAMPOS ORIGINALES */} 
       {mostrarLogin && ( 
         <div className="fixed inset-0 bg-black/95 backdrop-blur-xl z-[100] flex items-center justify-center p-4"> 
           <div className="bg-zinc-950 p-8 rounded-[2.5rem] border border-zinc-900 w-full max-w-md relative max-h-[90vh] overflow-y-auto custom-scrollbar"> 
             <button onClick={() => setMostrarLogin(false)} className="absolute top-6 right-6 text-[8px] font-black uppercase text-zinc-600 hover:text-white">Cerrar</button> 
-             
+            
             <div className="text-center mb-8"> 
               <h2 className="text-lg font-black uppercase tracking-[0.2em] mb-2">{esLogin ? 'Identificación' : 'Alistamiento'}</h2> 
               <p className="text-[9px] text-zinc-500 uppercase tracking-widest italic">{esLogin ? 'Acceso al Sistema' : 'Nuevo Operativo'}</p> 
