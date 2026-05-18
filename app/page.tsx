@@ -4,32 +4,36 @@ import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link'; 
 import { createBrowserClient } from '@supabase/ssr'; 
 
-// --- COMPONENTE: OFERTA FLASH TÁCTICA (70% OFF) ---
+// --- CONFIGURACIÓN GLOBAL: FECHA DE FINALIZACIÓN FIJA ---
+// Al poner una fecha fija, el contador es igual para todo el mundo y nunca retrocede.
+const FECHA_OBJETIVO = new Date('2026-05-22T23:59:59').getTime();
+
+// --- COMPONENTE: OFERTA FLASH TÁCTICA --- 
 function OfertaFlash({ alistarse }: { alistarse: () => void }) {
-  const [timeLeft, setTimeLeft] = useState({ days: 3, hours: 0, minutes: 0, seconds: 0 });
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    // Temporizador táctico de 3 días
-    const targetDate = new Date();
-    targetDate.setDate(targetDate.getDate() + 3);
+    const calcularTiempo = () => {
+      const ahora = new Date().getTime();
+      const distancia = FECHA_OBJETIVO - ahora;
 
-    const timer = setInterval(() => {
-      const now = new Date().getTime();
-      const distance = targetDate.getTime() - now;
-
-      if (distance < 0) {
-        clearInterval(timer);
+      if (distancia < 0) {
         setVisible(false);
-      } else {
-        setTimeLeft({
-          days: Math.floor(distance / (1000 * 60 * 60 * 24)),
-          hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-          minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
-          seconds: Math.floor((distance % (1000 * 60)) / 1000),
-        });
+        return null;
       }
-    }, 1000);
+
+      setTimeLeft({
+        days: Math.floor(distancia / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((distancia % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+        minutes: Math.floor((distancia % (1000 * 60 * 60)) / (1000 * 60)),
+        seconds: Math.floor((distancia % (1000 * 60)) / 1000),
+      });
+    };
+
+    // Ejecutar inmediatamente y luego cada segundo
+    calcularTiempo();
+    const timer = setInterval(calcularTiempo, 1000);
 
     return () => clearInterval(timer);
   }, []);
@@ -240,13 +244,10 @@ export default function Page() {
     window.location.href = '/perfil'; 
   }; 
 
-  // Lógica inteligente para el botón de la oferta
   const manejarAccesoOferta = () => {
     if (autorizado) {
-      // Si ya está logueado, lo mandamos al panel donde configurarás el pago
       window.location.href = '/perfil';
     } else {
-      // Si no, abrimos el modal en modo registro
       setEsLogin(false);
       setMostrarLogin(true);
     }
@@ -283,7 +284,6 @@ export default function Page() {
           <img src="/logoweb.jpeg" alt="Logo" className="relative w-[500px] md:w-[700px] mx-auto rounded-3xl border border-zinc-900 shadow-2xl transition-all duration-700 hover:border-zinc-700" /> 
         </div> 
 
-        {/* LA OFERTA SIEMPRE VISIBLE */}
         <OfertaFlash alistarse={manejarAccesoOferta} />
 
         <p className="text-[10px] font-medium text-zinc-500 uppercase tracking-[0.4em] max-w-md italic mb-10 leading-loose"> 
