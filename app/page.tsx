@@ -14,17 +14,18 @@ function ContadorSocios({ total }: { total: number }) {
           <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-600"></span>
         </span>
         <span className="text-[8px] font-black tracking-[0.4em] uppercase text-zinc-500 italic">
-          Red de Vigilancia Activa
+          Sincronización de Red Global
         </span>
       </div>
-      <div className="flex items-baseline gap-2">
-        <span className="text-5xl font-black italic tracking-tighter text-white">
+      <div className="flex items-baseline gap-3">
+        <span className="text-6xl font-black italic tracking-tighter text-white">
           {total > 0 ? total.toLocaleString() : '---'}
         </span>
-        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-700">
-          Operativos Alistados
+        <span className="text-[11px] font-black uppercase tracking-[0.3em] text-orange-600 italic">
+          Usuarios Alistados
         </span>
       </div>
+      <div className="h-[1px] w-12 bg-zinc-800 mt-2"></div>
     </div>
   );
 }
@@ -32,7 +33,7 @@ function ContadorSocios({ total }: { total: number }) {
 // --- COMPONENTE: GUÍA DE INSTALACIÓN ---
 function GuiaInstalacion() {
   return (
-    <div className="w-full max-w-4xl mx-auto mt-20 mb-10 p-10 bg-zinc-950 border border-zinc-900 rounded-[3rem] relative overflow-hidden group">
+    <div id="conocenos" className="w-full max-w-4xl mx-auto mt-20 mb-10 p-10 bg-zinc-950 border border-zinc-900 rounded-[3rem] relative overflow-hidden group">
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-orange-600/20 to-transparent" />
       <h2 className="text-[9px] font-black uppercase tracking-[0.5em] mb-12 text-orange-600 italic text-center">
         ⚡ DESPLIEGUE TÁCTICO: INSTALACIÓN MOBILE
@@ -76,7 +77,7 @@ export default function Page() {
   const [esLogin, setEsLogin] = useState(true);
   const [totalSocios, setTotalSocios] = useState(0);
 
-  // --- TUS ESTADOS ORIGINALES ---
+  // Estados del formulario
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [nombre, setNombre] = useState('');
@@ -95,7 +96,6 @@ export default function Page() {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) setAutorizado(true);
 
-      // Obtener conteo de socios
       const { count } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
       if (count) setTotalSocios(count);
     };
@@ -107,12 +107,6 @@ export default function Page() {
     });
     return () => subscription.unsubscribe();
   }, [supabase]);
-
-  // --- TUS FUNCIONES LÓGICAS ORIGINALES ---
-  const limpiarFormulario = () => {
-    setEmail(''); setPassword(''); setPassword2(''); setNombre(''); setApellidos('');
-    setEdad(''); setNacionalidad(''); setProvincia(''); setSexo(''); setMotivoCambio(''); setError('');
-  };
 
   const traducirErrorSupabase = (message: string) => {
     if (message.includes('User already registered')) return 'Este correo ya está registrado. Inicia sesión.';
@@ -155,7 +149,6 @@ export default function Page() {
 
       if (error) { setError(traducirErrorSupabase(error.message)); setCargando(false); return; }
 
-      // Notificación API
       try {
         await fetch('/api/notify', {
           method: 'POST',
@@ -177,11 +170,12 @@ export default function Page() {
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center p-6 font-sans selection:bg-orange-600 selection:text-white">
       
-      {/* NAVBAR REDISEÑADO */}
+      {/* NAVBAR */}
       <nav className="w-full max-w-7xl flex justify-between items-center py-6 z-50">
         <div className="flex gap-6 italic">
           <a href="https://discord.gg/q2rtc8PX" target="_blank" className="text-[9px] font-black uppercase tracking-widest text-zinc-500 hover:text-orange-600 transition-all">Discord</a>
           <a href="https://www.tiktok.com/@mastesto" target="_blank" className="text-[9px] font-black uppercase tracking-widest text-zinc-500 hover:text-orange-600 transition-all">TikTok</a>
+          <Link href="#conocenos" className="text-[9px] font-black uppercase tracking-widest text-zinc-500 hover:text-white transition-all">Conócenos más</Link>
         </div>
         <div className="flex gap-4">
           {autorizado ? (
@@ -214,7 +208,7 @@ export default function Page() {
         </footer>
       </main>
 
-      {/* MODAL CON PSICOLOGÍA Y FORMULARIO COMPLETO */}
+      {/* MODAL */}
       {mostrarLogin && (
         <div className="fixed inset-0 bg-black/95 backdrop-blur-xl z-[100] flex items-center justify-center p-4">
           <div className="bg-zinc-950 p-8 rounded-[2.5rem] border border-zinc-900 w-full max-w-md relative max-h-[90vh] overflow-y-auto custom-scrollbar">
@@ -222,7 +216,7 @@ export default function Page() {
             
             <div className="text-center mb-8">
               <h2 className="text-lg font-black uppercase tracking-[0.2em] mb-2">{esLogin ? 'Identificación' : 'Alistamiento'}</h2>
-              <p className="text-[9px] text-zinc-500 uppercase tracking-widest italic">{esLogin ? 'Acceso a la base de datos' : 'Protocolo de registro de nuevo operativo'}</p>
+              <p className="text-[9px] text-zinc-500 uppercase tracking-widest italic">{esLogin ? 'Acceso a la base de datos' : 'Protocolo de registro de nuevo usuario'}</p>
             </div>
 
             <button onClick={handleGoogleLogin} disabled={cargando} className="w-full flex items-center justify-center gap-3 bg-white text-black py-3 rounded-xl text-[9px] font-black uppercase hover:bg-zinc-200 transition-all mb-6">
@@ -237,7 +231,7 @@ export default function Page() {
             </div>
 
             <form onSubmit={handleAuth} className="space-y-4">
-              <input type="email" placeholder="EMAIL DE OPERATIVO" value={email} onChange={(e)=>setEmail(e.target.value)} required className="w-full bg-black border border-zinc-800 rounded-xl py-3 px-4 text-[10px] uppercase focus:border-orange-600 outline-none transition-all placeholder:text-zinc-700" />
+              <input type="email" placeholder="EMAIL DE USUARIO" value={email} onChange={(e)=>setEmail(e.target.value)} required className="w-full bg-black border border-zinc-800 rounded-xl py-3 px-4 text-[10px] uppercase focus:border-orange-600 outline-none transition-all placeholder:text-zinc-700" />
               
               {!esLogin && (
                 <>
@@ -273,7 +267,7 @@ export default function Page() {
             </form>
 
             <p className="text-center mt-8 text-[9px] text-zinc-600 uppercase font-bold tracking-widest">
-              {esLogin ? '¿No eres operativo?' : '¿Ya tienes acceso?'}
+              {esLogin ? '¿No eres usuario?' : '¿Ya tienes acceso?'}
               <button onClick={() => { setEsLogin(!esLogin); setError(''); }} className="ml-2 text-white hover:text-orange-600 transition-colors underline decoration-zinc-800 underline-offset-4">
                 {esLogin ? 'Registrarse' : 'Identificarse'}
               </button>
