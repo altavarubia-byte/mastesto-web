@@ -7,6 +7,8 @@ import { Toaster } from '@/components/ui/sonner'
 import type { ReactNode } from 'react'
 import type { Metadata, Viewport } from 'next'
 import { Suspense } from 'react'
+// Añadimos la importación necesaria
+import { GoogleTagManager } from '@next/third-parties/google'
 import './globals.css'
 
 // Configuración del viewport para PWA
@@ -49,6 +51,9 @@ export default function RootLayout({
 }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="es" className="dark">
+      {/* Insertamos Google Tag Manager con tu ID específico */}
+      <GoogleTagManager gtmId="GTM-MLX4ZF37" />
+      
       <body className="antialiased bg-black text-white selection:bg-orange-600 selection:text-black">
         <Suspense fallback={null}>
           <NuqsAdapter>
