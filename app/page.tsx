@@ -5,12 +5,12 @@ import Link from 'next/link';
 import { createBrowserClient } from '@supabase/ssr'; 
 
 // --- COMPONENTE: OFERTA FLASH TÁCTICA (70% OFF) ---
-function OfertaFlash() {
+// Ahora recibe funciones para abrir el registro directamente
+function OfertaFlash({ alistarse }: { alistarse: () => void }) {
   const [timeLeft, setTimeLeft] = useState({ days: 3, hours: 0, minutes: 0, seconds: 0 });
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    // Establecemos la fecha límite (3 días desde hoy)
     const targetDate = new Date();
     targetDate.setDate(targetDate.getDate() + 3);
 
@@ -53,7 +53,10 @@ function OfertaFlash() {
               <span className="text-4xl font-black text-white italic tracking-tighter leading-none">8,99€</span>
             </div>
             <div className="h-10 w-[1px] bg-zinc-900 mx-2"></div>
-            <button className="bg-orange-600 hover:bg-orange-500 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95 shadow-lg shadow-orange-900/40">
+            <button 
+              onClick={alistarse}
+              className="bg-orange-600 hover:bg-orange-500 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95 shadow-lg shadow-orange-900/40"
+            >
               Alistarse Ahora
             </button>
           </div>
@@ -237,6 +240,12 @@ export default function Page() {
     window.location.href = '/perfil'; 
   }; 
 
+  // Función para abrir el registro desde la oferta
+  const abrirRegistro = () => {
+    setEsLogin(false);
+    setMostrarLogin(true);
+  };
+
   return ( 
     <div className="min-h-screen bg-black text-white flex flex-col items-center p-6 font-sans"> 
       
@@ -268,8 +277,8 @@ export default function Page() {
           <img src="/logoweb.jpeg" alt="Logo" className="relative w-[500px] md:w-[700px] mx-auto rounded-3xl border border-zinc-900 shadow-2xl transition-all duration-700 hover:border-zinc-700" /> 
         </div> 
 
-        {/* OFERTA FLASH TÁCTICA */}
-        <OfertaFlash />
+        {/* OFERTA FLASH TÁCTICA - Ahora vinculada a abrir el registro */}
+        {!autorizado && <OfertaFlash alistarse={abrirRegistro} />}
 
         <p className="text-[10px] font-medium text-zinc-500 uppercase tracking-[0.4em] max-w-md italic mb-10 leading-loose"> 
           Forjando la <span className="text-white">disciplina absoluta</span>. <br/>Ingeniería de rendimiento humano. 
