@@ -86,7 +86,7 @@ export default function PerfilPage() {
   const [chat, setChat] = useState<{ role: string, content: string }[]>([]);
   const [cargandoIA, setCargandoIA] = useState(false);
   const [temperatura, setTemperatura] = useState(0.7);
-  const [brevedad, setBrevedad] = useState(50); // Rango de palabras
+  const [brevedad, setBrevedad] = useState(50);
 
   // ADMIN
   const [tituloTarea, setTituloTarea] = useState('');
@@ -213,7 +213,15 @@ export default function PerfilPage() {
                <p className="text-[10px] font-bold truncate mb-4" style={{ color: colorAcento }}>{user?.email}</p>
                
                <div className="space-y-1 border-t border-zinc-900 pt-4">
-                 {/* REDIRECCION LEADERBOARD */}
+                 
+                 {/* NUEVO BOTÓN HAZTE SOCIO */}
+                 <button 
+                   onClick={() => window.open('https://buy.stripe.com/tu_enlace_aqui', '_blank')} 
+                   className="w-full mb-2 bg-orange-600 text-white p-3 text-[10px] font-black uppercase rounded-xl transition-all flex justify-between items-center group hover:bg-orange-500 shadow-lg shadow-orange-900/20"
+                 >
+                   Hazte Socio <span className="text-white">⚡</span>
+                 </button>
+
                  <button 
                    onClick={() => router.push('/ranking')} 
                    className="w-full text-left p-3 text-[9px] font-black uppercase text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-xl transition-all flex justify-between items-center group"
@@ -349,7 +357,6 @@ export default function PerfilPage() {
               <span>EL FORJADOR v1.0</span>
             </div>
             
-            {/* AJUSTES IA */}
             <div className="p-5 border-b border-zinc-900 space-y-4">
               <div>
                 <div className="flex justify-between text-[7px] font-black text-zinc-500 uppercase mb-2"><span>FUEGO (TEMPERATURA)</span><span>{temperatura}</span></div>
