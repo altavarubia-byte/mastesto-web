@@ -66,7 +66,7 @@ export default function PerfilPage() {
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [confirmarReinicio, setConfirmarReinicio] = useState(false);
   
-  // Estados de la IA
+  // IA
   const [isOpen, setIsOpen] = useState(false);
   const [mensaje, setMensaje] = useState('');
   const [chat, setChat] = useState<{ role: string, content: string }[]>([]);
@@ -74,13 +74,16 @@ export default function PerfilPage() {
   const [temperatura, setTemperatura] = useState(0.7);
   const [brevedad, setBrevedad] = useState(40);
 
+  // MODO ADMIN: Crear Tareas
   const [tituloTarea, setTituloTarea] = useState('');
   const [minutosTarea, setMinutosTarea] = useState(30);
   const [socioId, setSocioId] = useState('');
+  const [statusMsg, setStatusMsg] = useState('');
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
+  // Validación de administrador
   const isAdmin = user?.email === 'altava.rubia@gmail.com';
   
   const obtenerRango = () => {
@@ -123,6 +126,28 @@ export default function PerfilPage() {
     return () => clearInterval(intervalo);
   }, [fechaInicio]);
 
+  // Función Admin para insertar tareas en la DB
+  const enviarTareaAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!tituloTarea || !socioId) return;
+    
+    const { error } = await supabase.from('tareas').insert([{ 
+      titulo: tituloTarea, 
+      duracion_minutos: minutosTarea, 
+      user_id: socioId 
+    }]);
+
+    if (!error) {
+      setStatusMsg('ORDEN DESPLEGADA');
+      setTituloTarea('');
+      setSocioId('');
+      setMinutosTarea(30);
+      setTimeout(() => setStatusMsg(''), 3000);
+    } else {
+      setStatusMsg('ERROR EN EL DESPLIEGUE');
+    }
+  };
+
   const consultarMentor = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!mensaje.trim() || cargandoIA) return;
@@ -160,23 +185,15 @@ export default function PerfilPage() {
           <button onClick={() => setMenuAbierto(!menuAbierto)} className="w-9 h-9 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center font-black hover:border-orange-600 transition-all text-[10px]">
             {(user?.user_metadata?.nombre?.[0] || 'V').toUpperCase()}
           </button>
-
           {menuAbierto && (
             <div className="absolute top-14 right-0 w-72 bg-zinc-950 border border-zinc-800 rounded-3xl p-6 shadow-2xl z-[110]">
                <div className="mb-6">
                  <p className="text-[8px] font-black text-zinc-600 uppercase tracking-widest mb-1">Identidad Conectada</p>
                  <p className="text-[10px] font-bold text-orange-600 truncate">{user?.email}</p>
                </div>
-               
                <div className="space-y-1 border-t border-zinc-900 pt-4">
                  <button className="w-full text-left p-3 text-[9px] font-black uppercase text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-xl transition-all">Ajustes de Perfil</button>
-                 <button className="w-full text-left p-3 text-[9px] font-black uppercase text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-xl transition-all italic">Logros de Rango</button>
-                 <button className="w-full text-left p-3 text-[9px] font-black uppercase text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-xl transition-all italic">Historial de Misiones</button>
-                 <button className="w-full text-left p-3 text-[9px] font-black uppercase text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-xl transition-all italic">Estadísticas Vitales</button>
-                 
-                 <button onClick={() => supabase.auth.signOut().then(() => router.push('/'))} className="w-full text-left p-3 text-[9px] font-black uppercase text-red-600 mt-2 border-t border-zinc-900 pt-4 hover:bg-red-950/10 rounded-xl transition-all italic">
-                   Finalizar Sesión
-                 </button>
+                 <button onClick={() => supabase.auth.signOut().then(() => router.push('/'))} className="w-full text-left p-3 text-[9px] font-black uppercase text-red-600 mt-2 border-t border-zinc-900 pt-4 hover:bg-red-950/10 rounded-xl transition-all italic">Finalizar Sesión</button>
                </div>
             </div>
           )}
@@ -185,62 +202,54 @@ export default function PerfilPage() {
 
       <main className="mt-20 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 pb-20">
         
-        {/* COLUMNA IZQUIERDA: BIOMETRÍA */}
+        {/* IZQUIERDA: BIOMETRÍA */}
         <div className="lg:col-span-3 space-y-6">
           <div className="bg-zinc-950 border border-zinc-900 p-6 rounded-[2rem]">
             <p className="text-[8px] text-zinc-500 uppercase font-black mb-4 tracking-[0.2em]">Estado del Socio</p>
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between text-[10px] font-black mb-1 uppercase italic">
-                  <span>Rango</span>
-                  <span className="text-orange-600">{obtenerRango()}</span>
-                </div>
-                <div className="h-1.5 bg-zinc-900 rounded-full overflow-hidden">
-                  <div className="h-full bg-orange-600 transition-all duration-1000" style={{ width: `${((tiempo.dias || 0) % 7) * 14.2}%` }} />
-                </div>
-              </div>
-              <div className="pt-4 border-t border-zinc-900">
-                <p className="text-[7px] text-zinc-600 uppercase font-bold mb-2 tracking-widest italic">Radar de Consistencia (7d)</p>
-                <div className="flex gap-1.5">
-                  {[...Array(7)].map((_, i) => (
-                    <div key={i} className={`h-4 w-4 rounded-sm ${i < (tiempo.dias % 7 || 1) ? 'bg-orange-600 shadow-[0_0_10px_rgba(234,88,12,0.4)]' : 'bg-zinc-900'}`} />
-                  ))}
-                </div>
-              </div>
+            <div className="flex justify-between text-[10px] font-black mb-1 uppercase italic">
+              <span>Rango</span>
+              <span className="text-orange-600">{obtenerRango()}</span>
+            </div>
+            <div className="h-1.5 bg-zinc-900 rounded-full overflow-hidden">
+              <div className="h-full bg-orange-600 transition-all duration-1000" style={{ width: `${((tiempo.dias || 0) % 7) * 14.2}%` }} />
             </div>
           </div>
         </div>
 
-        {/* COLUMNA CENTRAL: CRONÓMETRO */}
+        {/* CENTRO: CRONÓMETRO Y PANEL ADMIN */}
         <div className="lg:col-span-6 space-y-6">
           <div className="bg-zinc-950 border border-zinc-900 rounded-[3.5rem] p-12 text-center shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-orange-600 to-transparent" />
             <p className="text-[9px] font-black uppercase tracking-[0.6em] text-zinc-500 mb-12 italic">Tiempo de Disciplina Absoluta</p>
-            
             <div className="grid grid-cols-4 gap-2 mb-12">
-              <div><p className="text-5xl md:text-7xl font-black tracking-tighter">{tiempo.dias}</p><p className="text-[7px] text-zinc-600 font-black uppercase mt-2">Días</p></div>
-              <div><p className="text-5xl md:text-7xl font-black tracking-tighter text-orange-600">{tiempo.horas.toString().padStart(2,'0')}</p><p className="text-[7px] text-zinc-600 font-black uppercase mt-2">Horas</p></div>
-              <div><p className="text-5xl md:text-7xl font-black tracking-tighter">{tiempo.min.toString().padStart(2,'0')}</p><p className="text-[7px] text-zinc-600 font-black uppercase mt-2">Min</p></div>
-              <div><p className="text-5xl md:text-7xl font-black tracking-tighter text-orange-600">{tiempo.seg.toString().padStart(2,'0')}</p><p className="text-[7px] text-zinc-600 font-black uppercase mt-2">Seg</p></div>
+              <div><p className="text-5xl md:text-7xl font-black">{tiempo.dias}</p><p className="text-[7px] text-zinc-600 uppercase font-black">Días</p></div>
+              <div><p className="text-5xl md:text-7xl font-black text-orange-600">{tiempo.horas.toString().padStart(2,'0')}</p><p className="text-[7px] text-zinc-600 uppercase font-black">Horas</p></div>
+              <div><p className="text-5xl md:text-7xl font-black">{tiempo.min.toString().padStart(2,'0')}</p><p className="text-[7px] text-zinc-600 uppercase font-black">Min</p></div>
+              <div><p className="text-5xl md:text-7xl font-black text-orange-600">{tiempo.seg.toString().padStart(2,'0')}</p><p className="text-[7px] text-zinc-600 uppercase font-black">Seg</p></div>
             </div>
-
-            <div className="pt-8 border-t border-zinc-900">
-              {!confirmarReinicio ? (
-                <button onClick={() => setConfirmarReinicio(true)} className="text-[8px] font-black uppercase text-zinc-800 hover:text-red-600 transition-all tracking-[0.3em] italic">[ Reportar Fallo de Sistema ]</button>
-              ) : (
-                <div className="flex flex-col items-center gap-4 animate-in zoom-in">
-                  <p className="text-red-600 font-black text-[9px] uppercase tracking-widest italic">¿Confirmar destrucción de racha?</p>
-                  <div className="flex gap-4">
-                    <button onClick={() => { const nf = new Date().toISOString(); supabase.auth.updateUser({data: {fecha_dejo_fumar: nf}}).then(()=>window.location.reload()) }} className="bg-red-600 text-black px-8 py-3 rounded-xl text-[9px] font-black uppercase">SÍ, HE FALLADO</button>
-                    <button onClick={() => setConfirmarReinicio(false)} className="bg-zinc-800 text-white px-8 py-3 rounded-xl text-[9px] font-black uppercase">VOLVER</button>
-                  </div>
-                </div>
-              )}
-            </div>
+            <button onClick={() => setConfirmarReinicio(true)} className="text-[8px] font-black uppercase text-zinc-800 hover:text-red-600 transition-all tracking-[0.3em] italic">[ Reportar Fallo ]</button>
           </div>
+
+          {/* PANEL ADMIN: APARECE SOLO SI ERES TÚ */}
+          {isAdmin && (
+            <div className="bg-zinc-950 border border-orange-600/30 p-8 rounded-[2.5rem] shadow-[0_0_50px_rgba(234,88,12,0.05)]">
+               <h4 className="text-[10px] font-black text-orange-600 uppercase mb-6 text-center tracking-[0.4em] italic">Consola de Comando Administrativo</h4>
+               <form onSubmit={enviarTareaAdmin} className="space-y-4">
+                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                   <input value={tituloTarea} onChange={e => setTituloTarea(e.target.value)} placeholder="TÍTULO DE LA MISIÓN" className="md:col-span-9 bg-black border border-zinc-800 p-4 rounded-xl text-[10px] focus:border-orange-600 outline-none transition-all uppercase font-bold" />
+                   <div className="md:col-span-3 relative">
+                     <input type="number" value={minutosTarea} onChange={e => setMinutosTarea(parseInt(e.target.value))} className="w-full bg-black border border-zinc-800 p-4 rounded-xl text-[10px] focus:border-orange-600 outline-none transition-all font-mono font-bold text-orange-600" />
+                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[7px] font-black text-zinc-700">MIN</span>
+                   </div>
+                 </div>
+                 <input value={socioId} onChange={e => setSocioId(e.target.value)} placeholder="UUID DEL SOCIO" className="w-full bg-black border border-zinc-800 p-4 rounded-xl text-[10px] focus:border-orange-600 outline-none transition-all font-mono" />
+                 <button className="w-full bg-orange-600 text-black py-4 rounded-xl font-black text-[10px] uppercase hover:bg-white transition-all tracking-[0.2em]">Lanzar Objetivo</button>
+                 {statusMsg && <p className="text-center text-[8px] font-black text-green-500 animate-pulse">{statusMsg}</p>}
+               </form>
+            </div>
+          )}
         </div>
 
-        {/* COLUMNA DERECHA: MISIONES */}
+        {/* DERECHA: MISIONES */}
         <div className="lg:col-span-3">
           <div className="bg-zinc-950 border border-zinc-900 p-6 rounded-[2.5rem] min-h-[350px]">
             <p className="text-[8px] text-zinc-500 uppercase font-black mb-6 tracking-widest text-center italic">Misiones_Asignadas</p>
@@ -248,58 +257,46 @@ export default function PerfilPage() {
               tareas.map((t: any) => <CardTarea key={t.id} tarea={t} userNick={user?.user_metadata?.nombre || 'Socio'} supabase={supabase} />)
             ) : (
               <div className="py-20 text-center border-2 border-dashed border-zinc-900 rounded-[2rem]">
-                <p className="text-[8px] text-zinc-800 font-black uppercase italic">Sin órdenes activas</p>
+                <p className="text-[8px] text-zinc-800 font-black uppercase italic">Esperando órdenes...</p>
               </div>
             )}
           </div>
         </div>
       </main>
 
-      {/* MODAL IA CON BARRAS RESTAURADAS */}
+      {/* MODAL IA */}
       <div className="fixed bottom-8 left-8 z-[120]">
-        <button onClick={() => setIsOpen(!isOpen)} className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all shadow-2xl ${isOpen ? 'bg-orange-600 rotate-90 text-white' : 'bg-white text-black hover:bg-orange-600 hover:text-white'}`}>
+        <button onClick={() => setIsOpen(!isOpen)} className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all shadow-2xl ${isOpen ? 'bg-orange-600 rotate-90 text-white' : 'bg-white text-black'}`}>
           <span className="font-black text-xs">IA</span>
         </button>
         {isOpen && (
           <div className="absolute bottom-20 left-0 w-80 bg-zinc-950 border-2 border-orange-600 rounded-[2.5rem] overflow-hidden shadow-2xl animate-in slide-in-from-bottom-4">
             <div className="p-4 bg-orange-600 text-black font-black text-[10px] flex justify-between italic items-center">
               <span>EL FORJADOR v1.0</span>
-              <button onClick={()=>setIsOpen(false)} className="hover:scale-110 transition-transform">✕</button>
+              <button onClick={()=>setIsOpen(false)}>✕</button>
             </div>
-            
-            {/* CONTROLES (BARRAS) */}
             <div className="p-5 border-b border-zinc-900 space-y-4">
               <div>
                 <div className="flex justify-between text-[7px] font-black text-zinc-500 uppercase mb-2 tracking-widest">
-                  <span>Temperatura (Fuego)</span>
-                  <span className="text-orange-600">{temperatura}</span>
+                  <span>Fuego (Temp)</span><span className="text-orange-600">{temperatura}</span>
                 </div>
-                <input type="range" min="0" max="1" step="0.1" value={temperatura} onChange={(e)=>setTemperatura(parseFloat(e.target.value))} className="w-full h-1 bg-zinc-900 rounded-lg appearance-none cursor-pointer accent-orange-600" />
+                <input type="range" min="0" max="1" step="0.1" value={temperatura} onChange={(e)=>setTemperatura(parseFloat(e.target.value))} className="w-full h-1 bg-zinc-900 accent-orange-600" />
               </div>
               <div>
                 <div className="flex justify-between text-[7px] font-black text-zinc-500 uppercase mb-2 tracking-widest">
-                  <span>Brevedad (Palabras)</span>
-                  <span className="text-orange-600">{brevedad}</span>
+                  <span>Brevedad</span><span className="text-orange-600">{brevedad}</span>
                 </div>
-                <input type="range" min="10" max="100" step="5" value={brevedad} onChange={(e)=>setBrevedad(parseInt(e.target.value))} className="w-full h-1 bg-zinc-900 rounded-lg appearance-none cursor-pointer accent-orange-600" />
+                <input type="range" min="10" max="100" step="5" value={brevedad} onChange={(e)=>setBrevedad(parseInt(e.target.value))} className="w-full h-1 bg-zinc-900 accent-orange-600" />
               </div>
             </div>
-
-            {/* CHAT */}
             <div ref={scrollRef} className="h-48 overflow-y-auto p-5 font-mono text-[10px] uppercase text-orange-500 space-y-4 bg-black">
-              {chat.length === 0 && <p className="text-zinc-800 italic">Esperando reporte de estado...</p>}
               {chat.map((msg, i) => (
-                <div key={i} className={msg.role === 'assistant' ? 'border-l-2 border-orange-600 pl-3 py-1 bg-orange-600/5' : 'text-zinc-600 text-right italic'}>
-                  {msg.content}
-                </div>
+                <div key={i} className={msg.role === 'assistant' ? 'border-l-2 border-orange-600 pl-3 py-1' : 'text-zinc-600 text-right italic'}>{msg.content}</div>
               ))}
-              {cargandoIA && <p className="animate-pulse">SINTETIZANDO...</p>}
             </div>
-
-            {/* INPUT */}
             <form onSubmit={consultarMentor} className="p-4 bg-zinc-950 flex gap-2 border-t border-zinc-900">
               <input type="text" value={mensaje} onChange={e => setMensaje(e.target.value)} className="flex-1 bg-black border border-zinc-900 p-3 text-[10px] text-white rounded-xl outline-none focus:border-orange-600" placeholder="Reporte de estado..." />
-              <button className="bg-orange-600 text-black px-4 rounded-xl font-black text-[10px] hover:bg-white transition-colors">ENVIAR</button>
+              <button className="bg-orange-600 text-black px-4 rounded-xl font-black text-[10px]">ENVIAR</button>
             </form>
           </div>
         )}
