@@ -461,7 +461,7 @@ function ContadorSocial() {
     tiktok: {
       seguidores: 0,
       likes: 0,
-    }
+    },
   });
 
   useEffect(() => {
@@ -472,46 +472,86 @@ function ContadorSocial() {
   }, []);
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-3xl mx-auto lg:mx-0 mb-8">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto lg:mx-0 mb-8">
 
-      <div className="rounded-2xl border border-zinc-900 bg-zinc-950/70 p-4">
-        <p className="text-2xl">👥</p>
-        <p className="text-2xl font-black">
-          {stats.discord.usuarios}
-        </p>
-        <p className="text-[8px] uppercase text-zinc-600">
-          Discord
-        </p>
+      {/* DISCORD */}
+      <div className="bg-zinc-950/70 border border-zinc-900 rounded-[2rem] p-6 backdrop-blur-xl shadow-2xl">
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 rounded-full bg-[#5865F2] flex items-center justify-center text-3xl shadow-[0_0_30px_rgba(88,101,242,0.35)]">
+            🎮
+          </div>
+
+          <div className="text-left">
+            <p className="text-[8px] uppercase tracking-[0.4em] font-black text-zinc-500 mb-1">
+              Discord
+            </p>
+
+            <div className="flex items-center gap-4">
+              <div>
+                <p className="text-3xl font-black text-white">
+                  {stats.discord.usuarios}
+                </p>
+                <p className="text-[8px] uppercase text-zinc-600 font-bold">
+                  Total
+                </p>
+              </div>
+
+              <div className="h-10 w-px bg-zinc-800" />
+
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
+                  <p className="text-3xl font-black text-green-500">
+                    {stats.discord.activos}
+                  </p>
+                </div>
+                <p className="text-[8px] uppercase font-bold text-green-500">
+                  Activos
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="rounded-2xl border border-zinc-900 bg-zinc-950/70 p-4">
-        <p className="text-2xl">🟢</p>
-        <p className="text-2xl font-black">
-          {stats.discord.activos}
-        </p>
-        <p className="text-[8px] uppercase text-zinc-600">
-          Activos
-        </p>
-      </div>
+      {/* TIKTOK */}
+      <div className="bg-zinc-950/70 border border-zinc-900 rounded-[2rem] p-6 backdrop-blur-xl shadow-2xl">
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center text-3xl shadow-[0_0_30px_rgba(255,255,255,0.18)]">
+            🎵
+          </div>
 
-      <div className="rounded-2xl border border-zinc-900 bg-zinc-950/70 p-4">
-        <p className="text-2xl">🎵</p>
-        <p className="text-2xl font-black">
-          {stats.tiktok.seguidores}
-        </p>
-        <p className="text-[8px] uppercase text-zinc-600">
-          Seguidores
-        </p>
-      </div>
+          <div className="text-left">
+            <p className="text-[8px] uppercase tracking-[0.4em] font-black text-zinc-500 mb-1">
+              TikTok
+            </p>
 
-      <div className="rounded-2xl border border-zinc-900 bg-zinc-950/70 p-4">
-        <p className="text-2xl">❤️</p>
-        <p className="text-2xl font-black">
-          {stats.tiktok.likes}
-        </p>
-        <p className="text-[8px] uppercase text-zinc-600">
-          Likes
-        </p>
+            <div className="flex items-center gap-4">
+              <div>
+                <p className="text-3xl font-black text-white">
+                  {stats.tiktok.seguidores}
+                </p>
+                <p className="text-[8px] uppercase text-zinc-600 font-bold">
+                  Seguidores
+                </p>
+              </div>
+
+              <div className="h-10 w-px bg-zinc-800" />
+
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-pink-500 animate-pulse" />
+                  <p className="text-3xl font-black text-pink-500">
+                    {stats.tiktok.likes}
+                  </p>
+                </div>
+                <p className="text-[8px] uppercase font-bold text-pink-500">
+                  Likes
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
     </div>
