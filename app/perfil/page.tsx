@@ -488,158 +488,27 @@ export default function PerfilPage() {
 
               <div className="space-y-6">
                 <div>
-                  <label className="text-[8px] font-black text-zinc-500 uppercase mb-2 block italic">Fecha de Inicio</label>
-                  <input type="date" value={nuevaFecha} onChange={(e) => setNuevaFecha(e.target.value)} className="w-full bg-black border border-zinc-900 p-4 rounded-xl text-[10px] outline-none font-mono" style={{ color: colorAcento }} />
+                  <label className="text-[8px] font-black text-zinc-500 uppercase mb-2 block italic">Color de Acento Hex</label>
+                  <input value={colorAcento} onChange={(e) => setColorAcento(e.target.value)} className="w-full bg-black border border-zinc-800 p-4 rounded-xl text-[10px] font-mono outline-none" style={{ color: colorAcento }} />
                 </div>
                 <div>
-                  <label className="text-[8px] font-black text-zinc-500 uppercase mb-4 block italic">Color de Interfaz</label>
-                  <div className="flex gap-3">
-                    {['#ea580c', '#ef4444', '#3b82f6', '#22c55e', '#a855f7'].map(c => (
-                      <button key={c} onClick={() => setColorAcento(c)} className={`w-8 h-8 rounded-full border-2 transition-all ${colorAcento === c ? 'border-white scale-110' : 'border-transparent opacity-40 hover:opacity-100'}`} style={{ backgroundColor: c }} />
-                    ))}
-                  </div>
+                  <label className="text-[8px] font-black text-zinc-500 uppercase mb-2 block italic">Fecha del Cambio (Desintoxicación)</label>
+                  <input type="date" value={nuevaFecha} onChange={(e) => setNuevaFecha(e.target.value)} className="w-full bg-black border border-zinc-800 p-4 rounded-xl text-[10px] text-white outline-none font-mono" />
                 </div>
-                <div className="flex items-center justify-between p-4 bg-black rounded-2xl border border-zinc-900">
-                  <span className="text-[9px] font-black uppercase text-zinc-400">Ghost Mode</span>
-                  <button onClick={() => setGhostMode(!ghostMode)} className="w-12 h-6 rounded-full relative transition-all" style={{ backgroundColor: ghostMode ? colorAcento : '#27272a' }}>
-                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${ghostMode ? 'left-7' : 'left-1'}`} />
-                  </button>
+                <div className="flex items-center justify-between p-4 bg-black/40 border border-zinc-900 rounded-xl">
+                  <span className="text-[8px] font-black text-zinc-500 uppercase italic">Modo Fantasma</span>
+                  <input type="checkbox" checked={ghostMode} onChange={(e) => setGhostMode(e.target.checked)} className="w-4 h-4 accent-zinc-500" />
                 </div>
               </div>
             </div>
 
-            <div className="flex gap-4 mt-12">
-              <button onClick={guardarAjustes} className="flex-1 py-5 rounded-2xl font-black text-[10px] uppercase hover:bg-white hover:text-black transition-all" style={{ backgroundColor: colorAcento, color: 'black' }}>Sincronizar Datos</button>
-              <button onClick={() => setEditandoPerfil(false)} className="px-8 bg-zinc-900 text-zinc-500 py-5 rounded-2xl font-black text-[10px] uppercase hover:text-white transition-all">Cancelar</button>
+            <div className="flex gap-4 mt-10">
+              <button onClick={() => setEditandoPerfil(false)} className="flex-1 py-4 bg-zinc-900 text-zinc-400 hover:text-white rounded-xl text-[10px] font-black uppercase transition-all">Cancelar</button>
+              <button onClick={guardarAjustes} className="flex-1 py-4 bg-white text-black hover:opacity-80 rounded-xl text-[10px] font-black uppercase transition-all">Guardar Protocolo</button>
             </div>
           </div>
         </div>
       )}
-
-      {/* IA MENTOR MODAL */}
-      <div className="fixed bottom-8 left-8 z-[120]">
-        <button onClick={() => setIsOpen(!isOpen)} className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all shadow-2xl" style={{ backgroundColor: isOpen ? colorAcento : 'white', color: 'black' }}>
-          <span className="font-black text-xs">{isOpen ? '✕' : 'IA'}</span>
-        </button>
-        {isOpen && (
-          <div className="absolute bottom-20 left-0 w-80 bg-zinc-950 border-2 rounded-[2.5rem] overflow-hidden shadow-2xl animate-in slide-in-from-bottom-4" style={{ borderColor: colorAcento }}>
-            <div className="p-4 font-black text-[10px] flex justify-between italic items-center" style={{ backgroundColor: colorAcento, color: 'black' }}>
-              <span>EL FORJADOR v1.0</span>
-            </div>
-            
-            <div className="p-5 border-b border-zinc-900 space-y-4">
-              <div>
-                <div className="flex justify-between text-[7px] font-black text-zinc-500 uppercase mb-2"><span>FUEGO (TEMPERATURA)</span><span>{temperatura}</span></div>
-                <input type="range" min="0" max="1" step="0.1" value={temperatura} onChange={(e)=>setTemperatura(parseFloat(e.target.value))} className="w-full h-1 bg-zinc-900 appearance-none accent-white" />
-              </div>
-              <div>
-                <div className="flex justify-between text-[7px] font-black text-zinc-500 uppercase mb-2"><span>RANGO PALABRAS (BREVEDAD)</span><span>{brevedad}</span></div>
-                <input type="range" min="10" max="200" step="10" value={brevedad} onChange={(e)=>setBrevedad(parseInt(e.target.value))} className="w-full h-1 bg-zinc-900 appearance-none accent-white" />
-              </div>
-            </div>
-
-            <div ref={scrollRef} className="h-48 overflow-y-auto p-5 font-mono text-[10px] uppercase space-y-4 bg-black" style={{ color: colorAcento }}>
-              {chat.length === 0 ? <p className="opacity-30 italic text-center mt-10">Reporte su estado, operativo.</p> : chat.map((msg, i) => (
-                <div key={i} className={msg.role === 'assistant' ? 'border-l-2 pl-3 py-1' : 'text-zinc-600 text-right italic'} style={{ borderLeftColor: msg.role === 'assistant' ? colorAcento : 'transparent' }}>{msg.content}</div>
-              ))}
-              {cargandoIA && <p className="animate-pulse">Procesando...</p>}
-            </div>
-
-            <form onSubmit={consultarMentor} className="p-4 bg-zinc-950 flex gap-2 border-t border-zinc-900">
-              <input type="text" value={mensaje} onChange={e => setMensaje(e.target.value)} className="flex-1 bg-black border border-zinc-800 p-3 text-[10px] text-white rounded-xl outline-none" placeholder="Escriba aquí..." />
-              <button className="px-4 rounded-xl font-black text-[10px]" style={{ backgroundColor: colorAcento, color: 'black' }}>OK</button>
-            </form>
-          </div>
-        )}
-      </div>
-
-      {/* MODAL PERSISTENTE DE DIAGNÓSTICO DE TABACO */}
-      {showTabacoModal && (
-        <div className="fixed inset-0 bg-black/98 z-[200] flex items-center justify-center p-6 backdrop-blur-xl animate-in fade-in duration-300">
-          <div className="bg-zinc-950 border border-zinc-900 p-8 rounded-[2.5rem] max-w-md w-full space-y-6 relative">
-            <h2 className="text-[11px] font-black uppercase tracking-[0.3em] text-orange-600 italic text-center">Protocolo de Salud Operativa</h2>
-            
-            {esFumador === null ? (
-              <div className="space-y-4 animate-in fade-in duration-200">
-                <p className="text-[9px] text-zinc-400 text-center uppercase font-black tracking-widest leading-relaxed">¿Usted es fumador activo o consume tabaco?</p>
-                <div className="grid grid-cols-2 gap-4">
-                  <button onClick={() => setEsFumador(true)} className="bg-white text-black py-4 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all hover:bg-zinc-200">SÍ</button>
-                  <button 
-                    onClick={async () => {
-                      setEsFumador(false);
-                      await supabase.auth.updateUser({ data: { es_fumador: false, quiere_reloj: false } });
-                      setShowTabacoModal(false);
-                    }} 
-                    className="bg-zinc-900 text-white py-4 rounded-xl text-[9px] font-black uppercase tracking-widest border border-zinc-800 transition-all hover:bg-zinc-800"
-                  >
-                    NO
-                  </button>
-                </div>
-              </div>
-            ) : quiereReloj === null ? (
-              <div className="space-y-4 animate-in fade-in duration-200">
-                <p className="text-[9px] text-zinc-400 text-center uppercase font-black tracking-widest leading-relaxed">¿Desea activar el módulo de desintoxicación y reloj biológico?</p>
-                <div className="grid grid-cols-2 gap-4">
-                  <button onClick={() => setQuiereReloj(true)} className="bg-orange-600 text-white py-4 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all hover:bg-orange-500">ACTIVAR</button>
-                  <button 
-                    onClick={async () => {
-                      setQuiereReloj(false);
-                      await supabase.auth.updateUser({ data: { es_fumador: true, quiere_reloj: false } });
-                      setShowTabacoModal(false);
-                    }} 
-                    className="bg-zinc-900 text-white py-4 rounded-xl text-[9px] font-black uppercase tracking-widest border border-zinc-800 transition-all hover:bg-zinc-800"
-                  >
-                    OMITIR
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4 animate-in fade-in duration-200 text-left">
-                <p className="text-[8px] text-zinc-500 text-center uppercase font-black tracking-widest mb-4">Ingrese parámetros financieros y de consumo</p>
-                
-                <div>
-                  <label className="text-[7px] font-black text-zinc-500 uppercase mb-1 block">Cigarrillos consumidos al día</label>
-                  <input type="number" placeholder="Ej: 15" value={datosTabaco.cigarrillosDia} onChange={(e) => setDatosTabaco({...datosTabaco, cigarrillosDia: e.target.value})} className="w-full bg-black border border-zinc-800 rounded-xl p-4 text-[10px] uppercase font-bold outline-none focus:border-orange-600" />
-                </div>
-
-                <div>
-                  <label className="text-[7px] font-black text-zinc-500 uppercase mb-1 block">Precio por paquete (€)</label>
-                  <input type="number" step="0.01" placeholder="Ej: 5.25" value={datosTabaco.precioPaquete} onChange={(e) => setDatosTabaco({...datosTabaco, precioPaquete: e.target.value})} className="w-full bg-black border border-zinc-800 rounded-xl p-4 text-[10px] uppercase font-bold outline-none focus:border-orange-600" />
-                </div>
-
-                <div>
-                  <label className="text-[7px] font-black text-zinc-500 uppercase mb-1 block">Unidades totales por paquete</label>
-                  <input type="number" placeholder="Ej: 20" value={datosTabaco.unidadesPaquete} onChange={(e) => setDatosTabaco({...datosTabaco, unidadesPaquete: e.target.value})} className="w-full bg-black border border-zinc-800 rounded-xl p-4 text-[10px] uppercase font-bold outline-none focus:border-orange-600" />
-                </div>
-
-                <button 
-                  onClick={async () => {
-                    if (!datosTabaco.cigarrillosDia || !datosTabaco.precioPaquete) return;
-                    const fechaActual = new Date().toISOString();
-                    await supabase.auth.updateUser({
-                      data: { 
-                        es_fumador: true, 
-                        quiere_reloj: true, 
-                        fecha_dejo_fumar: fechaActual, 
-                        cigarrillos_dia: Number(datosTabaco.cigarrillosDia), 
-                        precio_paquete: Number(datosTabaco.precioPaquete), 
-                        unidades_paquete: Number(datosTabaco.unidadesPaquete) 
-                      }
-                    });
-                    setFechaInicio(fechaActual);
-                    setNuevaFecha(fechaActual.split('T')[0]);
-                    setShowTabacoModal(false);
-                  }}
-                  className="w-full bg-white text-black py-4 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all hover:bg-zinc-200 mt-6"
-                >
-                  Iniciar Forja Biológica
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
     </div>
   );
 }
