@@ -691,6 +691,7 @@ export default function Page() {
         <section className="w-full min-h-[78vh] flex flex-col lg:flex-row items-center justify-between gap-12 px-4 mb-16">
           <div className="w-full lg:w-[55%] text-center lg:text-left">
             <ContadorSocios total={totalSocios} />
+            <ContadorSocial />
 
             <div className="inline-flex items-center gap-2 rounded-full border border-orange-600/20 bg-orange-600/10 px-4 py-2 mb-6">
               <span className="text-orange-500 text-xs">⚔️</span>
