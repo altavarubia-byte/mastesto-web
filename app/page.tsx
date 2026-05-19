@@ -7,7 +7,7 @@ import { createBrowserClient } from '@supabase/ssr';
 // --- CONFIGURACIÓN GLOBAL: FECHA DE FINALIZACIÓN FIJA ---
 const FECHA_OBJETIVO = new Date('2026-05-22T23:59:59').getTime();
 
-// --- NUEVO: COMPONENTE DE MÓDULOS (DA VALOR REAL AL PRODUCTO) ---
+// --- COMPONENTE DE MÓDULOS (DA VALOR REAL AL PRODUCTO) ---
 function ModulosSistema() {
   const modulos = [
     { titulo: 'Tracker de Bio-Rendimiento', desc: 'Control de disciplina y hábitos diarios en tiempo real.' },
@@ -24,6 +24,162 @@ function ModulosSistema() {
           <p className="text-[9px] text-zinc-500 uppercase italic leading-relaxed">{m.desc}</p>
         </div>
       ))}
+    </div>
+  );
+}
+
+// --- COMPONENTE: SECCIÓN DE COMENTARIOS (MURO DE FRECUENCIAS) ---
+function SeccionComentarios({ supabase }: { supabase: any }) {
+  const [user, setUser] = useState<any>(null);
+  const [comentarios, setComentarios] = useState<any[]>([]);
+  const [nuevoComentario, setNuevoComentario] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [enviando, setEnviando] = useState(false);
+
+  const misComentariosCount = useMemo(() => {
+    if (!user) return 0;
+    return comentarios.filter(c => c.user_id === user.id).length;
+  }, [comentarios, user]);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) setUser(user);
+    });
+
+    const fetchComentarios = async () => {
+      const { data, error } = await supabase
+        .from('comentarios')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (!error && data) setComentarios(data);
+      setLoading(false);
+    };
+
+    fetchComentarios();
+
+    const canal = supabase
+      .channel('cambios_comentarios')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comentarios' }, (payload: any) => {
+        setComentarios((prev) => [payload.new, ...prev]);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(canal);
+    };
+  }, [supabase]);
+
+  const enviarComentario = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !nuevoComentario.trim() || misComentariosCount >= 3 || enviando) return;
+
+    setEnviando(true);
+    const meta = user.user_metadata;
+
+    const { error } = await supabase.from('comentarios').insert([
+      {
+        user_id: user.id,
+        alias: meta?.alias || 'SOCIO ANÓNIMO',
+        contenido: nuevoComentario.trim(),
+        color_acento: meta?.color_acento || '#ea580c'
+      }
+    ]);
+
+    if (!error) {
+      setNuevoComentario('');
+    }
+    setEnviando(false);
+  };
+
+  if (loading) return <div className="text-[10px] font-black text-center text-zinc-700 uppercase italic animate-pulse my-10">Sincronizando feed de la comunidad...</div>;
+
+  return (
+    <div className="w-full max-w-4xl mx-auto mb-16 px-4 text-white bg-black">
+      <div className="border border-zinc-900 bg-zinc-950/30 rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden text-left">
+        <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-orange-600/30 to-transparent" />
+        
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+          <div>
+            <h2 className="text-[11px] font-black uppercase tracking-[0.4em] text-zinc-500 mb-1 italic">Muro de Frecuencias</h2>
+            <p className="text-[8px] text-zinc-600 uppercase font-bold italic">Reportes directos de los operativos en la brecha</p>
+          </div>
+          {user && (
+            <div className="bg-black/50 border border-zinc-900 px-4 py-2 rounded-xl text-[8px] font-mono font-black uppercase tracking-widest text-zinc-400">
+              Tus transmisiones: <span className={misComentariosCount >= 3 ? "text-red-500" : "text-orange-500"}>{misComentariosCount}/3</span>
+            </div>
+          )}
+        </div>
+
+        {user ? (
+          misComentariosCount < 3 ? (
+            <form onSubmit={enviarComentario} className="mb-10 space-y-3">
+              <div className="relative">
+                <textarea
+                  value={nuevoComentario}
+                  onChange={(e) => setNuevoComentario(e.target.value)}
+                  maxLength={500}
+                  placeholder="DEJA TU REPORTE DE DISCIPLINA O LOGRO AQUÍ... (MÁX 500 CARACTERES)"
+                  className="w-full bg-black border border-zinc-900 p-5 rounded-2xl text-[10px] uppercase font-bold text-white outline-none focus:border-zinc-700 h-24 resize-none transition-all placeholder:text-zinc-700"
+                />
+                <span className="absolute bottom-4 right-4 text-[7px] font-mono text-zinc-600">
+                  {nuevoComentario.length}/500
+                </span>
+              </div>
+              <button
+                type="submit"
+                disabled={enviando || !nuevoComentario.trim()}
+                className="w-full py-4 rounded-xl font-black text-[9px] bg-white text-black uppercase tracking-widest hover:opacity-80 transition-all disabled:opacity-20"
+              >
+                {enviando ? 'TRANSMITIENDO...' : 'FIJAR MENSAJE EN EL MURO'}
+              </button>
+            </form>
+          ) : (
+            <div className="mb-10 p-5 border border-red-950 bg-red-950/10 rounded-2xl text-center">
+              <p className="text-[8px] font-black tracking-widest uppercase text-red-500 italic">
+                ⚠️ CUOTA DE TRANSMISIÓN MÁXIMA ALCANZADA (3/3). TUS ENLACES ESTÁN BLINDADOS.
+              </p>
+            </div>
+          )
+        ) : (
+          <div className="mb-10 p-5 border border-zinc-900 bg-black/40 rounded-2xl text-center italic">
+            <p className="text-[8px] font-black tracking-widest uppercase text-zinc-500">
+              Inicia sesión o accede al área de socios para transmitir en la frecuencia principal.
+            </p>
+          </div>
+        )}
+
+        <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+          {comentarios.length > 0 ? (
+            comentarios.map((comentario) => (
+              <div 
+                key={comentario.id}
+                className="p-5 rounded-2xl border bg-black/30 transition-all duration-300 group hover:bg-black/60"
+                style={{ borderColor: `${comentario.color_acento}15` }}
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <span 
+                    className="text-[9px] font-black uppercase tracking-wider italic"
+                    style={{ color: comentario.color_acento }}
+                  >
+                    @{comentario.alias}
+                  </span>
+                  <span className="text-[7px] font-mono text-zinc-600">
+                    {new Date(comentario.created_at).toLocaleDateString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+                <p className="text-[10px] text-zinc-300 font-medium leading-relaxed uppercase break-words">
+                  {comentario.contenido}
+                </p>
+              </div>
+            ))
+          ) : (
+            <p className="text-[8px] text-zinc-700 text-center uppercase font-black italic py-10">
+              Silencio en la frecuencia. Sé el primero en reportar...
+            </p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -252,6 +408,9 @@ export default function Page() {
         <OfertaFlash alistarse={() => { setEsLogin(false); setMostrarLogin(true); }} />
 
         <ModulosSistema />
+
+        {/* --- NUEVA SECCIÓN DE COMENTARIOS SIN ALTERAR COMPONENTES PREVIOS --- */}
+        <SeccionComentarios supabase={supabase} />
 
         <div className="flex flex-col items-center gap-4 opacity-40 mb-20">
           <span className="text-[8px] font-black uppercase tracking-[0.4em] text-zinc-400">Pagos Seguros vía</span>
