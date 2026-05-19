@@ -453,344 +453,109 @@ function GuiaInstalacion() {
   );
 }
 function ContadorSocial() {
-
-  const [stats, setStats] = useState({
-
-    discord:{
-      usuarios:0,
-      activos:0
-    },
-
-    tiktok:{
-      seguidores:0,
-      likes:0
-    }
-
+  const [stats, setStats] = useState<any>({
+    discord: { usuarios: null, activos: null },
+    tiktok: { seguidores: null, likes: null },
   });
 
-  useEffect(()=>{
-
-    fetch("/api/social")
-    .then((res)=>res.json())
-    .then(setStats)
-    .catch(console.error);
-
-  },[]);
-
-
-  return(
-
-<div className="
-grid
-grid-cols-1
-md:grid-cols-2
-gap-4
-max-w-4xl
-mx-auto
-lg:mx-0
-mb-8
-">
-
-
-{/* DISCORD */}
-
-<a
-
-href="https://discord.gg/a7a3Skg2"
-target="_blank"
-rel="noopener noreferrer"
-
-className="
-
-block
-bg-zinc-950/70
-border
-border-zinc-900
-rounded-[2rem]
-p-6
-backdrop-blur-xl
-shadow-2xl
-
-hover:border-[#5865F2]
-hover:scale-[1.02]
-
-transition-all
-cursor-pointer
-
-"
-
->
-
-<div className="flex items-center gap-4">
-
-<div className="
-w-16
-h-16
-rounded-full
-bg-[#5865F2]
-flex
-items-center
-justify-center
-text-3xl
-shadow-[0_0_30px_rgba(88,101,242,0.35)]
-">
-
-🎮
-
-</div>
-
-
-<div className="text-left">
-
-<p className="
-text-[8px]
-uppercase
-tracking-[0.4em]
-font-black
-text-zinc-500
-mb-1
-">
-
-Discord
-
-</p>
-
-
-<div className="flex items-center gap-4">
-
-<div>
-
-<p className="
-text-3xl
-font-black
-text-white
-">
-
-{stats.discord.usuarios}
-
-</p>
-
-<p className="
-text-[8px]
-uppercase
-text-zinc-600
-font-bold
-">
-
-Total
-
-</p>
-
-</div>
-
-
-<div className="
-h-10
-w-px
-bg-zinc-800
-"/>
-
-
-<div>
-
-<div className="flex items-center gap-2">
-
-<div className="
-w-3
-h-3
-rounded-full
-bg-green-500
-animate-pulse
-"/>
-
-<p className="
-text-3xl
-font-black
-text-green-500
-">
-
-{stats.discord.activos}
-
-</p>
-
-</div>
-
-<p className="
-text-[8px]
-uppercase
-font-bold
-text-green-500
-">
-
-Activos
-
-</p>
-
-</div>
-
-</div>
-
-</div>
-
-</div>
-
-</a>
-
-
-{/* TIKTOK */}
-
-<a
-
-href="https://www.tiktok.com/@mastesto"
-target="_blank"
-rel="noopener noreferrer"
-
-className="
-
-block
-bg-zinc-950/70
-border
-border-zinc-900
-rounded-[2rem]
-p-6
-backdrop-blur-xl
-shadow-2xl
-
-hover:border-pink-500
-hover:scale-[1.02]
-
-transition-all
-cursor-pointer
-
-"
-
->
-
-<div className="flex items-center gap-4">
-
-
-<div className="
-w-16
-h-16
-rounded-full
-bg-gradient-to-r
-from-pink-500
-to-cyan-400
-flex
-items-center
-justify-center
-text-3xl
-shadow-[0_0_30px_rgba(236,72,153,0.35)]
-">
-
-🎵
-
-</div>
-
-
-<div className="text-left">
-
-<p className="
-text-[8px]
-uppercase
-tracking-[0.4em]
-font-black
-text-zinc-500
-mb-1
-">
-
-TikTok
-
-</p>
-
-
-<div className="flex items-center gap-4">
-
-<div>
-
-<p className="
-text-3xl
-font-black
-text-white
-">
-
-{stats.tiktok.seguidores}
-
-</p>
-
-<p className="
-text-[8px]
-uppercase
-text-zinc-600
-font-bold
-">
-
-Seguidores
-
-</p>
-
-</div>
-
-
-<div className="
-h-10
-w-px
-bg-zinc-800
-"/>
-
-
-<div>
-
-<div className="flex items-center gap-2">
-
-<div className="
-w-3
-h-3
-rounded-full
-bg-pink-500
-animate-pulse
-"/>
-
-<p className="
-text-3xl
-font-black
-text-pink-500
-">
-
-{stats.tiktok.likes}
-
-</p>
-
-</div>
-
-<p className="
-text-[8px]
-uppercase
-font-bold
-text-pink-500
-">
-
-Likes
-
-</p>
-
-</div>
-
-</div>
-
-</div>
-
-</div>
-
-</div>
-
-</a>
-
-
-</div>
-
-)
-
+  useEffect(() => {
+    fetch('/api/social')
+      .then((res) => res.json())
+      .then(setStats)
+      .catch(console.error);
+  }, []);
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto lg:mx-0 mb-8">
+      <a
+        href="https://discord.gg/a7a3Skg2"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block bg-zinc-950/70 border border-zinc-900 rounded-[2rem] p-6 backdrop-blur-xl shadow-2xl hover:border-[#5865F2] hover:scale-[1.02] transition-all cursor-pointer"
+      >
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 rounded-full bg-[#5865F2] flex items-center justify-center text-3xl">
+            🎮
+          </div>
+
+          <div className="text-left">
+            <p className="text-[8px] uppercase tracking-[0.4em] font-black text-zinc-500 mb-1">
+              Discord
+            </p>
+
+            <div className="flex items-center gap-4">
+              <div>
+                <p className="text-3xl font-black text-white">
+                  {stats.discord.usuarios ?? '--'}
+                </p>
+                <p className="text-[8px] uppercase text-zinc-600 font-bold">
+                  Total
+                </p>
+              </div>
+
+              <div className="h-10 w-px bg-zinc-800" />
+
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
+                  <p className="text-3xl font-black text-green-500">
+                    {stats.discord.activos ?? '--'}
+                  </p>
+                </div>
+                <p className="text-[8px] uppercase font-bold text-green-500">
+                  Activos
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </a>
+
+      <a
+        href="https://www.tiktok.com/@mastesto"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block bg-zinc-950/70 border border-zinc-900 rounded-[2rem] p-6 backdrop-blur-xl shadow-2xl hover:border-pink-500 hover:scale-[1.02] transition-all cursor-pointer"
+      >
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 flex items-center justify-center text-3xl">
+            🎵
+          </div>
+
+          <div className="text-left">
+            <p className="text-[8px] uppercase tracking-[0.4em] font-black text-zinc-500 mb-1">
+              TikTok
+            </p>
+
+            <div className="flex items-center gap-4">
+              <div>
+                <p className="text-3xl font-black text-white">
+                  {stats.tiktok.seguidores ?? '--'}
+                </p>
+                <p className="text-[8px] uppercase text-zinc-600 font-bold">
+                  Seguidores
+                </p>
+              </div>
+
+              <div className="h-10 w-px bg-zinc-800" />
+
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-pink-500 animate-pulse" />
+                  <p className="text-3xl font-black text-pink-500">
+                    {stats.tiktok.likes ?? '--'}
+                  </p>
+                </div>
+                <p className="text-[8px] uppercase font-bold text-pink-500">
+                  Likes
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+  );
 }
 export default function Page() {
   const supabase = useMemo(() => createBrowserClient(
