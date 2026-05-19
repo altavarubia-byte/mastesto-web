@@ -572,6 +572,32 @@ function ContadorSocial() {
   );
 }
 export default function Page() {
+  const [cookiesAceptadas, setCookiesAceptadas] = useState(false);
+
+useEffect(() => {
+
+  const aceptadas =
+  localStorage.getItem(
+    "mastesto-cookies"
+  );
+
+  if(aceptadas==="true"){
+    setCookiesAceptadas(true);
+  }
+
+},[]);
+
+
+const aceptarCookies=()=>{
+
+  localStorage.setItem(
+    "mastesto-cookies",
+    "true"
+  );
+
+  setCookiesAceptadas(true);
+
+};
   const supabase = useMemo(() => createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
