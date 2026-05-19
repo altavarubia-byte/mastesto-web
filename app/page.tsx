@@ -765,18 +765,22 @@ const aceptarCookies=()=>{
             </>
           )}
           {!cookiesAceptadas && (
-
-<div className="
-fixed
-inset-0
-z-[9999]
-bg-black/90
-backdrop-blur-xl
-flex
-items-center
-justify-center
-p-6
-">
+  <div
+    className="
+    fixed
+    inset-0
+    z-[99999]
+    bg-black
+    flex
+    items-center
+    justify-center
+    p-6
+    overflow-hidden
+    "
+    onClick={(e) => e.preventDefault()}
+    onWheel={(e) => e.preventDefault()}
+    onTouchMove={(e) => e.preventDefault()}
+  >
 
 <div className="
 max-w-2xl
