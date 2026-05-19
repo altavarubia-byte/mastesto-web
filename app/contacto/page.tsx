@@ -49,7 +49,7 @@ export default function ContactoPage() {
         <div className="grid grid-cols-2 gap-4 py-4 border-y border-zinc-800/50">
           <div className="text-center">
             <p className="text-[8px] text-zinc-500 uppercase tracking-widest">Email Oficial</p>
-            <p className="text-xs font-bold">mastesto@gmail.es</p>
+            <p className="text-xs font-bold">mastesto3@gmail.es</p>
           </div>
           <div className="text-center border-l border-zinc-800/50">
             <p className="text-[8px] text-zinc-500 uppercase tracking-widest">Línea Directa</p>
