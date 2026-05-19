@@ -718,11 +718,118 @@ export default function Page() {
 
         <GuiaInstalacion />
 
-        <footer className="mt-14 py-10 opacity-40">
-          <p className="text-white text-[7px] font-black uppercase tracking-[0.8em]">
-            Mastesto Engineering Protocol • 2026
-          </p>
-        </footer>
+       <footer className="w-full mt-28 pt-16 pb-12 border-t border-zinc-900/50">
+
+  <div className="max-w-6xl mx-auto px-4">
+
+    <div className="flex flex-col items-center">
+
+      {/* ENLACES */}
+      <div className="flex flex-wrap items-center justify-center gap-6 md:gap-10 mb-10">
+
+        <Link
+          href="/contacto"
+          className="
+          text-[8px]
+          font-black
+          uppercase
+          tracking-[0.35em]
+          text-zinc-600
+          hover:text-orange-500
+          transition-all
+          "
+        >
+          Contacto
+        </Link>
+
+        <div className="w-1 h-1 rounded-full bg-zinc-800" />
+
+        <Link
+          href="/privacidad"
+          className="
+          text-[8px]
+          font-black
+          uppercase
+          tracking-[0.35em]
+          text-zinc-600
+          hover:text-orange-500
+          transition-all
+          "
+        >
+          Privacidad
+        </Link>
+
+        <div className="w-1 h-1 rounded-full bg-zinc-800" />
+
+        <Link
+          href="/terminos"
+          className="
+          text-[8px]
+          font-black
+          uppercase
+          tracking-[0.35em]
+          text-zinc-600
+          hover:text-orange-500
+          transition-all
+          "
+        >
+          Términos
+        </Link>
+
+      </div>
+
+      {/* SEPARADOR */}
+      <div className="w-64 h-px bg-gradient-to-r from-transparent via-zinc-700 to-transparent mb-10" />
+
+      {/* FIRMA */}
+      <div className="flex flex-col items-center gap-3">
+
+        <p
+          className="
+          text-white
+          text-[7px]
+          font-black
+          uppercase
+          tracking-[0.8em]
+          opacity-70
+          text-center
+          "
+        >
+          Mastesto Engineering Protocol
+        </p>
+
+        <p
+          className="
+          text-[8px]
+          text-zinc-700
+          italic
+          tracking-[0.3em]
+          uppercase
+          text-center
+          "
+        >
+          Disciplina • Voluntad • Honor
+        </p>
+
+        <p
+          className="
+          text-[7px]
+          text-zinc-800
+          uppercase
+          tracking-[0.25em]
+          text-center
+          "
+        >
+          © 2026 Mastesto
+        </p>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</footer>
       </main>
 
       {/* --- MODAL DE LOGIN/REGISTRO COMPLETO --- */}
