@@ -80,10 +80,10 @@ export default function PerfilPage() {
   const [ghostMode, setGhostMode] = useState(false);
   const [nuevaFecha, setNuevaFecha] = useState('');
 
-  // IA MENTOR
-  const [isOpen, setIsOpen] = useState(false);
+  // IA MENTOR DESPLEGABLE
+  const [mentorAbierto, setMentorAbierto] = useState(false);
   const [mensaje, setMensaje] = useState('');
-  const [chat, setChat] = useState<{ role: string, content: string }[]>([]);
+  const [chat, setChat] = useState<{ role: 'user' | 'assistant', content: string }[]>([]);
   const [cargandoIA, setCargandoIA] = useState(false);
   const [temperatura, setTemperatura] = useState(0.7);
   const [brevedad, setBrevedad] = useState(50);
@@ -276,15 +276,27 @@ export default function PerfilPage() {
 
   const consultarMentor = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!mensaje.trim() || cargandoIA) return;
-    const historial = [...chat, { role: 'user', content: mensaje }];
-    setChat(historial); setMensaje(''); setCargandoIA(true);
+
+    const texto = mensaje.trim();
+    if (!texto || cargandoIA) return;
+
+    const nuevoMensaje: { role: 'user', content: string } = {
+      role: 'user',
+      content: texto,
+    };
+
+    const historialActualizado = [...chat, nuevoMensaje];
+
+    setChat(historialActualizado);
+    setMensaje('');
+    setCargandoIA(true);
+
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: historial,
+          messages: historialActualizado,
           contexto: `
 PROGRESO ACTUAL:
 Alias: ${alias}
@@ -296,13 +308,37 @@ Misión personal: ${bio}
           words: brevedad,
         }),
       });
+
       const data = await res.json();
-      setChat([...historial, { role: 'assistant', content: data.content || 'SISTEMA: SIN RESPUESTA.' }]);
+
+      setChat((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: data.content || 'SISTEMA: SIN RESPUESTA.',
+        },
+      ]);
     } catch (e) {
       console.error(e);
-      setChat([...historial, { role: 'assistant', content: 'SISTEMA: ERROR DE CONEXIÓN.' }]);
-    } finally { setCargandoIA(false); }
+      setChat((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: 'SISTEMA: ERROR DE CONEXIÓN.',
+        },
+      ]);
+    } finally {
+      setCargandoIA(false);
+      setTimeout(() => {
+        scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+      }, 80);
+    }
   };
+
+  useEffect(() => {
+    if (!scrollRef.current) return;
+    scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+  }, [chat, cargandoIA]);
 
   if (loading) return <div className="bg-black min-h-screen text-white flex items-center justify-center font-black animate-pulse uppercase tracking-[1em]">Cargando...</div>;
 
@@ -471,98 +507,124 @@ Misión personal: ${bio}
             <p className="text-[8px] text-zinc-500 uppercase font-black mb-6 tracking-widest text-center italic">Buffer_Misiones</p>
             {tareas.length > 0 ? tareas.map((t: any) => <CardTarea key={t.id} tarea={t} userNick={alias} supabase={supabase} colorAcento={colorAcento} />) : <p className="text-[8px] text-zinc-700 text-center uppercase font-black italic mt-20">Esperando órdenes...</p>}
           </div>
+        </div>
+      </main>
 
-          {/* COMPONENTE IA MENTOR */}
-          <div className="bg-zinc-950 border border-zinc-900 p-6 rounded-[2.5rem] flex flex-col h-[400px]">
-            <p className="text-[8px] text-zinc-500 uppercase font-black mb-4 tracking-widest text-center italic">Mentor_Intel_IA</p>
-            
-            {/* Historial de Chat */}
-            <div className="flex-1 overflow-y-auto space-y-3 mb-4 pr-1 scrollbar-thin" ref={scrollRef}>
+      {/* IA MENTOR FLOTANTE DESPLEGABLE */}
+      <div className="fixed bottom-6 right-6 z-[140]">
+        {!mentorAbierto ? (
+          <button
+            type="button"
+            onClick={() => setMentorAbierto(true)}
+            className="w-16 h-16 rounded-full border border-zinc-800 bg-zinc-950 text-white shadow-2xl flex items-center justify-center hover:scale-105 transition-all"
+            style={{ boxShadow: `0 0 35px ${colorAcento}35`, borderColor: `${colorAcento}55` }}
+          >
+            <span className="text-2xl">⚔️</span>
+          </button>
+        ) : (
+          <div className="w-[92vw] max-w-[380px] h-[560px] bg-zinc-950 border border-zinc-800 rounded-[2rem] shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-4 border-b border-zinc-900 flex items-center justify-between bg-black/40">
+              <div>
+                <p className="text-[9px] text-zinc-500 uppercase font-black tracking-widest italic">Mentor_Intel_IA</p>
+                <p className="text-[8px] text-zinc-600 uppercase font-bold">Sistema táctico desplegado</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMentorAbierto(false)}
+                className="w-8 h-8 rounded-full bg-zinc-900 text-zinc-400 hover:text-white text-xs font-black"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-3 p-4 scrollbar-thin" ref={scrollRef}>
               {chat.length === 0 ? (
-                <p className="text-[8px] text-zinc-600 text-center uppercase italic mt-12">Sistemas listos. Consulta táctica disponible.</p>
+                <div className="h-full flex items-center justify-center text-center px-8">
+                  <p className="text-[9px] text-zinc-600 uppercase italic leading-relaxed">
+                    Sistemas listos. Pregunta al mentor y seguirá la conversación mensaje tras mensaje.
+                  </p>
+                </div>
               ) : (
                 chat.map((msg, idx) => (
-                  <div key={idx} className={`p-3 rounded-xl border text-[9px] leading-relaxed ${msg.role === 'user' ? 'bg-zinc-900/40 border-zinc-800 ml-4 text-right' : 'bg-black border-zinc-900/80 mr-4 text-left'}`}>
-                    <p className="text-[7px] font-black tracking-wider text-zinc-500 uppercase mb-1">{msg.role === 'user' ? alias : 'MENTOR'}</p>
-                    <p className={msg.role === 'user' ? 'text-zinc-300' : 'text-zinc-100 font-medium'}>{msg.content}</p>
+                  <div
+                    key={idx}
+                    className={`p-3 rounded-2xl border text-[10px] leading-relaxed ${
+                      msg.role === 'user'
+                        ? 'bg-zinc-900/70 border-zinc-800 ml-8 text-right'
+                        : 'bg-black border-zinc-900 mr-8 text-left'
+                    }`}
+                  >
+                    <p className="text-[7px] font-black tracking-wider text-zinc-500 uppercase mb-1">
+                      {msg.role === 'user' ? alias : 'MENTOR'}
+                    </p>
+                    <p className={msg.role === 'user' ? 'text-zinc-300' : 'text-zinc-100 font-medium'}>
+                      {msg.content}
+                    </p>
                   </div>
                 ))
               )}
-              {cargandoIA && <div className="text-[8px] text-zinc-500 font-black animate-pulse uppercase tracking-wider">Procesando Respuesta...</div>}
+              {cargandoIA && (
+                <div className="text-[8px] text-zinc-500 font-black animate-pulse uppercase tracking-wider">
+                  Procesando respuesta...
+                </div>
+              )}
             </div>
 
-            {/* Controles IA */}
-            <div className="mb-4 space-y-3 border-t border-zinc-900 pt-4">
-              <div>
-                <div className="flex justify-between mb-1">
-                  <span className="text-[7px] font-black text-zinc-500 uppercase tracking-widest">
-                    Temperatura IA
-                  </span>
-                  <span className="text-[7px] font-mono" style={{ color: colorAcento }}>
-                    {temperatura.toFixed(1)}
-                  </span>
+            <div className="p-4 border-t border-zinc-900 bg-black/30">
+              <div className="mb-4 space-y-3">
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-[7px] font-black text-zinc-500 uppercase tracking-widest">Temperatura IA</span>
+                    <span className="text-[7px] font-mono" style={{ color: colorAcento }}>{temperatura.toFixed(1)}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.1"
+                    value={temperatura}
+                    onChange={(e) => setTemperatura(Number(e.target.value))}
+                    className="w-full accent-orange-600"
+                  />
                 </div>
 
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.1"
-                  value={temperatura}
-                  onChange={(e) => setTemperatura(Number(e.target.value))}
-                  className="w-full accent-orange-600"
-                />
-
-                <p className="text-[7px] text-zinc-600 mt-1 italic">
-                  Baja = más seria · Alta = más creativa
-                </p>
-              </div>
-
-              <div>
-                <div className="flex justify-between mb-1">
-                  <span className="text-[7px] font-black text-zinc-500 uppercase tracking-widest">
-                    Máximo de palabras
-                  </span>
-                  <span className="text-[7px] font-mono" style={{ color: colorAcento }}>
-                    {brevedad}
-                  </span>
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-[7px] font-black text-zinc-500 uppercase tracking-widest">Máximo palabras</span>
+                    <span className="text-[7px] font-mono" style={{ color: colorAcento }}>{brevedad}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="20"
+                    max="200"
+                    step="10"
+                    value={brevedad}
+                    onChange={(e) => setBrevedad(Number(e.target.value))}
+                    className="w-full accent-orange-600"
+                  />
                 </div>
-
-                <input
-                  type="range"
-                  min="20"
-                  max="200"
-                  step="10"
-                  value={brevedad}
-                  onChange={(e) => setBrevedad(Number(e.target.value))}
-                  className="w-full accent-orange-600"
-                />
-
-                <p className="text-[7px] text-zinc-600 mt-1 italic">
-                  Controla lo larga que será la respuesta del mentor.
-                </p>
               </div>
+
+              <form onSubmit={consultarMentor} className="flex gap-2">
+                <input
+                  value={mensaje}
+                  onChange={(e) => setMensaje(e.target.value)}
+                  placeholder="ESCRIBE AL MENTOR..."
+                  className="flex-1 bg-black border border-zinc-900 p-3 rounded-xl text-[10px] font-bold text-white outline-none focus:border-zinc-700"
+                  disabled={cargandoIA}
+                />
+                <button
+                  type="submit"
+                  disabled={cargandoIA || !mensaje.trim()}
+                  className="px-4 bg-white text-black text-[9px] font-black uppercase rounded-xl hover:opacity-80 transition-all disabled:opacity-30"
+                >
+                  ENVIAR
+                </button>
+              </form>
             </div>
-
-            {/* Input Form */}
-            <form onSubmit={consultarMentor} className="flex gap-2">
-              <input 
-                value={mensaje} 
-                onChange={(e) => setMensaje(e.target.value)} 
-                placeholder="CONEXIÓN CON MENTOR..." 
-                className="flex-1 bg-black border border-zinc-900 p-3 rounded-xl text-[9px] uppercase font-bold text-white outline-none focus:border-zinc-700"
-              />
-              <button 
-                type="submit" 
-                disabled={cargandoIA}
-                className="px-4 bg-white text-black text-[9px] font-black uppercase rounded-xl hover:opacity-80 transition-all disabled:opacity-30"
-              >
-                ENGAGE
-              </button>
-            </form>
           </div>
-        </div>
-      </main>
+        )}
+      </div>
 
       {/* MODAL DE CONFIGURACIÓN */}
       {editandoPerfil && (
