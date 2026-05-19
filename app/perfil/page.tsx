@@ -129,7 +129,7 @@ export default function PerfilPage() {
     { id: 13, tiempoHoras: 504, titulo: "Mente Inquebrantable", desc: "Tres semanas completas. Los receptores de nicotina cerebrales empiezan a desactivarse.", icono: "👁️" },
     { id: 14, tiempoHoras: 720, titulo: "Renacimiento Pulmonar", desc: "1 mes. La tos y la dificultad para respirar disminuyen de manera evidente.", icono: "🌀" },
     { id: 15, tiempoHoras: 1080, titulo: "Flujo Limpio", desc: "La función pulmonar general ha mejorado ya hasta un 10%.", icono: "🌊" },
-    { id: 16, tiempoHoras: 1440, titulo: "Piel Operativa", desc: "2 meses. La piel recupera elasticidad, brillo natural y oxigenación celular.", icono: "✨" },
+    { id: 16, text-xl: 1440, tiempoHoras: 1440, titulo: "Piel Operativa", desc: "2 meses. La piel recupera elasticidad, brillo natural y oxigenación celular.", icono: "✨" },
     { id: 17, tiempoHoras: 2160, titulo: "Resistencia Élite", desc: "3 meses. Los cilios pulmonares se han regenerado y barren activamente la mucosidad.", icono: "🧹" },
     { id: 18, tiempoHoras: 2880, titulo: "Inmunidad Reforzada", desc: "4 meses. El sistema inmunológico se estabiliza. Menos resfriados y bajas metabólicas.", icono: "🔰" },
     { id: 19, tiempoHoras: 3600, titulo: "Fuerza Cardiovascular", desc: "5 meses. El ventrículo izquierdo trabaja con un esfuerzo significativamente menor.", icono: "❤️" },
@@ -163,7 +163,7 @@ export default function PerfilPage() {
     { id: 47, tiempoHoras: 148920, titulo: "Inmortalidad Estadística", desc: "17 años. Los efectos acumulativos del daño vascular crónico quedan saldados.", icono: "💫" },
     { id: 48, tiempoHoras: 166440, titulo: "Salud Absoluta", desc: "19 años. Tu perfil de riesgo general es impecable.", icono: "🪐" },
     { id: 49, tiempoHoras: 175200, titulo: "20 AÑOS INTACTO", desc: "Sistema respiratorio y cardiovascular reseteados al 100% de fábrica.", icono: "🌌" },
-    { id: 50, tiempoHoras: 262800, titulo: "DIOS DE LA DISCIPLINA", desc: "Dos décadas de autocontrol absoluto. Eres el Forjador de tu propio destino biológico.", icono: "☀️" }
+    { id: 50, tiempoHoras: 262800, titulo: "DIOS DE LA DISCIPLINA", desc: "Dos décadas de autocontrol absoluto. Eres el Forjador de tu propio destiny biológico.", icono: "☀️" }
   ], []);
 
   useEffect(() => {
@@ -222,7 +222,7 @@ export default function PerfilPage() {
     return () => clearInterval(intervalo);
   }, [fechaInicio]);
 
-  // --- ANÁLISIS DE LOGROS Y PROGRESO (DISPONIBLE PARA TODOS LOS SOCIOS) ---
+  // --- ANÁLISIS DE LOGROS Y PROGRESO ---
   const analisisProgresoTabaco = useMemo(() => {
     if (!fechaInicio || !user?.user_metadata?.quiere_reloj) return null;
     
@@ -316,7 +316,6 @@ export default function PerfilPage() {
                <p className="text-[8px] font-black text-zinc-600 uppercase tracking-widest mb-1 italic">Operativo</p>
                <p className="text-[10px] font-bold truncate mb-4" style={{ color: colorAcento }}>{user?.email}</p>
                
-               {/* --- VARIABLE CORREGIDA: analisisProgresoTabaco --- */}
                {analisisProgresoTabaco && (
                  <div className="mb-4 border-t border-zinc-900 pt-3">
                    <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mb-2 italic">
@@ -455,11 +454,49 @@ export default function PerfilPage() {
           )}
         </div>
 
-        {/* LISTA DE MISIONES */}
-        <div className="lg:col-span-3">
-          <div className="bg-zinc-950 border border-zinc-900 p-6 rounded-[2.5rem] min-h-[400px]">
+        {/* COLUMNA LATERAL: MISIONES E IA MENTOR */}
+        <div className="lg:col-span-3 space-y-6">
+          {/* LISTA DE MISIONES */}
+          <div className="bg-zinc-950 border border-zinc-900 p-6 rounded-[2.5rem] min-h-[250px]">
             <p className="text-[8px] text-zinc-500 uppercase font-black mb-6 tracking-widest text-center italic">Buffer_Misiones</p>
             {tareas.length > 0 ? tareas.map((t: any) => <CardTarea key={t.id} tarea={t} userNick={alias} supabase={supabase} colorAcento={colorAcento} />) : <p className="text-[8px] text-zinc-700 text-center uppercase font-black italic mt-20">Esperando órdenes...</p>}
+          </div>
+
+          {/* COMPONENTE IA MENTOR */}
+          <div className="bg-zinc-950 border border-zinc-900 p-6 rounded-[2.5rem] flex flex-col h-[400px]">
+            <p className="text-[8px] text-zinc-500 uppercase font-black mb-4 tracking-widest text-center italic">Mentor_Intel_IA</p>
+            
+            {/* Historial de Chat */}
+            <div className="flex-1 overflow-y-auto space-y-3 mb-4 pr-1 scrollbar-thin" ref={scrollRef}>
+              {chat.length === 0 ? (
+                <p className="text-[8px] text-zinc-600 text-center uppercase italic mt-12">Sistemas listos. Consulta táctica disponible.</p>
+              ) : (
+                chat.map((msg, idx) => (
+                  <div key={idx} className={`p-3 rounded-xl border text-[9px] leading-relaxed ${msg.role === 'user' ? 'bg-zinc-900/40 border-zinc-800 ml-4 text-right' : 'bg-black border-zinc-900/80 mr-4 text-left'}`}>
+                    <p className="text-[7px] font-black tracking-wider text-zinc-500 uppercase mb-1">{msg.role === 'user' ? alias : 'MENTOR'}</p>
+                    <p className={msg.role === 'user' ? 'text-zinc-300' : 'text-zinc-100 font-medium'}>{msg.content}</p>
+                  </div>
+                ))
+              )}
+              {cargandoIA && <div className="text-[8px] text-zinc-500 font-black animate-pulse uppercase tracking-wider">Procesando Respuesta...</div>}
+            </div>
+
+            {/* Input Form */}
+            <form onSubmit={consultarMentor} className="flex gap-2">
+              <input 
+                value={mensaje} 
+                onChange={(e) => setMensaje(e.target.value)} 
+                placeholder="CONEXIÓN CON MENTOR..." 
+                className="flex-1 bg-black border border-zinc-900 p-3 rounded-xl text-[9px] uppercase font-bold text-white outline-none focus:border-zinc-700"
+              />
+              <button 
+                type="submit" 
+                disabled={cargandoIA}
+                className="px-4 bg-white text-black text-[9px] font-black uppercase rounded-xl hover:opacity-80 transition-all disabled:opacity-30"
+              >
+                ENGAGE
+              </button>
+            </form>
           </div>
         </div>
       </main>
@@ -497,7 +534,7 @@ export default function PerfilPage() {
                 </div>
                 <div className="flex items-center justify-between p-4 bg-black/40 border border-zinc-900 rounded-xl">
                   <span className="text-[8px] font-black text-zinc-500 uppercase italic">Modo Fantasma</span>
-                  <input type="checkbox" checked={ghostMode} onChange={(e) => setGhostMode(e.target.checked)} className="w-4 h-4 accent-zinc-500" />
+                  <input type="checkbox" checked={ghostMode} onChange={(e) => setGhostMode(e.checked)} className="w-4 h-4 accent-zinc-500" />
                 </div>
               </div>
             </div>
