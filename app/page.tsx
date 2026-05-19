@@ -459,12 +459,26 @@ function ContadorSocial() {
   });
 
   useEffect(() => {
-    fetch('/api/social')
-      .then((res) => res.json())
+
+  const cargarDatos = () => {
+
+    fetch("/api/social")
+      .then((res)=>res.json())
       .then(setStats)
       .catch(console.error);
-  }, []);
 
+  };
+
+  cargarDatos();
+
+  const intervalo = setInterval(
+    cargarDatos,
+    15000
+  );
+
+  return () => clearInterval(intervalo);
+
+}, []);
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto lg:mx-0 mb-8">
       <a
