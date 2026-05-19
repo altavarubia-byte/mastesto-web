@@ -94,6 +94,12 @@ export default function PerfilPage() {
   const [socioId, setSocioId] = useState('');
   const [statusMsg, setStatusMsg] = useState('');
 
+  // --- NUEVOS ESTADOS: PROTOCOLO TABACO ---
+  const [showTabacoModal, setShowTabacoModal] = useState(false);
+  const [esFumador, setEsFumador] = useState<boolean | null>(null);
+  const [quiereReloj, setQuiereReloj] = useState<boolean | null>(null);
+  const [datosTabaco, setDatosTabaco] = useState({ cigarrillosDia: '', precioPaquete: '', unidadesPaquete: '20' });
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const isAdmin = user?.email === 'altava.rubia@gmail.com';
@@ -123,6 +129,17 @@ export default function PerfilPage() {
       setColorAcento(meta?.color_acento || '#ea580c');
       setGhostMode(meta?.ghost_mode || false);
 
+      // Evaluar si se debe mostrar el modal de tabaco de manera persistente
+      if (meta?.es_fumador === undefined) {
+        setShowTabacoModal(true);
+      } else if (meta?.es_fumador === true && meta?.quiere_reloj === true) {
+        setDatosTabaco({
+          cigarrillosDia: String(meta?.cigarrillos_dia || 0),
+          precioPaquete: String(meta?.precio_paquete || 0),
+          unidadesPaquete: String(meta?.unidades_paquete || 20)
+        });
+      }
+
       const { data: tasks } = await supabase.from('tareas').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
       if (tasks) setTareas(tasks);
       setLoading(false);
@@ -147,6 +164,40 @@ export default function PerfilPage() {
     }, 1000);
     return () => clearInterval(intervalo);
   }, [fechaInicio]);
+
+  // --- NUEVA LÓGICA: CÁLCULOS BIOLÓGICOS DEL TABACO ---
+  const statsTabaco = useMemo(() => {
+    if (!fechaInicio || !user?.user_metadata?.quiere_reloj) return null;
+    
+    const totalMs = new Date().getTime() - new Date(fechaInicio).getTime();
+    const totalHoras = totalMs / (1000 * 60 * 60);
+    const totalDias = totalHoras / 24;
+
+    const cigsDia = Number(datosTabaco.cigarrillosDia) || 0;
+    const precioPaq = Number(datosTabaco.precioPaquete) || 0;
+    const unidPaq = Number(datosTabaco.unidadesPaquete) || 20;
+
+    const precioPorCigarrillo = precioPaq / unidPaq;
+    const dineroAhorrado = totalDias * cigsDia * precioPorCigarrillo;
+    const cigarrosEvitados = totalDias * cigsDia;
+
+    let reporteSalud = "Estabilizando parámetros metabólicos...";
+    if (totalHoras >= 72) {
+      reporteSalud = "Función pulmonar óptima. Bronquios relajados.";
+    } else if (totalHoras >= 48) {
+      reporteSalud = "Terminaciones nerviosas regenerándose. Gusto y olfato mejorados.";
+    } else if (totalHoras >= 24) {
+      reporteSalud = "Presión arterial normalizada. Monóxido de carbono eliminado.";
+    } else if (totalHoras >= 8) {
+      reporteSalud = "Oxigenación en sangre recuperando niveles críticos normales.";
+    }
+
+    return {
+      dinero: dineroAhorrado.toFixed(2),
+      cigarros: Math.floor(cigarrosEvitados),
+      salud: reporteSalud
+    };
+  }, [fechaInicio, datosTabaco, user]);
 
   const guardarAjustes = async () => {
     await supabase.auth.updateUser({
@@ -269,6 +320,30 @@ export default function PerfilPage() {
             </div>
           </div>
 
+          {/* --- NUEVO: MONITOR TÁCTICO ANTI-TABACO --- */}
+          {user?.user_metadata?.quiere_reloj && statsTabaco && (
+            <div className="bg-zinc-950 border border-zinc-900 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-green-500/30 to-transparent" />
+              <p className="text-[8px] font-black uppercase tracking-[0.4em] text-zinc-500 mb-6 italic">Protocolo Anti-Tabaco Activo</p>
+              
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="bg-black/50 border border-zinc-900 p-4 rounded-2xl text-center">
+                  <span className="text-[7px] font-black text-zinc-600 uppercase tracking-widest block mb-1">Capital Recuperado</span>
+                  <span className="text-2xl font-mono font-black text-green-500">{statsTabaco.dinero}€</span>
+                </div>
+                <div className="bg-black/50 border border-zinc-900 p-4 rounded-2xl text-center">
+                  <span className="text-[7px] font-black text-zinc-600 uppercase tracking-widest block mb-1">Cigarros Evitados</span>
+                  <span className="text-2xl font-mono font-black text-white">{statsTabaco.cigarros}</span>
+                </div>
+              </div>
+
+              <div className="border-t border-zinc-900 pt-4 text-left">
+                <span className="text-[7px] font-black text-zinc-600 uppercase tracking-widest block mb-1">Diagnóstico Bioquímico</span>
+                <p className="text-[9px] font-bold uppercase text-zinc-300 tracking-wide italic animate-pulse">{statsTabaco.salud}</p>
+              </div>
+            </div>
+          )}
+
           {isAdmin && (
             <div className="bg-zinc-950 border border-zinc-900 p-8 rounded-[2.5rem]">
                <h4 className="text-[10px] font-black uppercase mb-6 text-center italic tracking-widest" style={{ color: colorAcento }}>Asignación de Misiones</h4>
@@ -382,6 +457,93 @@ export default function PerfilPage() {
           </div>
         )}
       </div>
+
+      {/* --- NUEVO: MODAL PERSISTENTE DE DIAGNÓSTICO DE TABACO --- */}
+      {showTabacoModal && (
+        <div className="fixed inset-0 bg-black/98 z-[200] flex items-center justify-center p-6 backdrop-blur-xl animate-in fade-in duration-300">
+          <div className="bg-zinc-950 border border-zinc-900 p-8 rounded-[2.5rem] max-w-md w-full space-y-6 relative">
+            <h2 className="text-[11px] font-black uppercase tracking-[0.3em] text-orange-600 italic text-center">Protocolo de Salud Operativa</h2>
+            
+            {esFumador === null ? (
+              <div className="space-y-4 animate-in fade-in duration-200">
+                <p className="text-[9px] text-zinc-400 text-center uppercase font-black tracking-widest leading-relaxed">¿Usted es fumador activo o consume tabaco?</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <button onClick={() => setEsFumador(true)} className="bg-white text-black py-4 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all hover:bg-zinc-200">SÍ</button>
+                  <button 
+                    onClick={async () => {
+                      setEsFumador(false);
+                      await supabase.auth.updateUser({ data: { es_fumador: false, quiere_reloj: false } });
+                      setShowTabacoModal(false);
+                    }} 
+                    className="bg-zinc-900 text-white py-4 rounded-xl text-[9px] font-black uppercase tracking-widest border border-zinc-800 transition-all hover:bg-zinc-800"
+                  >
+                    NO
+                  </button>
+                </div>
+              </div>
+            ) : quiereReloj === null ? (
+              <div className="space-y-4 animate-in fade-in duration-200">
+                <p className="text-[9px] text-zinc-400 text-center uppercase font-black tracking-widest leading-relaxed">¿Desea activar el módulo de desintoxicación y reloj biológico?</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <button onClick={() => setQuiereReloj(true)} className="bg-orange-600 text-white py-4 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all hover:bg-orange-500">ACTIVAR</button>
+                  <button 
+                    onClick={async () => {
+                      setQuiereReloj(false);
+                      await supabase.auth.updateUser({ data: { es_fumador: true, quiere_reloj: false } });
+                      setShowTabacoModal(false);
+                    }} 
+                    className="bg-zinc-900 text-white py-4 rounded-xl text-[9px] font-black uppercase tracking-widest border border-zinc-800 transition-all hover:bg-zinc-800"
+                  >
+                    OMITIR
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4 animate-in fade-in duration-200 text-left">
+                <p className="text-[8px] text-zinc-500 text-center uppercase font-black tracking-widest mb-4">Ingrese parámetros financieros y de consumo</p>
+                
+                <div>
+                  <label className="text-[7px] font-black text-zinc-500 uppercase mb-1 block">Cigarrillos consumidos al día</label>
+                  <input type="number" placeholder="Ej: 15" value={datosTabaco.cigarrillosDia} onChange={(e) => setDatosTabaco({...datosTabaco, cigarrillosDia: e.target.value})} className="w-full bg-black border border-zinc-800 rounded-xl p-4 text-[10px] uppercase font-bold outline-none focus:border-orange-600" />
+                </div>
+
+                <div>
+                  <label className="text-[7px] font-black text-zinc-500 uppercase mb-1 block">Precio por paquete (€)</label>
+                  <input type="number" step="0.01" placeholder="Ej: 5.25" value={datosTabaco.precioPaquete} onChange={(e) => setDatosTabaco({...datosTabaco, precioPaquete: e.target.value})} className="w-full bg-black border border-zinc-800 rounded-xl p-4 text-[10px] uppercase font-bold outline-none focus:border-orange-600" />
+                </div>
+
+                <div>
+                  <label className="text-[7px] font-black text-zinc-500 uppercase mb-1 block">Unidades totales por paquete</label>
+                  <input type="number" placeholder="Ej: 20" value={datosTabaco.unidadesPaquete} onChange={(e) => setDatosTabaco({...datosTabaco, unidadesPaquete: e.target.value})} className="w-full bg-black border border-zinc-800 rounded-xl p-4 text-[10px] uppercase font-bold outline-none focus:border-orange-600" />
+                </div>
+
+                <button 
+                  onClick={async () => {
+                    if (!datosTabaco.cigarrillosDia || !datosTabaco.precioPaquete) return;
+                    const fechaActual = new Date().toISOString();
+                    await supabase.auth.updateUser({
+                      data: { 
+                        es_fumador: true, 
+                        quiere_reloj: true, 
+                        fecha_dejo_fumar: fechaActual, 
+                        cigarrillos_dia: Number(datosTabaco.cigarrillosDia), 
+                        precio_paquete: Number(datosTabaco.precioPaquete), 
+                        unidades_paquete: Number(datosTabaco.unidadesPaquete) 
+                      }
+                    });
+                    setFechaInicio(fechaActual);
+                    setNuevaFecha(fechaActual.split('T')[0]);
+                    setShowTabacoModal(false);
+                  }}
+                  className="w-full bg-white text-black py-4 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all hover:bg-zinc-200 mt-6"
+                >
+                  Iniciar Forja Biológica
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
     </div>
   );
