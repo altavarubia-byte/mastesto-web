@@ -764,6 +764,131 @@ const aceptarCookies=()=>{
               </button>
             </>
           )}
+          {!cookiesAceptadas && (
+
+<div className="
+fixed
+inset-0
+z-[9999]
+bg-black/90
+backdrop-blur-xl
+flex
+items-center
+justify-center
+p-6
+">
+
+<div className="
+max-w-2xl
+bg-zinc-950
+border
+border-orange-500/20
+rounded-[2rem]
+p-8
+shadow-[0_0_60px_rgba(255,100,0,0.15)]
+">
+
+<div className="text-center">
+
+<div className="
+w-20
+h-20
+rounded-full
+mx-auto
+mb-6
+bg-orange-600/20
+flex
+items-center
+justify-center
+text-4xl
+">
+
+🍪
+
+</div>
+
+<h2 className="
+text-3xl
+font-black
+mb-5
+text-white
+">
+
+Bienvenido a Mastesto
+
+</h2>
+
+<p className="
+text-zinc-400
+leading-relaxed
+mb-6
+">
+
+Utilizamos cookies y tecnologías similares
+para mejorar la experiencia, analizar el uso
+de la plataforma y optimizar funciones.
+
+Al continuar aceptas nuestra política de
+privacidad y términos del servicio.
+
+</p>
+
+<div className="
+flex
+gap-3
+justify-center
+">
+
+<a
+href="/privacidad"
+target="_blank"
+className="
+px-4
+py-3
+rounded-xl
+bg-zinc-900
+text-zinc-300
+"
+>
+
+Leer política
+
+</a>
+
+<button
+onClick={aceptarCookies}
+className="
+px-8
+py-3
+rounded-xl
+bg-orange-600
+hover:bg-orange-500
+font-black
+transition-all
+"
+>
+
+ACEPTAR Y ENTRAR ⚔️
+
+</button>
+
+</div>
+
+<p className="
+text-[10px]
+mt-6
+text-zinc-600
+">
+
+Sin aceptar cookies no es posible usar Mastesto
+
+</p>
+
+</div>
+</div>
+</div>
+
+)}
         </div>
       </nav>
 
