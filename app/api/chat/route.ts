@@ -5,6 +5,12 @@ export async function POST(req: Request) {
     const { messages, contexto, temp, words } = await req.json();
 
     const maxWords = words || 40;
+    const temperatura = temp ?? 0.7;
+
+    const estiloIA =
+      temperatura >= 0.8
+        ? `Actúa como un líder firme, intenso, inspirador y dominante. Tono de mando, energía alta, autoridad y motivación fuerte.`
+        : `Actúa de forma normal, cercana, clara y útil. Tono humano, tranquilo y natural.`;
 
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -15,29 +21,31 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
         messages: [
-          { 
-            role: 'system', 
-            content: `Eres EL FORJADOR de +TESTO. 
+          {
+            role: 'system',
+            content: `Eres el mentor inteligente de +TESTO.
 
-            ESTOS SON LOS DATOS REALES DEL SOCIO (PROHIBIDO INVENTAR):
-            ${contexto}
+ESTOS SON LOS DATOS REALES DEL SOCIO. PROHIBIDO INVENTAR:
+${contexto}
 
-            REGLAS CRÍTICAS:
-            1. Si el socio pregunta cuánto tiempo lleva, responde EXACTAMENTE con los datos de "PROGRESO ACTUAL" que recibes arriba.
-            2. Tu respuesta DEBE ser de máximo ${maxWords} palabras.
-            3. Tono: Marcial, severo, autoritario. Sin saludos.
-            4. Si los datos dicen 0 días y 10 horas, NO DIGAS que lleva años. Di la verdad con dureza.` 
+REGLAS OBLIGATORIAS:
+1. Saluda siempre al principio de forma breve.
+2. Si el socio pregunta cuánto tiempo lleva, responde exactamente con los datos de "PROGRESO ACTUAL".
+3. Tu respuesta debe acercarse lo máximo posible a ${maxWords} palabras, sin pasarse.
+4. Máximo permitido: ${maxWords} palabras.
+5. ${estiloIA}
+6. Si los datos dicen 0 días y 10 horas, no digas que lleva años. Di la verdad.
+7. No inventes logros, fechas ni progresos que no estén en el contexto.`
           },
           ...messages,
         ],
-        temperature: temp ?? 0.7,
+        temperature: temperatura,
       }),
     });
 
     const data = await response.json();
-    let content = data.choices[0].message.content;
+    let content = data.choices?.[0]?.message?.content || 'SISTEMA: SIN RESPUESTA.';
 
-    // Recorte de seguridad
     const palabras = content.split(/\s+/);
     if (palabras.length > maxWords) {
       content = palabras.slice(0, maxWords).join(' ') + '...';
