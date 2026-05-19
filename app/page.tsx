@@ -409,7 +409,7 @@ export default function Page() {
             <Link href="/perfil" className="bg-white text-black px-5 py-2.5 rounded-full text-[9px] font-black uppercase tracking-tighter hover:scale-105 transition-all">Panel Operativo</Link>
           ) : (
             <>
-              <button onClick={() => { setEsLogin(true); setMostrarLogin(true); }} className="hidden sm:block text-[9px] font-black uppercase text-zinc-400 hover:text-white">Entrar</button>
+              <button onClick={() => { setEsLogin(true); setMostrarLogin(true); }} className="block text-[9px] font-black uppercase text-zinc-400 hover:text-white">Entrar</button>
               <button onClick={abrirRegistro} className="bg-orange-600 text-white px-5 py-2.5 rounded-full text-[9px] font-black uppercase tracking-tighter hover:bg-orange-500 transition-all shadow-[0_0_25px_rgba(234,88,12,0.25)]">Alistarse</button>
             </>
           )}
