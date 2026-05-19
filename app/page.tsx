@@ -574,6 +574,17 @@ function ContadorSocial() {
 export default function Page() {
   
   const [cookiesAceptadas, setCookiesAceptadas] = useState(false);
+  useEffect(() => {
+  if (!cookiesAceptadas) {
+    document.body.style.overflow = 'hidden';
+  } else {
+    document.body.style.overflow = '';
+  }
+
+  return () => {
+    document.body.style.overflow = '';
+  };
+}, [cookiesAceptadas]);
    useEffect(() => {
   if (!cookiesAceptadas) {
     document.body.style.overflow = 'hidden';
@@ -775,48 +786,164 @@ const aceptarCookies=()=>{
               </button>
             </>
           )}
-          {!cookiesAceptadas && (
-  <div className="fixed inset-0 z-[999999] bg-black/95 backdrop-blur-2xl flex items-center justify-center px-4 py-6 overflow-y-auto overscroll-none touch-none">
-    <div className="w-full max-w-md bg-zinc-950 border border-orange-500/30 rounded-[2rem] p-6 shadow-[0_0_60px_rgba(255,100,0,0.2)]">
-      <div className="text-center">
-        <div className="w-16 h-16 rounded-full mx-auto mb-5 bg-orange-600/20 flex items-center justify-center text-3xl">
-          🍪
-        </div>
+         {!cookiesAceptadas && (
 
-        <h2 className="text-2xl font-black mb-4 text-white">
-          Bienvenido a Mastesto
-        </h2>
+<div
+className="
+fixed
+top-0
+left-0
+right-0
+bottom-0
+w-screen
+h-screen
+z-[999999]
+bg-black
+backdrop-blur-2xl
+flex
+items-center
+justify-center
+px-5
+overflow-hidden
+touch-none
+select-none
+"
+>
 
-        <p className="text-sm text-zinc-400 leading-relaxed mb-6">
-          Utilizamos cookies y tecnologías similares para mejorar la experiencia,
-          analizar el uso de la plataforma y optimizar funciones.
-          <br /><br />
-          Para continuar debes aceptar nuestra política de privacidad y términos del servicio.
-        </p>
+<div
+className="
+w-full
+max-w-md
+bg-zinc-950
+border
+border-orange-500/20
+rounded-[2rem]
+p-7
+shadow-[0_0_80px_rgba(255,120,0,0.25)]
+text-center
+"
+>
 
-        <div className="flex flex-col gap-3">
-          <a
-            href="/privacidad"
-            target="_blank"
-            className="w-full px-4 py-3 rounded-xl bg-zinc-900 text-zinc-300 text-sm font-bold"
-          >
-            Leer política
-          </a>
+<div
+className="
+w-20
+h-20
+mx-auto
+rounded-full
+bg-orange-600/15
+flex
+items-center
+justify-center
+text-4xl
+mb-5
+"
+>
 
-          <button
-            onClick={aceptarCookies}
-            className="w-full px-6 py-4 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-black transition-all"
-          >
-            ACEPTAR Y ENTRAR ⚔️
-          </button>
-        </div>
+🍪
 
-        <p className="text-[10px] mt-5 text-zinc-600">
-          Sin aceptar cookies no es posible usar Mastesto
-        </p>
-      </div>
-    </div>
-  </div>
+</div>
+
+<h1
+className="
+text-3xl
+font-black
+text-white
+mb-4
+"
+>
+
+Bienvenido a Mastesto
+
+</h1>
+
+
+<p
+className="
+text-sm
+leading-relaxed
+text-zinc-400
+mb-6
+"
+>
+
+Utilizamos cookies y tecnologías similares
+para mejorar la experiencia, estadísticas,
+seguridad, rendimiento y funcionamiento
+de la comunidad.
+
+Debes aceptar la política para continuar.
+
+</p>
+
+
+<div className="
+flex
+flex-col
+gap-3
+">
+
+<a
+
+href="/privacidad"
+target="_blank"
+
+className="
+w-full
+bg-zinc-900
+hover:bg-zinc-800
+rounded-xl
+py-3
+font-bold
+text-zinc-300
+transition
+"
+
+>
+
+Leer política
+
+</a>
+
+
+<button
+
+onClick={aceptarCookies}
+
+className="
+w-full
+bg-orange-600
+hover:bg-orange-500
+rounded-xl
+py-4
+font-black
+transition-all
+"
+
+>
+
+ACEPTAR Y ENTRAR ⚔️
+
+</button>
+
+</div>
+
+
+<p
+className="
+text-[10px]
+mt-5
+text-zinc-600
+"
+>
+
+Sin aceptar cookies no es posible usar Mastesto
+
+</p>
+
+</div>
+
+</div>
+
 )}
         </div>
       </nav>
