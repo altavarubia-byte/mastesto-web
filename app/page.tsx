@@ -78,10 +78,13 @@ function SeccionReportes({ supabase }: { supabase: any }) {
     setEnviando(true);
     const meta = user.user_metadata;
 
+    // Control de alias automático si viene de Google Sync
+    const aliasOperativo = meta?.alias || meta?.given_name || meta?.full_name?.split(' ')[0] || 'OPERATIVO';
+
     const { error } = await supabase.from('comentarios').insert([
       {
         user_id: user.id,
-        alias: meta?.alias || 'SOCIO ANÓNIMO',
+        alias: aliasOperativo.toUpperCase(),
         contenido: nuevoReporte.trim(),
         color_acento: meta?.color_acento || '#ea580c'
       }
