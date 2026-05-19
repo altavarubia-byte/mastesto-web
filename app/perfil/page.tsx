@@ -153,7 +153,11 @@ export default function PerfilPage() {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-  const isAdmin = user?.email === 'altava.rubia@gmail.com';
+  const ADMIN_EMAIL = 'altava.rubia@gmail.com';
+
+  const isAdmin =
+  user?.email?.toLowerCase()?.trim() ===
+  ADMIN_EMAIL.toLowerCase();
 
   const obtenerRango = () => {
     const d = tiempo.dias || 0;
