@@ -663,7 +663,7 @@ export default function PerfilPage() {
         <div className="lg:col-span-3 space-y-6">
           <div className="bg-zinc-950 border border-zinc-900 p-6 rounded-[2.5rem] min-h-[250px]">
             <p className="text-[8px] text-zinc-500 uppercase font-black mb-6 tracking-widest text-center italic">Buffer_Misiones</p>
-            {tareas.length > 0 ? tarefasNoUsar : null}
+            
             {tareas.length > 0 ? tareas.map((t: any) => <CardTarea key={t.id} tarea={t} userNick={alias} supabase={supabase} colorAcento={colorAcento} />) : <p className="text-[8px] text-zinc-700 text-center uppercase font-black italic mt-20">Esperando órdenes...</p>}
           </div>
         </div>
