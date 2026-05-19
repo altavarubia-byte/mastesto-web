@@ -28,41 +28,41 @@ function ModulosSistema() {
   );
 }
 
-// --- COMPONENTE: SECCIÓN DE COMENTARIOS (MURO DE FRECUENCIAS) ---
-function SeccionComentarios({ supabase }: { supabase: any }) {
+// --- COMPONENTE: SECCIÓN DE REPORTES (MURO DE FRECUENCIAS) ---
+function SeccionReportes({ supabase }: { supabase: any }) {
   const [user, setUser] = useState<any>(null);
-  const [comentarios, setComentarios] = useState<any[]>([]);
-  const [nuevoComentario, setNuevoComentario] = useState('');
+  const [reportes, setReportes] = useState<any[]>([]);
+  const [nuevoReporte, setNuevoReporte] = useState('');
   const [loading, setLoading] = useState(true);
   const [enviando, setEnviando] = useState(false);
 
-  const misComentariosCount = useMemo(() => {
+  const misReportesCount = useMemo(() => {
     if (!user) return 0;
-    return comentarios.filter(c => c.user_id === user.id).length;
-  }, [comentarios, user]);
+    return reportes.filter(r => r.user_id === user.id).length;
+  }, [reportes, user]);
 
   useEffect(() => {
-    // Corregido el tipado explícito aquí para evitar el error de compilación en el build
+    // Tipado explícito para que TypeScript no proteste durante pnpm run build
     supabase.auth.getUser().then(({ data }: { data: { user: any } }) => {
       if (data?.user) setUser(data.user);
     });
 
-    const fetchComentarios = async () => {
+    const fetchReportes = async () => {
       const { data, error } = await supabase
-        .from('comentarios')
+        .from('comentarios') // Se conecta a tu tabla 'comentarios' en Supabase
         .select('*')
         .order('created_at', { ascending: false });
       
-      if (!error && data) setComentarios(data);
+      if (!error && data) setReportes(data);
       setLoading(false);
     };
 
-    fetchComentarios();
+    fetchReportes();
 
     const canal = supabase
-      .channel('cambios_comentarios')
+      .channel('cambios_reportes')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comentarios' }, (payload: any) => {
-        setComentarios((prev) => [payload.new, ...prev]);
+        setReportes((prev) => [payload.new, ...prev]);
       })
       .subscribe();
 
@@ -71,9 +71,9 @@ function SeccionComentarios({ supabase }: { supabase: any }) {
     };
   }, [supabase]);
 
-  const enviarComentario = async (e: React.FormEvent) => {
+  const enviarReporte = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !nuevoComentario.trim() || misComentariosCount >= 3 || enviando) return;
+    if (!user || !nuevoReporte.trim() || misReportesCount >= 3 || enviando) return;
 
     setEnviando(true);
     const meta = user.user_metadata;
@@ -82,13 +82,13 @@ function SeccionComentarios({ supabase }: { supabase: any }) {
       {
         user_id: user.id,
         alias: meta?.alias || 'SOCIO ANÓNIMO',
-        contenido: nuevoComentario.trim(),
+        contenido: nuevoReporte.trim(),
         color_acento: meta?.color_acento || '#ea580c'
       }
     ]);
 
     if (!error) {
-      setNuevoComentario('');
+      setNuevoReporte('');
     }
     setEnviando(false);
   };
@@ -107,76 +107,76 @@ function SeccionComentarios({ supabase }: { supabase: any }) {
           </div>
           {user && (
             <div className="bg-black/50 border border-zinc-900 px-4 py-2 rounded-xl text-[8px] font-mono font-black uppercase tracking-widest text-zinc-400">
-              Tus transmisiones: <span className={misComentariosCount >= 3 ? "text-red-500" : "text-orange-500"}>{misComentariosCount}/3</span>
+              Tus reportes: <span className={misReportesCount >= 3 ? "text-red-500" : "text-orange-500"}>{misReportesCount}/3</span>
             </div>
           )}
         </div>
 
         {user ? (
-          misComentariosCount < 3 ? (
-            <form onSubmit={enviarComentario} className="mb-10 space-y-3">
+          misReportesCount < 3 ? (
+            <form onSubmit={enviarReporte} className="mb-10 space-y-3">
               <div className="relative">
                 <textarea
-                  value={nuevoComentario}
-                  onChange={(e) => setNuevoComentario(e.target.value)}
+                  value={nuevoReporte}
+                  onChange={(e) => setNuevoReporte(e.target.value)}
                   maxLength={500}
                   placeholder="DEJA TU REPORTE DE DISCIPLINA O LOGRO AQUÍ... (MÁX 500 CARACTERES)"
                   className="w-full bg-black border border-zinc-900 p-5 rounded-2xl text-[10px] uppercase font-bold text-white outline-none focus:border-zinc-700 h-24 resize-none transition-all placeholder:text-zinc-700"
                 />
                 <span className="absolute bottom-4 right-4 text-[7px] font-mono text-zinc-600">
-                  {nuevoComentario.length}/500
+                  {nuevoReporte.length}/500
                 </span>
               </div>
               <button
                 type="submit"
-                disabled={enviando || !nuevoComentario.trim()}
+                disabled={enviando || !nuevoReporte.trim()}
                 className="w-full py-4 rounded-xl font-black text-[9px] bg-white text-black uppercase tracking-widest hover:opacity-80 transition-all disabled:opacity-20"
               >
-                {enviando ? 'TRANSMITIENDO...' : 'FIJAR MENSAJE EN EL MURO'}
+                {enviando ? 'TRANSMITIENDO REPORTE...' : 'FIJAR REPORTE EN EL MURO'}
               </button>
             </form>
           ) : (
             <div className="mb-10 p-5 border border-red-950 bg-red-950/10 rounded-2xl text-center">
               <p className="text-[8px] font-black tracking-widest uppercase text-red-500 italic">
-                ⚠️ CUOTA DE TRANSMISIÓN MÁXIMA ALCANZADA (3/3). TUS ENLACES ESTÁN BLINDADOS.
+                ⚠️ LÍMITE DE REPORTES ALCANZADO (3/3). TUS TRANSMISIONES ESTÁN BLINDADAS.
               </p>
             </div>
           )
         ) : (
           <div className="mb-10 p-5 border border-zinc-900 bg-black/40 rounded-2xl text-center italic">
             <p className="text-[8px] font-black tracking-widest uppercase text-zinc-500">
-              Inicia sesión o accede al área de socios para transmitir en la frecuencia principal.
+              Inicia sesión o accede al área de socios para transmitir tu reporte en la frecuencia principal.
             </p>
           </div>
         )}
 
         <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-          {comentarios.length > 0 ? (
-            comentarios.map((comentario) => (
+          {reportes.length > 0 ? (
+            reportes.map((reporte) => (
               <div 
-                key={comentario.id}
+                key={reporte.id}
                 className="p-5 rounded-2xl border bg-black/30 transition-all duration-300 group hover:bg-black/60"
-                style={{ borderColor: `${comentario.color_acento}15` }}
+                style={{ borderColor: `${reporte.color_acento}15` }}
               >
                 <div className="flex justify-between items-center mb-2">
                   <span 
                     className="text-[9px] font-black uppercase tracking-wider italic"
-                    style={{ color: comentario.color_acento }}
+                    style={{ color: reporte.color_acento }}
                   >
-                    @{comentario.alias}
+                    @{reporte.alias}
                   </span>
                   <span className="text-[7px] font-mono text-zinc-600">
-                    {new Date(comentario.created_at).toLocaleDateString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(reporte.created_at).toLocaleDateString('es-ES', { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
                 <p className="text-[10px] text-zinc-300 font-medium leading-relaxed uppercase break-words">
-                  {comentario.contenido}
+                  {reporte.contenido}
                 </p>
               </div>
             ))
           ) : (
             <p className="text-[8px] text-zinc-700 text-center uppercase font-black italic py-10">
-              Silencio en la frecuencia. Sé el primero en reportar...
+              Silencio en la frecuencia. Sé el primer operativo en reportar...
             </p>
           )}
         </div>
@@ -410,8 +410,8 @@ export default function Page() {
 
         <ModulosSistema />
 
-        {/* --- SECCIÓN DE COMENTARIOS SIN ALTERAR COMPONENTES PREVIOS --- */}
-        <SeccionComentarios supabase={supabase} />
+        {/* --- INVOCACIÓN DEL COMPONENTE CON TERMINOLOGÍA DE REPORTES --- */}
+        <SeccionReportes supabase={supabase} />
 
         <div className="flex flex-col items-center gap-4 opacity-40 mb-20">
           <span className="text-[8px] font-black uppercase tracking-[0.4em] text-zinc-400">Pagos Seguros vía</span>
