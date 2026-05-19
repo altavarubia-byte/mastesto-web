@@ -42,8 +42,9 @@ function SeccionComentarios({ supabase }: { supabase: any }) {
   }, [comentarios, user]);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) setUser(user);
+    // Corregido el tipado explícito aquí para evitar el error de compilación en el build
+    supabase.auth.getUser().then(({ data }: { data: { user: any } }) => {
+      if (data?.user) setUser(data.user);
     });
 
     const fetchComentarios = async () => {
@@ -409,7 +410,7 @@ export default function Page() {
 
         <ModulosSistema />
 
-        {/* --- NUEVA SECCIÓN DE COMENTARIOS SIN ALTERAR COMPONENTES PREVIOS --- */}
+        {/* --- SECCIÓN DE COMENTARIOS SIN ALTERAR COMPONENTES PREVIOS --- */}
         <SeccionComentarios supabase={supabase} />
 
         <div className="flex flex-col items-center gap-4 opacity-40 mb-20">
