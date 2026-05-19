@@ -525,7 +525,7 @@ Misión personal: ${bio}
           <div className="w-[92vw] max-w-[380px] h-[560px] bg-zinc-950 border border-zinc-800 rounded-[2rem] shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
             <div className="p-4 border-b border-zinc-900 flex items-center justify-between bg-black/40">
               <div>
-                <p className="text-[9px] text-zinc-500 uppercase font-black tracking-widest italic">Mentor_Intel_IA</p>
+                <p className="text-[9px] text-zinc-500 uppercase font-black tracking-widest italic">El Forjador</p>
                 <p className="text-[8px] text-zinc-600 uppercase font-bold">Sistema táctico desplegado</p>
               </div>
               <button
@@ -555,7 +555,7 @@ Misión personal: ${bio}
                     }`}
                   >
                     <p className="text-[7px] font-black tracking-wider text-zinc-500 uppercase mb-1">
-                      {msg.role === 'user' ? alias : 'MENTOR'}
+                      {msg.role === 'user' ? alias : 'El Forjador'}
                     </p>
                     <p className={msg.role === 'user' ? 'text-zinc-300' : 'text-zinc-100 font-medium'}>
                       {msg.content}
