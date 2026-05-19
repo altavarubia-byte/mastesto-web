@@ -131,7 +131,7 @@ export default function PerfilPage() {
     { id: 15, tiempoHoras: 1080, titulo: "Flujo Limpio", desc: "La función pulmonar general ha mejorado ya hasta un 10%.", icono: "🌊" },
     { id: 16, tiempoHoras: 1440, titulo: "Piel Operativa", desc: "2 meses. La piel recupera elasticidad, brillo natural y oxigenación celular.", icono: "✨" },
     { id: 17, tiempoHoras: 2160, titulo: "Resistencia Élite", desc: "3 meses. Los cilios pulmonares se han regenerado y barren activamente la mucosidad.", icono: "🧹" },
-    { id: 18, tiempoHoras: 2880, titulo: "Inmunidad Reforzada", desc: "4 meses. El sistema inmunológico se estabiliza. Menos resfriados and bajas metabólicas.", icono: "🔰" },
+    { id: 18, tiempoHoras: 2880, titulo: "Inmunidad Reforzada", desc: "4 meses. El sistema inmunológico se estabiliza. Menos resfriados y bajas metabólicas.", icono: "🔰" },
     { id: 19, tiempoHoras: 3600, titulo: "Fuerza Cardiovascular", desc: "5 meses. El ventrículo izquierdo trabaja con un esfuerzo significativamente menor.", icono: "❤️" },
     { id: 20, tiempoHoras: 4320, titulo: "Medio Año de Acero", desc: "6 meses. Has evitado miles de toxinas mutagénicas en tus vías respiratorias.", icono: "🎖️" },
     { id: 21, tiempoHoras: 5040, titulo: "Barrera Química", desc: "7 meses. La inflamación celular crónica sistémica se reduce a la mitad.", icono: "🚫" },
@@ -156,7 +156,7 @@ export default function PerfilPage() {
     { id: 40, tiempoHoras: 61320, titulo: "Soberanía Biológica", desc: "7 años. Los niveles de toxinas acumuladas en la médula ósea desaparecen.", icono: "🔮" },
     { id: 41, tiempoHoras: 70080, titulo: "OCHO AÑOS LIBRE", desc: "El riesgo de padecer diabetes tipo 2 disminuye al nivel de un no fumador.", icono: "🩸" },
     { id: 42, tiempoHoras: 78840, titulo: "Pureza Celular", desc: "9 años. El tejido del páncreas y la vejiga están completamente protegidos.", icono: "🛡️" },
-    { id: 43, tiempoHoras: 87600, text: "DÉCADA INQUEBRANTABLE", desc: "10 años. El riesgo de cáncer de pulmón cae al mismo nivel que si nunca hubieras fumado.", icono: "🔱" },
+    { id: 43, tiempoHoras: 87600, titulo: "DÉCADA INQUEBRANTABLE", desc: "10 años. El riesgo de cáncer de pulmón cae al mismo nivel que si nunca hubieras fumado.", icono: "🔱" },
     { id: 44, tiempoHoras: 105120, titulo: "Leyenda +TESTO", desc: "12 años. Las células precancerosas han sido completamente reemplazadas.", icono: "🌋" },
     { id: 45, tiempoHoras: 122640, titulo: "Evolución Completa", desc: "14 años. La arquitectura interna de tus pulmones es idéntica a la nativa pura.", icono: "🌳" },
     { id: 46, tiempoHoras: 131400, titulo: "15 AÑOS DE PUREZA MÁXIMA", desc: "El riesgo de enfermedad coronaria es ahora idéntico al de una persona que jamás fumó.", icono: "🌟" },
@@ -183,7 +183,7 @@ export default function PerfilPage() {
       setColorAcento(meta?.color_acento || '#ea580c');
       setGhostMode(meta?.ghost_mode || false);
 
-      // --- CORRECCIÓN CUESTIONARIO COMPROBACIÓN REPETICIÓN ---
+      // Comprobación persistente del cuestionario
       if (meta?.es_fumador === undefined || meta?.es_fumador === null) {
         setShowTabacoModal(true);
       } else {
@@ -316,17 +316,17 @@ export default function PerfilPage() {
                <p className="text-[8px] font-black text-zinc-600 uppercase tracking-widest mb-1 italic">Operativo</p>
                <p className="text-[10px] font-bold truncate mb-4" style={{ color: colorAcento }}>{user?.email}</p>
                
-               {/* --- LOGROS DESBLOQUEADOS (ACCESIBLES PARA CUALQUIER SOCIO) --- */}
-               {analisProgresoTabaco && (
+               {/* --- VARIABLE CORREGIDA: analisisProgresoTabaco --- */}
+               {analisisProgresoTabaco && (
                  <div className="mb-4 border-t border-zinc-900 pt-3">
                    <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mb-2 italic">
-                     Logros de Salud ({analisProgresoTabaco.logros.length}/{analisProgresoTabaco.totalHitosCount})
+                     Logros de Salud ({analisisProgresoTabaco.logros.length}/{analisisProgresoTabaco.totalHitosCount})
                    </p>
-                   {analisProgresoTabaco.logros.length === 0 ? (
+                   {analisisProgresoTabaco.logros.length === 0 ? (
                      <p className="text-[8px] text-zinc-600 italic uppercase">Forjando primer logro...</p>
                    ) : (
                      <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                       {analisProgresoTabaco.logros.map((logro) => (
+                       {analisisProgresoTabaco.logros.map((logro) => (
                          <div key={logro.id} className="flex items-center gap-2 bg-black/40 border border-zinc-900 p-2 rounded-xl">
                            <span className="text-xs">{logro.icono}</span>
                            <div className="flex-1 min-w-0">
@@ -397,7 +397,7 @@ export default function PerfilPage() {
             </div>
           </div>
 
-          {/* MONITOR DE PROGRESO Y HITOS DE SALUD DESPLEGADO */}
+          {/* MONITOR DE PROGRESO Y HITOS DE SALUD */}
           {user?.user_metadata?.quiere_reloj && analisisProgresoTabaco && (
             <div className="bg-zinc-950 border border-zinc-900 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden animate-in fade-in duration-300">
               <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-green-500/30 to-transparent" />
@@ -406,11 +406,11 @@ export default function PerfilPage() {
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div className="bg-black/50 border border-zinc-900 p-4 rounded-2xl text-center">
                   <span className="text-[7px] font-black text-zinc-600 uppercase tracking-widest block mb-1">Capital Recuperado</span>
-                  <span className="text-2xl font-mono font-black text-green-500">{analisProgresoTabaco.dinero}€</span>
+                  <span className="text-2xl font-mono font-black text-green-500">{analisisProgresoTabaco.dinero}€</span>
                 </div>
                 <div className="bg-black/50 border border-zinc-900 p-4 rounded-2xl text-center">
                   <span className="text-[7px] font-black text-zinc-600 uppercase tracking-widest block mb-1">Cigarros Evitados</span>
-                  <span className="text-2xl font-mono font-black text-white">{analisProgresoTabaco.cigarros}</span>
+                  <span className="text-2xl font-mono font-black text-white">{analisisProgresoTabaco.cigarros}</span>
                 </div>
               </div>
 
@@ -418,21 +418,21 @@ export default function PerfilPage() {
               <div className="border-t border-zinc-900 pt-4 text-left mb-4">
                 <span className="text-[7px] font-black text-zinc-600 uppercase tracking-widest block mb-1">Último Impacto Biológico Conseguido</span>
                 <p className="text-[10px] font-bold uppercase text-green-400 tracking-wide italic">
-                  {analisProgresoTabaco.salud}
+                  {analisisProgresoTabaco.salud}
                 </p>
               </div>
 
               {/* HITOS DE PROGRESO RESTANTES */}
-              {analisProgresoTabaco.proximo && (
+              {analisisProgresoTabaco.proximo && (
                 <div className="border-t border-zinc-900 pt-4 text-left">
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-[7px] font-black text-zinc-600 uppercase tracking-widest">Siguiente Objetivo Sanitario</span>
-                    <span className="text-[7px] font-mono text-zinc-500">HITO #{analisProgresoTabaco.proximo.id}</span>
+                    <span className="text-[7px] font-mono text-zinc-500">HITO #{analisisProgresoTabaco.proximo.id}</span>
                   </div>
                   <p className="text-[9px] font-black uppercase text-zinc-300 tracking-wide">
-                    {analisProgresoTabaco.proximo.icono} {analisProgresoTabaco.proximo.titulo}
+                    {analisisProgresoTabaco.proximo.icono} {analisisProgresoTabaco.proximo.titulo}
                   </p>
-                  <p className="text-[8px] text-zinc-500 italic mt-0.5">{analisProgresoTabaco.proximo.desc}</p>
+                  <p className="text-[8px] text-zinc-500 italic mt-0.5">{analisisProgresoTabaco.proximo.desc}</p>
                 </div>
               )}
             </div>
@@ -482,7 +482,7 @@ export default function PerfilPage() {
                 </div>
                 <div>
                   <label className="text-[8px] font-black text-zinc-500 uppercase mb-2 block italic">Declaración de Misión (Bio)</label>
-                  <textarea value={bio} onChange={(e) => setBio(e.target.value)} className="w-full bg-black border border-zinc-900 p-4 rounded-xl text-[10px] text-white outline-none h-20 resize-none italic" />
+                  <textarea value={bio} onChange={(e) => setBio(e.target.value)} className="w-full bg-black border border-zinc-800 p-4 rounded-xl text-[10px] text-white outline-none h-20 resize-none italic" />
                 </div>
               </div>
 
@@ -553,7 +553,7 @@ export default function PerfilPage() {
         )}
       </div>
 
-      {/* MODAL PERSISTENTE DE DIAGNÓSTICO DE TABACO (Oculto permanentemente tras responder una vez) */}
+      {/* MODAL PERSISTENTE DE DIAGNÓSTICO DE TABACO */}
       {showTabacoModal && (
         <div className="fixed inset-0 bg-black/98 z-[200] flex items-center justify-center p-6 backdrop-blur-xl animate-in fade-in duration-300">
           <div className="bg-zinc-950 border border-zinc-900 p-8 rounded-[2.5rem] max-w-md w-full space-y-6 relative">
