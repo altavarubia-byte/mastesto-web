@@ -283,15 +283,25 @@ export default function PerfilPage() {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          messages: historial, 
-          contexto: `Alias: ${alias}. Racha: ${tiempo.dias} días. Máximo palabras: ${brevedad}.`,
-          temperature: temperatura
+        body: JSON.stringify({
+          messages: historial,
+          contexto: `
+PROGRESO ACTUAL:
+Alias: ${alias}
+Racha exacta: ${tiempo.dias} días, ${tiempo.horas} horas, ${tiempo.min} minutos y ${tiempo.seg} segundos.
+Rango actual: ${obtenerRango()}
+Misión personal: ${bio}
+`,
+          temp: temperatura,
+          words: brevedad,
         }),
       });
       const data = await res.json();
-      setChat([...historial, { role: 'assistant', content: data.content }]);
-    } catch (e) { console.error(e); } finally { setCargandoIA(false); }
+      setChat([...historial, { role: 'assistant', content: data.content || 'SISTEMA: SIN RESPUESTA.' }]);
+    } catch (e) {
+      console.error(e);
+      setChat([...historial, { role: 'assistant', content: 'SISTEMA: ERROR DE CONEXIÓN.' }]);
+    } finally { setCargandoIA(false); }
   };
 
   if (loading) return <div className="bg-black min-h-screen text-white flex items-center justify-center font-black animate-pulse uppercase tracking-[1em]">Cargando...</div>;
@@ -481,6 +491,59 @@ export default function PerfilPage() {
               {cargandoIA && <div className="text-[8px] text-zinc-500 font-black animate-pulse uppercase tracking-wider">Procesando Respuesta...</div>}
             </div>
 
+            {/* Controles IA */}
+            <div className="mb-4 space-y-3 border-t border-zinc-900 pt-4">
+              <div>
+                <div className="flex justify-between mb-1">
+                  <span className="text-[7px] font-black text-zinc-500 uppercase tracking-widest">
+                    Temperatura IA
+                  </span>
+                  <span className="text-[7px] font-mono" style={{ color: colorAcento }}>
+                    {temperatura.toFixed(1)}
+                  </span>
+                </div>
+
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={temperatura}
+                  onChange={(e) => setTemperatura(Number(e.target.value))}
+                  className="w-full accent-orange-600"
+                />
+
+                <p className="text-[7px] text-zinc-600 mt-1 italic">
+                  Baja = más seria · Alta = más creativa
+                </p>
+              </div>
+
+              <div>
+                <div className="flex justify-between mb-1">
+                  <span className="text-[7px] font-black text-zinc-500 uppercase tracking-widest">
+                    Máximo de palabras
+                  </span>
+                  <span className="text-[7px] font-mono" style={{ color: colorAcento }}>
+                    {brevedad}
+                  </span>
+                </div>
+
+                <input
+                  type="range"
+                  min="20"
+                  max="200"
+                  step="10"
+                  value={brevedad}
+                  onChange={(e) => setBrevedad(Number(e.target.value))}
+                  className="w-full accent-orange-600"
+                />
+
+                <p className="text-[7px] text-zinc-600 mt-1 italic">
+                  Controla lo larga que será la respuesta del mentor.
+                </p>
+              </div>
+            </div>
+
             {/* Input Form */}
             <form onSubmit={consultarMentor} className="flex gap-2">
               <input 
@@ -534,7 +597,7 @@ export default function PerfilPage() {
                 </div>
                 <div className="flex items-center justify-between p-4 bg-black/40 border border-zinc-900 rounded-xl">
                   <span className="text-[8px] font-black text-zinc-500 uppercase italic">Modo Fantasma</span>
-                  <input type="checkbox" checked={ghostMode} onChange={(e) => setGhostMode(e.checked)} className="w-4 h-4 accent-zinc-500" />
+                  <input type="checkbox" checked={ghostMode} onChange={(e) => setGhostMode(e.target.checked)} className="w-4 h-4 accent-zinc-500" />
                 </div>
               </div>
             </div>
