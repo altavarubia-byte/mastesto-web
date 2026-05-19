@@ -94,7 +94,7 @@ export default function PerfilPage() {
   const [socioId, setSocioId] = useState('');
   const [statusMsg, setStatusMsg] = useState('');
 
-  // --- NUEVOS ESTADOS: PROTOCOLO TABACO ---
+  // PROTOCOLO TABACO
   const [showTabacoModal, setShowTabacoModal] = useState(false);
   const [esFumador, setEsFumador] = useState<boolean | null>(null);
   const [quiereReloj, setQuiereReloj] = useState<boolean | null>(null);
@@ -111,6 +111,60 @@ export default function PerfilPage() {
     if (d < 30) return "SARGENTO DE HIERRO";
     return "COMANDANTE +TESTO";
   };
+
+  // --- BASE DE DATOS DE HITOS Y LOGROS DE SALUD (50 NIVELES EVOLUTIVOS) ---
+  const hitosSaludYLogros = useMemo(() => [
+    { id: 1, tiempoHoras: 0.3, titulo: "Células Limpias", desc: "La presión arterial y el pulso bajan a la normalidad.", icono: "🫀" },
+    { id: 2, tiempoHoras: 2, titulo: "Filtro de Nicotina", desc: "La nicotina en sangre disminuye un 50%.", icono: "🩸" },
+    { id: 3, tiempoHoras: 8, titulo: "Oxigenación Alfa", desc: "El monóxido de carbono en sangre se reduce a la mitad. Oxígeno normalizado.", icono: "🌬️" },
+    { id: 4, tiempoHoras: 12, titulo: "Purificación de Gas", desc: "Los niveles de monóxido de carbono caen a rangos completamente normales.", icono: "🧪" },
+    { id: 5, tiempoHoras: 24, titulo: "Escudo Cardíaco V1", desc: "Ansiedad máxima superada. Las probabilidades de ataque cardíaco empiezan a disminuir.", icono: "🛡️" },
+    { id: 6, tiempoHoras: 48, titulo: "Sabor de Acero", desc: "Las terminaciones nerviosas se regeneran. El olfato y el gusto se agudizan notablemente.", icono: "👅" },
+    { id: 7, tiempoHoras: 72, titulo: "Bronquios Libres", desc: "Los tubos bronquiales se relajan. La capacidad pulmonar aumenta y respirar es más fácil.", icono: "🫁" },
+    { id: 8, tiempoHoras: 96, titulo: "Victoria de Voluntad", desc: "Superada la barrera crítica del síndrome de abstinencia físico.", icono: "🧠" },
+    { id: 9, tiempoHoras: 120, titulo: "Energía Dinámica", desc: "La circulación sanguínea general mejora drásticamente. Menos fatiga al despertar.", icono: "⚡" },
+    { id: 10, tiempoHoras: 168, titulo: "Aliento de Hierro", desc: "Se elimina por completo el olor a alquitrán impregnado en el sistema respiratorio.", icono: "💬" },
+    { id: 11, tiempoHoras: 240, titulo: "Estabilidad Mental", desc: "La dependencia psicológica severa empieza a perder fuerza de control.", icono: "🧩" },
+    { id: 12, tiempoHoras: 336, titulo: "Resistencia Base", desc: "Las encías y los dientes recuperan el riego sanguíneo saludable perdido.", icono: "🦷" },
+    { id: 13, tiempoHoras: 504, titulo: "Mente Inquebrantable", desc: "Tres semanas completas. Los receptores de nicotina cerebrales empiezan a desactivarse.", icono: "👁️" },
+    { id: 14, tiempoHoras: 720, titulo: "Renacimiento Pulmonar", desc: "1 mes. La tos y la dificultad para respirar disminuyen de manera evidente.", icono: "🌀" },
+    { id: 15, tiempoHoras: 1080, titulo: "Flujo Limpio", desc: "La función pulmonar general ha mejorado ya hasta un 10%.", icono: "🌊" },
+    { id: 16, tiempoHoras: 1440, titulo: "Piel Operativa", desc: "2 meses. La piel recupera elasticidad, brillo natural y oxigenación celular.", icono: "✨" },
+    { id: 17, tiempoHoras: 2160, titulo: "Resistencia Élite", desc: "3 meses. Los cilios pulmonares se han regenerado y barren activamente la mucosidad.", icono: "🧹" },
+    { id: 18, tiempoHoras: 2880, titulo: "Inmunidad Reforzada", desc: "4 meses. El sistema inmunológico se estabiliza. Menos resfriados and bajas metabólicas.", icono: "🔰" },
+    { id: 19, tiempoHoras: 3600, titulo: "Fuerza Cardiovascular", desc: "5 meses. El ventrículo izquierdo trabaja con un esfuerzo significativamente menor.", icono: "❤️" },
+    { id: 20, tiempoHoras: 4320, titulo: "Medio Año de Acero", desc: "6 meses. Has evitado miles de toxinas mutagénicas en tus vías respiratorias.", icono: "🎖️" },
+    { id: 21, tiempoHoras: 5040, titulo: "Barrera Química", desc: "7 meses. La inflamación celular crónica sistémica se reduce a la mitad.", icono: "🚫" },
+    { id: 22, tiempoHoras: 5760, titulo: "Voz de Comando", desc: "8 meses. Las cuerdas vocales sanan por completo de la agresión térmica diaria.", icono: "🗣️" },
+    { id: 23, tiempoHoras: 6480, titulo: "Capilaridad Óptima", desc: "9 meses. El cabello y las uñas crecen más fuertes debido a la microcirculación limpia.", icono: "🧬" },
+    { id: 24, tiempoHoras: 7200, titulo: "Oxígeno Infinito", desc: "10 meses. Capacidad aeróbica incrementada al nivel más alto desde que iniciaste.", icono: "🚀" },
+    { id: 25, tiempoHoras: 7920, titulo: "Sistema Autolimpiante", desc: "11 meses. Los macrófagos alveolares limpian los últimos depósitos densos de alquitrán.", icono: "🧼" },
+    { id: 26, tiempoHoras: 8760, titulo: "UN AÑO EN LA BRECHA", desc: "El riesgo de enfermedad coronaria se reduce a la mitad en comparación con un fumador.", icono: "👑" },
+    { id: 27, tiempoHoras: 10220, titulo: "Veterano Anti-Humo", desc: "14 meses de total independencia. Tu gasto cardíaco es óptimo.", icono: "🎖️" },
+    { id: 28, tiempoHoras: 11680, titulo: "Corazón Blindado", desc: "16 meses. Las arterias recuperan flexibilidad y reducen rigidez de placa.", icono: "🌌" },
+    { id: 29, tiempoHoras: 13140, titulo: "Control Absoluto", desc: "18 meses. Los patrones de sueño y niveles de cortisol están 100% regulados.", icono: "☯️" },
+    { id: 30, tiempoHoras: 14600, titulo: "Filtro de Élite", desc: "20 meses. La sangre transporta oxígeno puro sin trazas de metales pesados.", icono: "💎" },
+    { id: 31, tiempoHoras: 16060, titulo: "Genética a Salvo", desc: "22 meses. Los marcadores epigenéticos dañados por el humo comienzan a revertirse.", icono: "🧬" },
+    { id: 32, tiempoHoras: 17520, titulo: "DOS AÑOS DE VICTORIA", desc: "Los riesgos de cáncer de boca, garganta y esófago se reducen a la mitad.", icono: "⚔️" },
+    { id: 33, tiempoHoras: 21900, titulo: "Comandante Biológico", desc: "2.5 años. Tu capacidad física supera con creces la media de la población.", icono: "☣️" },
+    { id: 34, tiempoHoras: 26280, titulo: "TRES AÑOS INVICTO", desc: "El riesgo de sufrir un accidente cerebrovascular iguala al de un no fumador.", icono: "💥" },
+    { id: 35, tiempoHoras: 30660, titulo: "Limpieza Arterial Máxima", desc: "3.5 años. Las paredes arteriales internas están limpias de depósitos nicotínicos.", icono: "🛣️" },
+    { id: 36, tiempoHoras: 35040, titulo: "CUATRO AÑOS DE GLORIA", desc: "Tu tasa de envejecimiento celular celular se ralentiza al ritmo normal óptimo.", icono: "⏳" },
+    { id: 37, tiempoHoras: 39420, titulo: "Células Inmunes Alfa", desc: "4.5 años. Las células asesinas naturales (NK) eliminan con éxito mutaciones base.", icono: "🏹" },
+    { id: 38, tiempoHoras: 43800, titulo: "LUSTRO DE ACERO (5 AÑOS)", desc: "El riesgo de morir por cáncer de pulmón disminuye a la mitad.", icono: "🏅" },
+    { id: 39, tiempoHoras: 52560, titulo: "Socio de Platino", desc: "6 años. Tu esperanza de vida calculada estadísticamente aumenta notablemente.", icono: "🌌" },
+    { id: 40, tiempoHoras: 61320, titulo: "Soberanía Biológica", desc: "7 años. Los niveles de toxinas acumuladas en la médula ósea desaparecen.", icono: "🔮" },
+    { id: 41, tiempoHoras: 70080, titulo: "OCHO AÑOS LIBRE", desc: "El riesgo de padecer diabetes tipo 2 disminuye al nivel de un no fumador.", icono: "🩸" },
+    { id: 42, tiempoHoras: 78840, titulo: "Pureza Celular", desc: "9 años. El tejido del páncreas y la vejiga están completamente protegidos.", icono: "🛡️" },
+    { id: 43, tiempoHoras: 87600, text: "DÉCADA INQUEBRANTABLE", desc: "10 años. El riesgo de cáncer de pulmón cae al mismo nivel que si nunca hubieras fumado.", icono: "🔱" },
+    { id: 44, tiempoHoras: 105120, titulo: "Leyenda +TESTO", desc: "12 años. Las células precancerosas han sido completamente reemplazadas.", icono: "🌋" },
+    { id: 45, tiempoHoras: 122640, titulo: "Evolución Completa", desc: "14 años. La arquitectura interna de tus pulmones es idéntica a la nativa pura.", icono: "🌳" },
+    { id: 46, tiempoHoras: 131400, titulo: "15 AÑOS DE PUREZA MÁXIMA", desc: "El riesgo de enfermedad coronaria es ahora idéntico al de una persona que jamás fumó.", icono: "🌟" },
+    { id: 47, tiempoHoras: 148920, titulo: "Inmortalidad Estadística", desc: "17 años. Los efectos acumulativos del daño vascular crónico quedan saldados.", icono: "💫" },
+    { id: 48, tiempoHoras: 166440, titulo: "Salud Absoluta", desc: "19 años. Tu perfil de riesgo general es impecable.", icono: "🪐" },
+    { id: 49, tiempoHoras: 175200, titulo: "20 AÑOS INTACTO", desc: "Sistema respiratorio y cardiovascular reseteados al 100% de fábrica.", icono: "🌌" },
+    { id: 50, tiempoHoras: 262800, titulo: "DIOS DE LA DISCIPLINA", desc: "Dos décadas de autocontrol absoluto. Eres el Forjador de tu propio destino biológico.", icono: "☀️" }
+  ], []);
 
   useEffect(() => {
     const getData = async () => {
@@ -129,15 +183,18 @@ export default function PerfilPage() {
       setColorAcento(meta?.color_acento || '#ea580c');
       setGhostMode(meta?.ghost_mode || false);
 
-      // Evaluar si se debe mostrar el modal de tabaco de manera persistente
-      if (meta?.es_fumador === undefined) {
+      // --- CORRECCIÓN CUESTIONARIO COMPROBACIÓN REPETICIÓN ---
+      if (meta?.es_fumador === undefined || meta?.es_fumador === null) {
         setShowTabacoModal(true);
-      } else if (meta?.es_fumador === true && meta?.quiere_reloj === true) {
-        setDatosTabaco({
-          cigarrillosDia: String(meta?.cigarrillos_dia || 0),
-          precioPaquete: String(meta?.precio_paquete || 0),
-          unidadesPaquete: String(meta?.unidades_paquete || 20)
-        });
+      } else {
+        setShowTabacoModal(false);
+        if (meta?.es_fumador === true && meta?.quiere_reloj === true) {
+          setDatosTabaco({
+            cigarrillosDia: String(meta?.cigarrillos_dia || 0),
+            precioPaquete: String(meta?.precio_paquete || 0),
+            unidadesPaquete: String(meta?.unidades_paquete || 20)
+          });
+        }
       }
 
       const { data: tasks } = await supabase.from('tareas').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
@@ -165,8 +222,8 @@ export default function PerfilPage() {
     return () => clearInterval(intervalo);
   }, [fechaInicio]);
 
-  // --- NUEVA LÓGICA: CÁLCULOS BIOLÓGICOS DEL TABACO ---
-  const statsTabaco = useMemo(() => {
+  // --- ANÁLISIS DE LOGROS Y PROGRESO (DISPONIBLE PARA TODOS LOS SOCIOS) ---
+  const analisisProgresoTabaco = useMemo(() => {
     if (!fechaInicio || !user?.user_metadata?.quiere_reloj) return null;
     
     const totalMs = new Date().getTime() - new Date(fechaInicio).getTime();
@@ -181,23 +238,19 @@ export default function PerfilPage() {
     const dineroAhorrado = totalDias * cigsDia * precioPorCigarrillo;
     const cigarrosEvitados = totalDias * cigsDia;
 
-    let reporteSalud = "Estabilizando parámetros metabólicos...";
-    if (totalHoras >= 72) {
-      reporteSalud = "Función pulmonar óptima. Bronquios relajados.";
-    } else if (totalHoras >= 48) {
-      reporteSalud = "Terminaciones nerviosas regenerándose. Gusto y olfato mejorados.";
-    } else if (totalHoras >= 24) {
-      reporteSalud = "Presión arterial normalizada. Monóxido de carbono eliminado.";
-    } else if (totalHoras >= 8) {
-      reporteSalud = "Oxigenación en sangre recuperando niveles críticos normales.";
-    }
+    const logrados = hitosSaludYLogros.filter(h => totalHoras >= h.tiempoHoras);
+    const proximoHito = hitosSaludYLogros.find(h => totalHoras < h.tiempoHoras) || hitosSaludYLogros[hitosSaludYLogros.length - 1];
+    const beneficioActual = logrados.length > 0 ? logrados[logrados.length - 1].desc : "Iniciando desintoxicación sistémica...";
 
     return {
       dinero: dineroAhorrado.toFixed(2),
       cigarros: Math.floor(cigarrosEvitados),
-      salud: reporteSalud
+      salud: beneficioActual,
+      logros: logrados,
+      proximo: proximoHito,
+      totalHitosCount: hitosSaludYLogros.length
     };
-  }, [fechaInicio, datosTabaco, user]);
+  }, [fechaInicio, datosTabaco, user, hitosSaludYLogros]);
 
   const guardarAjustes = async () => {
     await supabase.auth.updateUser({
@@ -259,13 +312,35 @@ export default function PerfilPage() {
           </button>
           
           {menuAbierto && (
-            <div className="absolute top-14 right-0 w-72 bg-zinc-950 border border-zinc-800 rounded-3xl p-6 shadow-2xl z-[110] animate-in fade-in zoom-in-95 duration-200">
+            <div className="absolute top-14 right-0 w-80 bg-zinc-950 border border-zinc-800 rounded-3xl p-6 shadow-2xl z-[110] animate-in fade-in zoom-in-95 duration-200 max-h-[85vh] overflow-y-auto">
                <p className="text-[8px] font-black text-zinc-600 uppercase tracking-widest mb-1 italic">Operativo</p>
                <p className="text-[10px] font-bold truncate mb-4" style={{ color: colorAcento }}>{user?.email}</p>
                
+               {/* --- LOGROS DESBLOQUEADOS (ACCESIBLES PARA CUALQUIER SOCIO) --- */}
+               {analisProgresoTabaco && (
+                 <div className="mb-4 border-t border-zinc-900 pt-3">
+                   <p className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mb-2 italic">
+                     Logros de Salud ({analisProgresoTabaco.logros.length}/{analisProgresoTabaco.totalHitosCount})
+                   </p>
+                   {analisProgresoTabaco.logros.length === 0 ? (
+                     <p className="text-[8px] text-zinc-600 italic uppercase">Forjando primer logro...</p>
+                   ) : (
+                     <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                       {analisProgresoTabaco.logros.map((logro) => (
+                         <div key={logro.id} className="flex items-center gap-2 bg-black/40 border border-zinc-900 p-2 rounded-xl">
+                           <span className="text-xs">{logro.icono}</span>
+                           <div className="flex-1 min-w-0">
+                             <p className="text-[8px] font-black text-white uppercase truncate">{logro.titulo}</p>
+                             <p className="text-[7px] text-zinc-500 truncate">{logro.desc}</p>
+                           </div>
+                         </div>
+                       ))}
+                     </div>
+                   )}
+                 </div>
+               )}
+
                <div className="space-y-1 border-t border-zinc-900 pt-4">
-                 
-                 {/* NUEVO BOTÓN HAZTE SOCIO */}
                  <button 
                    onClick={() => window.open('https://buy.stripe.com/tu_enlace_aqui', '_blank')} 
                    className="w-full mb-2 bg-orange-600 text-white p-3 text-[10px] font-black uppercase rounded-xl transition-all flex justify-between items-center group hover:bg-orange-500 shadow-lg shadow-orange-900/20"
@@ -309,6 +384,8 @@ export default function PerfilPage() {
 
         {/* DASHBOARD PRINCIPAL */}
         <div className="lg:col-span-6 space-y-6">
+          
+          {/* CRONÓMETRO */}
           <div className="bg-zinc-950 border border-zinc-900 rounded-[3.5rem] p-12 text-center shadow-2xl relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-1 opacity-20" style={{ background: `linear-gradient(90deg, transparent, ${colorAcento}, transparent)` }} />
             <p className="text-[9px] font-black uppercase tracking-[0.6em] text-zinc-500 mb-12 italic">Cronómetro de Disciplina</p>
@@ -320,30 +397,48 @@ export default function PerfilPage() {
             </div>
           </div>
 
-          {/* --- NUEVO: MONITOR TÁCTICO ANTI-TABACO --- */}
-          {user?.user_metadata?.quiere_reloj && statsTabaco && (
-            <div className="bg-zinc-950 border border-zinc-900 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden">
+          {/* MONITOR DE PROGRESO Y HITOS DE SALUD DESPLEGADO */}
+          {user?.user_metadata?.quiere_reloj && analisisProgresoTabaco && (
+            <div className="bg-zinc-950 border border-zinc-900 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden animate-in fade-in duration-300">
               <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-green-500/30 to-transparent" />
               <p className="text-[8px] font-black uppercase tracking-[0.4em] text-zinc-500 mb-6 italic">Protocolo Anti-Tabaco Activo</p>
               
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div className="bg-black/50 border border-zinc-900 p-4 rounded-2xl text-center">
                   <span className="text-[7px] font-black text-zinc-600 uppercase tracking-widest block mb-1">Capital Recuperado</span>
-                  <span className="text-2xl font-mono font-black text-green-500">{statsTabaco.dinero}€</span>
+                  <span className="text-2xl font-mono font-black text-green-500">{analisProgresoTabaco.dinero}€</span>
                 </div>
                 <div className="bg-black/50 border border-zinc-900 p-4 rounded-2xl text-center">
                   <span className="text-[7px] font-black text-zinc-600 uppercase tracking-widest block mb-1">Cigarros Evitados</span>
-                  <span className="text-2xl font-mono font-black text-white">{statsTabaco.cigarros}</span>
+                  <span className="text-2xl font-mono font-black text-white">{analisProgresoTabaco.cigarros}</span>
                 </div>
               </div>
 
-              <div className="border-t border-zinc-900 pt-4 text-left">
-                <span className="text-[7px] font-black text-zinc-600 uppercase tracking-widest block mb-1">Diagnóstico Bioquímico</span>
-                <p className="text-[9px] font-bold uppercase text-zinc-300 tracking-wide italic animate-pulse">{statsTabaco.salud}</p>
+              {/* BENEFICIO LOGRADO ACTUALMENTE */}
+              <div className="border-t border-zinc-900 pt-4 text-left mb-4">
+                <span className="text-[7px] font-black text-zinc-600 uppercase tracking-widest block mb-1">Último Impacto Biológico Conseguido</span>
+                <p className="text-[10px] font-bold uppercase text-green-400 tracking-wide italic">
+                  {analisProgresoTabaco.salud}
+                </p>
               </div>
+
+              {/* HITOS DE PROGRESO RESTANTES */}
+              {analisProgresoTabaco.proximo && (
+                <div className="border-t border-zinc-900 pt-4 text-left">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-[7px] font-black text-zinc-600 uppercase tracking-widest">Siguiente Objetivo Sanitario</span>
+                    <span className="text-[7px] font-mono text-zinc-500">HITO #{analisProgresoTabaco.proximo.id}</span>
+                  </div>
+                  <p className="text-[9px] font-black uppercase text-zinc-300 tracking-wide">
+                    {analisProgresoTabaco.proximo.icono} {analisProgresoTabaco.proximo.titulo}
+                  </p>
+                  <p className="text-[8px] text-zinc-500 italic mt-0.5">{analisProgresoTabaco.proximo.desc}</p>
+                </div>
+              )}
             </div>
           )}
 
+          {/* ASIGNACIÓN DE MISIONES (ADMIN) */}
           {isAdmin && (
             <div className="bg-zinc-950 border border-zinc-900 p-8 rounded-[2.5rem]">
                <h4 className="text-[10px] font-black uppercase mb-6 text-center italic tracking-widest" style={{ color: colorAcento }}>Asignación de Misiones</h4>
@@ -458,7 +553,7 @@ export default function PerfilPage() {
         )}
       </div>
 
-      {/* --- NUEVO: MODAL PERSISTENTE DE DIAGNÓSTICO DE TABACO --- */}
+      {/* MODAL PERSISTENTE DE DIAGNÓSTICO DE TABACO (Oculto permanentemente tras responder una vez) */}
       {showTabacoModal && (
         <div className="fixed inset-0 bg-black/98 z-[200] flex items-center justify-center p-6 backdrop-blur-xl animate-in fade-in duration-300">
           <div className="bg-zinc-950 border border-zinc-900 p-8 rounded-[2.5rem] max-w-md w-full space-y-6 relative">
