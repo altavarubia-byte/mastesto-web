@@ -572,7 +572,19 @@ function ContadorSocial() {
   );
 }
 export default function Page() {
+  
   const [cookiesAceptadas, setCookiesAceptadas] = useState(false);
+   useEffect(() => {
+  if (!cookiesAceptadas) {
+    document.body.style.overflow = 'hidden';
+  } else {
+    document.body.style.overflow = '';
+  }
+
+  return () => {
+    document.body.style.overflow = '';
+  };
+}, [cookiesAceptadas]);
 
 useEffect(() => {
 
@@ -705,8 +717,7 @@ const aceptarCookies=()=>{
   };
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col items-center p-4 md:p-6 font-sans relative overflow-x-hidden selection:bg-orange-600 selection:text-white">
-      <FondoMastesto />
+    <div className={`min-h-screen bg-black text-white flex flex-col items-center p-4 md:p-6 font-sans relative overflow-x-hidden selection:bg-orange-600 selection:text-white ${!cookiesAceptadas ? 'h-screen overflow-hidden' : ''}`}>       <FondoMastesto />
 
       <nav className="fixed top-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-7xl z-50 rounded-full border border-zinc-900 bg-black/75 backdrop-blur-2xl px-4 md:px-6 py-3 flex justify-between items-center shadow-2xl">
         <Link href="/" className="flex items-center gap-3 group">
@@ -765,133 +776,47 @@ const aceptarCookies=()=>{
             </>
           )}
           {!cookiesAceptadas && (
-  <div
-    className="
-    fixed
-    inset-0
-    z-[99999]
-    bg-black
-    flex
-    items-center
-    justify-center
-    p-6
-    overflow-hidden
-    "
-    onClick={(e) => e.preventDefault()}
-    onWheel={(e) => e.preventDefault()}
-    onTouchMove={(e) => e.preventDefault()}
-  >
+  <div className="fixed inset-0 z-[999999] bg-black/95 backdrop-blur-2xl flex items-center justify-center px-4 py-6 overflow-y-auto overscroll-none touch-none">
+    <div className="w-full max-w-md bg-zinc-950 border border-orange-500/30 rounded-[2rem] p-6 shadow-[0_0_60px_rgba(255,100,0,0.2)]">
+      <div className="text-center">
+        <div className="w-16 h-16 rounded-full mx-auto mb-5 bg-orange-600/20 flex items-center justify-center text-3xl">
+          🍪
+        </div>
 
-<div className="
-max-w-2xl
-bg-zinc-950
-border
-border-orange-500/20
-rounded-[2rem]
-p-8
-shadow-[0_0_60px_rgba(255,100,0,0.15)]
-">
+        <h2 className="text-2xl font-black mb-4 text-white">
+          Bienvenido a Mastesto
+        </h2>
 
-<div className="text-center">
+        <p className="text-sm text-zinc-400 leading-relaxed mb-6">
+          Utilizamos cookies y tecnologías similares para mejorar la experiencia,
+          analizar el uso de la plataforma y optimizar funciones.
+          <br /><br />
+          Para continuar debes aceptar nuestra política de privacidad y términos del servicio.
+        </p>
 
-<div className="
-w-20
-h-20
-rounded-full
-mx-auto
-mb-6
-bg-orange-600/20
-flex
-items-center
-justify-center
-text-4xl
-">
+        <div className="flex flex-col gap-3">
+          <a
+            href="/privacidad"
+            target="_blank"
+            className="w-full px-4 py-3 rounded-xl bg-zinc-900 text-zinc-300 text-sm font-bold"
+          >
+            Leer política
+          </a>
 
-🍪
+          <button
+            onClick={aceptarCookies}
+            className="w-full px-6 py-4 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-black transition-all"
+          >
+            ACEPTAR Y ENTRAR ⚔️
+          </button>
+        </div>
 
-</div>
-
-<h2 className="
-text-3xl
-font-black
-mb-5
-text-white
-">
-
-Bienvenido a Mastesto
-
-</h2>
-
-<p className="
-text-zinc-400
-leading-relaxed
-mb-6
-">
-
-Utilizamos cookies y tecnologías similares
-para mejorar la experiencia, analizar el uso
-de la plataforma y optimizar funciones.
-
-Al continuar aceptas nuestra política de
-privacidad y términos del servicio.
-
-</p>
-
-<div className="
-flex
-gap-3
-justify-center
-">
-
-<a
-href="/privacidad"
-target="_blank"
-className="
-px-4
-py-3
-rounded-xl
-bg-zinc-900
-text-zinc-300
-"
->
-
-Leer política
-
-</a>
-
-<button
-onClick={aceptarCookies}
-className="
-px-8
-py-3
-rounded-xl
-bg-orange-600
-hover:bg-orange-500
-font-black
-transition-all
-"
->
-
-ACEPTAR Y ENTRAR ⚔️
-
-</button>
-
-</div>
-
-<p className="
-text-[10px]
-mt-6
-text-zinc-600
-">
-
-Sin aceptar cookies no es posible usar Mastesto
-
-</p>
-
-</div>
-</div>
-</div>
-
+        <p className="text-[10px] mt-5 text-zinc-600">
+          Sin aceptar cookies no es posible usar Mastesto
+        </p>
+      </div>
+    </div>
+  </div>
 )}
         </div>
       </nav>
