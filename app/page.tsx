@@ -452,7 +452,71 @@ function GuiaInstalacion() {
     </section>
   );
 }
+function ContadorSocial() {
+  const [stats, setStats] = useState({
+    discord: {
+      usuarios: 0,
+      activos: 0,
+    },
+    tiktok: {
+      seguidores: 0,
+      likes: 0,
+    }
+  });
 
+  useEffect(() => {
+    fetch('/api/social')
+      .then((res) => res.json())
+      .then(setStats)
+      .catch(console.error);
+  }, []);
+
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-3xl mx-auto lg:mx-0 mb-8">
+
+      <div className="rounded-2xl border border-zinc-900 bg-zinc-950/70 p-4">
+        <p className="text-2xl">👥</p>
+        <p className="text-2xl font-black">
+          {stats.discord.usuarios}
+        </p>
+        <p className="text-[8px] uppercase text-zinc-600">
+          Discord
+        </p>
+      </div>
+
+      <div className="rounded-2xl border border-zinc-900 bg-zinc-950/70 p-4">
+        <p className="text-2xl">🟢</p>
+        <p className="text-2xl font-black">
+          {stats.discord.activos}
+        </p>
+        <p className="text-[8px] uppercase text-zinc-600">
+          Activos
+        </p>
+      </div>
+
+      <div className="rounded-2xl border border-zinc-900 bg-zinc-950/70 p-4">
+        <p className="text-2xl">🎵</p>
+        <p className="text-2xl font-black">
+          {stats.tiktok.seguidores}
+        </p>
+        <p className="text-[8px] uppercase text-zinc-600">
+          Seguidores
+        </p>
+      </div>
+
+      <div className="rounded-2xl border border-zinc-900 bg-zinc-950/70 p-4">
+        <p className="text-2xl">❤️</p>
+        <p className="text-2xl font-black">
+          {stats.tiktok.likes}
+        </p>
+        <p className="text-[8px] uppercase text-zinc-600">
+          Likes
+        </p>
+      </div>
+
+    </div>
+  );
+}
 export default function Page() {
   const supabase = useMemo(() => createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
