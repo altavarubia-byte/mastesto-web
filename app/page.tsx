@@ -1,34 +1,63 @@
-'use client'; 
+'use client';
 
-import { useState, useEffect, useMemo } from 'react'; 
-import Link from 'next/link'; 
-import { createBrowserClient } from '@supabase/ssr'; 
+import { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
+import { createBrowserClient } from '@supabase/ssr';
 
 // --- CONFIGURACIÓN GLOBAL: FECHA DE FINALIZACIÓN FIJA ---
 const FECHA_OBJETIVO = new Date('2026-05-22T23:59:59').getTime();
 
-// --- COMPONENTE DE MÓDULOS (DA VALOR REAL AL PRODUCTO) ---
-function ModulosSistema() {
-  const modulos = [
-    { titulo: 'Tracker de Bio-Rendimiento', desc: 'Control de disciplina y hábitos diarios en tiempo real.' },
-    { titulo: 'Protocolo Anti-Tabaco', desc: 'Reloj de desintoxicación y seguimiento de ahorro.' },
-    { titulo: 'Ranking de Operativos', desc: 'Leaderboard global basado en puntos de voluntad.' }
-  ];
-
+// --- COMPONENTE: AURA DE FONDO PROFESIONAL ---
+function FondoMastesto() {
   return (
-    <div className="grid md:grid-cols-3 gap-4 w-full max-w-4xl mb-16 px-4">
-      {modulos.map((m, i) => (
-        <div key={i} className="bg-zinc-950/50 border border-zinc-900 p-6 rounded-[2rem] text-left hover:border-orange-600/40 transition-all group">
-          <div className="h-[2px] w-6 bg-orange-600 mb-4 group-hover:w-full transition-all duration-700"></div>
-          <h4 className="text-[10px] font-black uppercase tracking-widest text-white mb-2">{m.titulo}</h4>
-          <p className="text-[9px] text-zinc-500 uppercase italic leading-relaxed">{m.desc}</p>
-        </div>
-      ))}
+    <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-black">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(234,88,12,0.22),transparent_34%),radial-gradient(circle_at_80%_20%,rgba(255,255,255,0.06),transparent_28%),linear-gradient(to_bottom,#050505,#000000_45%,#050505)]" />
+      <div className="absolute left-1/2 top-0 h-[700px] w-[700px] -translate-x-1/2 rounded-full bg-orange-600/10 blur-[120px]" />
+      <div className="absolute inset-0 opacity-[0.07] [background-image:linear-gradient(to_right,#fff_1px,transparent_1px),linear-gradient(to_bottom,#fff_1px,transparent_1px)] [background-size:72px_72px]" />
+      <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black to-transparent" />
     </div>
   );
 }
 
-// --- COMPONENTE: SECCIÓN DE REPORTES (MURO DE FRECUENCIAS) ---
+// --- COMPONENTE DE MÓDULOS ---
+function ModulosSistema() {
+  const modulos = [
+    { num: '01', titulo: 'Tracker de Bio-Rendimiento', desc: 'Control de disciplina, hábitos y avance personal desde un panel limpio y directo.' },
+    { num: '02', titulo: 'Protocolo Anti-Tabaco', desc: 'Reloj de desintoxicación, ahorro estimado e hitos de recuperación para no abandonar.' },
+    { num: '03', titulo: 'Ranking de Operativos', desc: 'Leaderboard global para convertir la constancia en competición sana y visible.' }
+  ];
+
+  return (
+    <section className="w-full max-w-6xl mx-auto px-4 mb-20">
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-8">
+        <div className="text-left">
+          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-orange-500 italic mb-3">Sistema Mastesto</p>
+          <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter leading-none">No es motivación.<br />Es estructura.</h2>
+        </div>
+        <p className="max-w-md text-left md:text-right text-xs md:text-sm text-zinc-500 uppercase font-bold leading-relaxed italic">
+          Herramientas diseñadas para que el usuario vuelva, reporte, mida y se foguee cada día.
+        </p>
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-4">
+        {modulos.map((m) => (
+          <div key={m.num} className="relative overflow-hidden bg-zinc-950/70 border border-zinc-900 p-7 rounded-[2rem] text-left hover:border-orange-600/50 hover:-translate-y-1 transition-all duration-300 group">
+            <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-orange-600/10 blur-2xl group-hover:bg-orange-600/20 transition-all" />
+            <div className="flex items-center justify-between mb-8">
+              <span className="text-[10px] font-black text-orange-500 tracking-widest">{m.num}</span>
+              <span className="h-2 w-2 rounded-full bg-zinc-800 group-hover:bg-orange-600 transition-all" />
+            </div>
+            <h4 className="text-sm font-black uppercase tracking-widest text-white mb-3">{m.titulo}</h4>
+            <p className="text-[11px] text-zinc-500 uppercase italic leading-relaxed">{m.desc}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// --- COMPONENTE: SECCIÓN DE REPORTES ---
 function SeccionReportes({ supabase }: { supabase: any }) {
   const [user, setUser] = useState<any>(null);
   const [reportes, setReportes] = useState<any[]>([]);
@@ -42,17 +71,15 @@ function SeccionReportes({ supabase }: { supabase: any }) {
   }, [reportes, user]);
 
   useEffect(() => {
-    // Tipado explícito para que TypeScript no proteste durante pnpm run build
     supabase.auth.getUser().then(({ data }: { data: { user: any } }) => {
       if (data?.user) setUser(data.user);
     });
 
     const fetchReportes = async () => {
       const { data, error } = await supabase
-        .from('comentarios') // Se conecta a tu tabla 'comentarios' en Supabase
+        .from('comentarios')
         .select('*')
         .order('created_at', { ascending: false });
-      
       if (!error && data) setReportes(data);
       setLoading(false);
     };
@@ -77,8 +104,6 @@ function SeccionReportes({ supabase }: { supabase: any }) {
 
     setEnviando(true);
     const meta = user.user_metadata;
-
-    // Control de alias automático si viene de Google Sync
     const aliasOperativo = meta?.alias || meta?.given_name || meta?.full_name?.split(' ')[0] || 'OPERATIVO';
 
     const { error } = await supabase.from('comentarios').insert([
@@ -90,105 +115,84 @@ function SeccionReportes({ supabase }: { supabase: any }) {
       }
     ]);
 
-    if (!error) {
-      setNuevoReporte('');
-    }
+    if (!error) setNuevoReporte('');
     setEnviando(false);
   };
 
   if (loading) return <div className="text-[10px] font-black text-center text-zinc-700 uppercase italic animate-pulse my-10">Sincronizando feed de la comunidad...</div>;
 
   return (
-    <div className="w-full max-w-4xl mx-auto mb-16 px-4 text-white bg-black">
-      <div className="border border-zinc-900 bg-zinc-950/30 rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden text-left">
-        <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-orange-600/30 to-transparent" />
-        
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+    <section className="w-full max-w-6xl mx-auto mb-20 px-4 text-white">
+      <div className="border border-zinc-900 bg-zinc-950/60 backdrop-blur-xl rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden text-left">
+        <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-orange-600/50 to-transparent" />
+        <div className="absolute -right-20 top-10 h-72 w-72 rounded-full bg-orange-600/5 blur-3xl" />
+
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 relative z-10">
           <div>
-            <h2 className="text-[11px] font-black uppercase tracking-[0.4em] text-zinc-500 mb-1 italic">Muro de Frecuencias</h2>
-            <p className="text-[8px] text-zinc-600 uppercase font-bold italic">Reportes directos de los operativos en la brecha</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-orange-500 mb-3 italic">Muro de Frecuencias</p>
+            <h2 className="text-2xl md:text-4xl font-black uppercase tracking-tighter leading-none mb-3">La brecha se reporta.</h2>
+            <p className="text-[10px] text-zinc-500 uppercase font-bold italic tracking-widest">Logros, caídas y victorias reales de la comunidad.</p>
           </div>
           {user && (
-            <div className="bg-black/50 border border-zinc-900 px-4 py-2 rounded-xl text-[8px] font-mono font-black uppercase tracking-widest text-zinc-400">
-              Tus reportes: <span className={misReportesCount >= 3 ? "text-red-500" : "text-orange-500"}>{misReportesCount}/3</span>
+            <div className="bg-black/70 border border-zinc-900 px-5 py-3 rounded-2xl text-[9px] font-mono font-black uppercase tracking-widest text-zinc-400">
+              Tus reportes: <span className={misReportesCount >= 3 ? 'text-red-500' : 'text-orange-500'}>{misReportesCount}/3</span>
             </div>
           )}
         </div>
 
         {user ? (
           misReportesCount < 3 ? (
-            <form onSubmit={enviarReporte} className="mb-10 space-y-3">
+            <form onSubmit={enviarReporte} className="mb-10 space-y-3 relative z-10">
               <div className="relative">
                 <textarea
                   value={nuevoReporte}
                   onChange={(e) => setNuevoReporte(e.target.value)}
                   maxLength={500}
                   placeholder="DEJA TU REPORTE DE DISCIPLINA O LOGRO AQUÍ... (MÁX 500 CARACTERES)"
-                  className="w-full bg-black border border-zinc-900 p-5 rounded-2xl text-[10px] uppercase font-bold text-white outline-none focus:border-zinc-700 h-24 resize-none transition-all placeholder:text-zinc-700"
+                  className="w-full bg-black/70 border border-zinc-900 p-5 rounded-2xl text-[11px] uppercase font-bold text-white outline-none focus:border-orange-600/60 h-28 resize-none transition-all placeholder:text-zinc-700"
                 />
-                <span className="absolute bottom-4 right-4 text-[7px] font-mono text-zinc-600">
-                  {nuevoReporte.length}/500
-                </span>
+                <span className="absolute bottom-4 right-4 text-[7px] font-mono text-zinc-600">{nuevoReporte.length}/500</span>
               </div>
               <button
                 type="submit"
                 disabled={enviando || !nuevoReporte.trim()}
-                className="w-full py-4 rounded-xl font-black text-[9px] bg-white text-black uppercase tracking-widest hover:opacity-80 transition-all disabled:opacity-20"
+                className="w-full py-4 rounded-xl font-black text-[10px] bg-white text-black uppercase tracking-widest hover:bg-orange-600 hover:text-white transition-all disabled:opacity-20"
               >
                 {enviando ? 'TRANSMITIENDO REPORTE...' : 'FIJAR REPORTE EN EL MURO'}
               </button>
             </form>
           ) : (
-            <div className="mb-10 p-5 border border-red-950 bg-red-950/10 rounded-2xl text-center">
-              <p className="text-[8px] font-black tracking-widest uppercase text-red-500 italic">
-                ⚠️ LÍMITE DE REPORTES ALCANZADO (3/3). TUS TRANSMISIONES ESTÁN BLINDADAS.
-              </p>
+            <div className="mb-10 p-5 border border-red-950 bg-red-950/10 rounded-2xl text-center relative z-10">
+              <p className="text-[8px] font-black tracking-widest uppercase text-red-500 italic">⚠️ LÍMITE DE REPORTES ALCANZADO (3/3). TUS TRANSMISIONES ESTÁN BLINDADAS.</p>
             </div>
           )
         ) : (
-          <div className="mb-10 p-5 border border-zinc-900 bg-black/40 rounded-2xl text-center italic">
-            <p className="text-[8px] font-black tracking-widest uppercase text-zinc-500">
-              Inicia sesión o accede al área de socios para transmitir tu reporte en la frecuencia principal.
-            </p>
+          <div className="mb-10 p-5 border border-zinc-900 bg-black/50 rounded-2xl text-center italic relative z-10">
+            <p className="text-[8px] font-black tracking-widest uppercase text-zinc-500">Inicia sesión o accede al área de socios para transmitir tu reporte en la frecuencia principal.</p>
           </div>
         )}
 
-        <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+        <div className="space-y-3 max-h-[420px] overflow-y-auto pr-2 custom-scrollbar relative z-10">
           {reportes.length > 0 ? (
             reportes.map((reporte) => (
-              <div 
-                key={reporte.id}
-                className="p-5 rounded-2xl border bg-black/30 transition-all duration-300 group hover:bg-black/60"
-                style={{ borderColor: `${reporte.color_acento}15` }}
-              >
+              <div key={reporte.id} className="p-5 rounded-2xl border bg-black/40 transition-all duration-300 group hover:bg-black/70 hover:translate-x-1" style={{ borderColor: `${reporte.color_acento}22` }}>
                 <div className="flex justify-between items-center mb-2">
-                  <span 
-                    className="text-[9px] font-black uppercase tracking-wider italic"
-                    style={{ color: reporte.color_acento }}
-                  >
-                    @{reporte.alias}
-                  </span>
-                  <span className="text-[7px] font-mono text-zinc-600">
-                    {new Date(reporte.created_at).toLocaleDateString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                  </span>
+                  <span className="text-[10px] font-black uppercase tracking-wider italic" style={{ color: reporte.color_acento }}>@{reporte.alias}</span>
+                  <span className="text-[7px] font-mono text-zinc-600">{new Date(reporte.created_at).toLocaleDateString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
-                <p className="text-[10px] text-zinc-300 font-medium leading-relaxed uppercase break-words">
-                  {reporte.contenido}
-                </p>
+                <p className="text-[11px] text-zinc-300 font-medium leading-relaxed uppercase break-words">{reporte.contenido}</p>
               </div>
             ))
           ) : (
-            <p className="text-[8px] text-zinc-700 text-center uppercase font-black italic py-10">
-              Silencio en la frecuencia. Sé el primer operativo en reportar...
-            </p>
+            <p className="text-[8px] text-zinc-700 text-center uppercase font-black italic py-10">Silencio en la frecuencia. Sé el primer operativo en reportar...</p>
           )}
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 
-// --- COMPONENTE: OFERTA FLASH TÁCTICA --- 
+// --- COMPONENTE: OFERTA FLASH TÁCTICA ---
 function OfertaFlash({ alistarse }: { alistarse: () => void }) {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const [visible, setVisible] = useState(true);
@@ -213,286 +217,342 @@ function OfertaFlash({ alistarse }: { alistarse: () => void }) {
   if (!visible) return null;
 
   return (
-    <div className="w-full max-w-4xl mx-auto mb-16 p-[1px] bg-gradient-to-r from-orange-600 via-orange-400 to-orange-600 rounded-[2.5rem] shadow-[0_0_50px_-10px_rgba(234,88,12,0.3)]">
-      <div className="bg-black rounded-[2.45rem] p-8 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-2 opacity-[0.05] font-black text-8xl italic -z-10 text-white tracking-tighter">70% OFF</div>
-        <div className="text-left space-y-2 z-10">
-          <div className="flex items-center gap-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-orange-600 animate-pulse"></span>
-            <h3 className="text-orange-500 text-[9px] font-black uppercase tracking-[0.4em] italic">Venta de Despliegue Inicial</h3>
-          </div>
-          <p className="text-3xl font-black italic tracking-tighter uppercase leading-none">Protocolo de Acceso Total</p>
-          <div className="flex items-center gap-4 mt-6">
-            <div className="flex flex-col">
-              <span className="text-zinc-600 line-through text-[10px] font-bold">29,99€</span>
-              <span className="text-4xl font-black text-white italic tracking-tighter leading-none">8,99€</span>
+    <section className="w-full max-w-6xl mx-auto mb-20 px-4">
+      <div className="p-[1px] bg-gradient-to-r from-orange-700 via-orange-400 to-orange-700 rounded-[2.5rem] shadow-[0_0_70px_-20px_rgba(234,88,12,0.55)]">
+        <div className="bg-black rounded-[2.45rem] p-7 md:p-9 flex flex-col lg:flex-row items-center justify-between gap-8 relative overflow-hidden border border-orange-500/10">
+          <div className="absolute top-0 right-0 p-4 opacity-[0.05] font-black text-8xl md:text-9xl italic text-white tracking-tighter">70% OFF</div>
+          <div className="text-left space-y-4 z-10 w-full lg:w-auto">
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-orange-600 animate-pulse"></span>
+              <h3 className="text-orange-500 text-[10px] font-black uppercase tracking-[0.4em] italic">Venta de Despliegue Inicial</h3>
             </div>
-            <div className="h-10 w-[1px] bg-zinc-900 mx-2"></div>
-            <button onClick={alistarse} className="bg-orange-600 hover:bg-orange-500 text-white px-8 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95">
-              Obtener Acceso
-            </button>
-          </div>
-        </div>
-        <div className="flex gap-2 z-10">
-          {[
-            { label: 'DÍAS', val: timeLeft.days },
-            { label: 'HRS', val: timeLeft.hours },
-            { label: 'MIN', val: timeLeft.minutes },
-            { label: 'SEG', val: timeLeft.seconds }
-          ].map((item, i) => (
-            <div key={i} className="flex flex-col items-center bg-zinc-950/80 border border-zinc-900 w-14 py-4 rounded-[1.2rem] backdrop-blur-sm">
-              <span className="text-xl font-black italic text-white tracking-tighter">{String(item.val).padStart(2, '0')}</span>
-              <span className="text-[6px] font-black text-zinc-600 tracking-[0.2em] mt-1">{item.label}</span>
+            <p className="text-3xl md:text-5xl font-black italic tracking-tighter uppercase leading-none">Acceso total.<br />Precio de fundador.</p>
+            <p className="text-xs text-zinc-500 uppercase font-bold max-w-lg leading-relaxed">Entra antes de que cierre el despliegue inicial y empieza a construir tu protocolo.</p>
+            <div className="flex flex-wrap items-center gap-5 pt-2">
+              <div className="flex flex-col">
+                <span className="text-zinc-600 line-through text-[11px] font-bold">29,99€</span>
+                <span className="text-5xl font-black text-white italic tracking-tighter leading-none">8,99€</span>
+              </div>
+              <button onClick={alistarse} className="bg-orange-600 hover:bg-orange-500 text-white px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(234,88,12,0.25)]">
+                Obtener Acceso
+              </button>
             </div>
-          ))}
+          </div>
+          <div className="grid grid-cols-4 gap-2 z-10 w-full lg:w-auto">
+            {[
+              { label: 'DÍAS', val: timeLeft.days },
+              { label: 'HRS', val: timeLeft.hours },
+              { label: 'MIN', val: timeLeft.minutes },
+              { label: 'SEG', val: timeLeft.seconds }
+            ].map((item, i) => (
+              <div key={i} className="flex flex-col items-center bg-zinc-950/90 border border-zinc-900 min-w-[64px] py-4 rounded-[1.3rem] backdrop-blur-sm">
+                <span className="text-2xl font-black italic text-white tracking-tighter">{String(item.val).padStart(2, '0')}</span>
+                <span className="text-[6px] font-black text-zinc-600 tracking-[0.2em] mt-1">{item.label}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
+    </section>
+  );
+}
+
+// --- COMPONENTE: CONTADOR TÁCTICO ---
+function ContadorSocios({ total }: { total: number }) {
+  return (
+    <div className="inline-flex items-center gap-4 rounded-full border border-zinc-900 bg-zinc-950/70 px-5 py-3 mb-8 shadow-2xl backdrop-blur-xl">
+      <span className="relative flex h-2 w-2">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-500 opacity-75"></span>
+        <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-600"></span>
+      </span>
+      <span className="text-[9px] font-black tracking-[0.3em] uppercase text-zinc-500 italic">Red Global</span>
+      <span className="text-xl font-black italic tracking-tighter text-white">{total > 0 ? total.toLocaleString() : '---'}</span>
+      <span className="text-[8px] font-black uppercase tracking-[0.25em] text-orange-600 italic">Alistados</span>
     </div>
   );
 }
 
-// --- COMPONENTE: CONTADOR TÁCTICO --- 
-function ContadorSocios({ total }: { total: number }) { 
-  return ( 
-    <div className="flex flex-col items-center space-y-2 mb-10 text-center"> 
-      <div className="flex items-center gap-3"> 
-        <span className="relative flex h-2 w-2"> 
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-500 opacity-75"></span> 
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-600"></span> 
-        </span> 
-        <span className="text-[8px] font-black tracking-[0.4em] uppercase text-zinc-500 italic"> 
-          Sincronización de Red Global 🌐
-        </span> 
-      </div> 
-      <div className="flex items-baseline gap-3"> 
-        <span className="text-6xl font-black italic tracking-tighter text-white"> 
-          {total > 0 ? total.toLocaleString() : '---'} 
-        </span> 
-        <span className="text-[11px] font-black uppercase tracking-[0.3em] text-orange-600 italic"> 
-          Usuarios Alistados
-        </span> 
-      </div> 
-    </div> 
-  ); 
-} 
+// --- COMPONENTE: GUÍA DE INSTALACIÓN ---
+function GuiaInstalacion() {
+  return (
+    <section className="w-full max-w-6xl mx-auto px-4 mt-8 mb-10">
+      <div className="p-8 md:p-10 bg-zinc-950/60 border border-zinc-900 rounded-[3rem] relative overflow-hidden group shadow-2xl backdrop-blur-xl">
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-orange-600/30 to-transparent" />
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-10">
+          <div className="text-left">
+            <p className="text-[9px] font-black uppercase tracking-[0.5em] mb-3 text-orange-500 italic">App rápida</p>
+            <h2 className="text-2xl md:text-4xl font-black uppercase tracking-tighter">Instálalo en tu móvil.</h2>
+          </div>
+          <p className="text-[10px] text-zinc-500 uppercase font-bold italic max-w-md text-left md:text-right">Acceso directo desde pantalla de inicio para entrar cada día sin excusas.</p>
+        </div>
+        <div className="grid md:grid-cols-2 gap-10 text-left relative z-10">
+          <div className="space-y-6 bg-black/35 border border-zinc-900 rounded-[2rem] p-6">
+            <div className="flex items-center gap-4 border-b border-zinc-900 pb-4">
+              <span className="text-3xl filter grayscale group-hover:grayscale-0 transition-all">🍎</span>
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-200">iOS (Safari)</h3>
+            </div>
+            <ul className="space-y-4 text-[9px] text-zinc-500 uppercase font-bold italic">
+              <li className="flex items-start gap-4"><span className="text-orange-600 font-black text-xs">01</span><span>Abre <strong className="text-zinc-200">mastesto.es</strong></span></li>
+              <li className="flex items-start gap-4"><span className="text-orange-600 font-black text-xs">02</span><span>Botón <strong className="text-zinc-200">COMPARTIR</strong></span></li>
+              <li className="flex items-start gap-4"><span className="text-orange-600 font-black text-xs">03</span><span><strong className="text-zinc-200">AÑADIR A PANTALLA DE INICIO</strong></span></li>
+            </ul>
+          </div>
+          <div className="space-y-6 bg-black/35 border border-zinc-900 rounded-[2rem] p-6">
+            <div className="flex items-center gap-4 border-b border-zinc-900 pb-4">
+              <span className="text-3xl filter grayscale group-hover:grayscale-0 transition-all">🤖</span>
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-200">Android (Chrome)</h3>
+            </div>
+            <ul className="space-y-4 text-[9px] text-zinc-500 uppercase font-bold italic">
+              <li className="flex items-start gap-4"><span className="text-orange-600 font-black text-xs">01</span><span>Entra desde <strong className="text-zinc-200">Chrome</strong></span></li>
+              <li className="flex items-start gap-4"><span className="text-orange-600 font-black text-xs">02</span><span>Menú de <strong className="text-zinc-200">3 PUNTOS</strong></span></li>
+              <li className="flex items-start gap-4"><span className="text-orange-600 font-black text-xs">03</span><span><strong className="text-zinc-200">INSTALAR APLICACIÓN</strong></span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
 
-// --- COMPONENTE: GUÍA DE INSTALACIÓN --- 
-function GuiaInstalacion() { 
-  return ( 
-    <div className="w-full max-w-4xl mx-auto mt-20 mb-10 p-10 bg-zinc-950 border border-zinc-900 rounded-[3rem] relative overflow-hidden group shadow-2xl"> 
-      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-orange-600/20 to-transparent" /> 
-      <h2 className="text-[9px] font-black uppercase tracking-[0.5em] mb-12 text-orange-600 italic text-center text-zinc-500"> 
-        ⚡ Protocolo de Instalación Mobile
-      </h2> 
-      <div className="grid md:grid-cols-2 gap-16 text-left relative z-10"> 
-        <div className="space-y-6"> 
-          <div className="flex items-center gap-4 border-b border-zinc-900 pb-4"> 
-            <span className="text-2xl filter grayscale group-hover:grayscale-0 transition-all">🍎</span> 
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-200">iOS (Safari)</h3> 
-          </div> 
-          <ul className="space-y-4 text-[9px] text-zinc-500 uppercase font-bold italic"> 
-            <li className="flex items-start gap-4"><span className="text-orange-600 font-black text-xs">01</span><span>Abre <strong className="text-zinc-200">mastesto.es</strong></span></li> 
-            <li className="flex items-start gap-4"><span className="text-orange-600 font-black text-xs">02</span><span>Botón <strong className="text-zinc-200">COMPARTIR</strong></span></li> 
-            <li className="flex items-start gap-4"><span className="text-orange-600 font-black text-xs">03</span><span><strong className="text-zinc-200">AÑADIR A PANTALLA DE INICIO</strong></span></li> 
-          </ul> 
-        </div> 
-        <div className="space-y-6"> 
-          <div className="flex items-center gap-4 border-b border-zinc-900 pb-4"> 
-            <span className="text-2xl filter grayscale group-hover:grayscale-0 transition-all">🤖</span> 
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-200">Android (Chrome)</h3> 
-          </div> 
-          <ul className="space-y-4 text-[9px] text-zinc-500 uppercase font-bold italic"> 
-            <li className="flex items-start gap-4"><span className="text-orange-600 font-black text-xs">01</span><span>Entra desde <strong className="text-zinc-200">Chrome</strong></span></li> 
-            <li className="flex items-start gap-4"><span className="text-orange-600 font-black text-xs">02</span><span>Menú de <strong className="text-zinc-200">3 PUNTOS</strong></span></li> 
-            <li className="flex items-start gap-4"><span className="text-orange-600 font-black text-xs">03</span><span><strong className="text-zinc-200">INSTALAR APLICACIÓN</strong></span></li> 
-          </ul> 
-        </div> 
-      </div> 
-    </div> 
-  ); 
-} 
+export default function Page() {
+  const supabase = useMemo(() => createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  ), []);
 
-export default function Page() { 
-  const supabase = useMemo(() => createBrowserClient( 
-    process.env.NEXT_PUBLIC_SUPABASE_URL!, 
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! 
-  ), []); 
+  const [mostrarLogin, setMostrarLogin] = useState(false);
+  const [autorizado, setAutorizado] = useState(false);
+  const [esLogin, setEsLogin] = useState(true);
+  const [totalSocios, setTotalSocios] = useState(0);
 
-  const [mostrarLogin, setMostrarLogin] = useState(false); 
-  const [autorizado, setAutorizado] = useState(false); 
-  const [esLogin, setEsLogin] = useState(true); 
-  const [totalSocios, setTotalSocios] = useState(0); 
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [nombre, setNombre] = useState('');
+  const [apellidos, setApellidos] = useState('');
+  const [edad, setEdad] = useState('');
+  const [nacionalidad, setNacionalidad] = useState('');
+  const [provincia, setProvincia] = useState('');
+  const [sexo, setSexo] = useState('');
+  const [password2, setPassword2] = useState('');
+  const [motivoCambio, setMotivoCambio] = useState('');
+  const [error, setError] = useState('');
+  const [cargando, setCargando] = useState(false);
 
-  // ESTADO DEL FORMULARIO COMPLETO
-  const [email, setEmail] = useState(''); 
-  const [password, setPassword] = useState(''); 
-  const [nombre, setNombre] = useState(''); 
-  const [apellidos, setApellidos] = useState(''); 
-  const [edad, setEdad] = useState(''); 
-  const [nacionalidad, setNacionalidad] = useState(''); 
-  const [provincia, setProvincia] = useState(''); 
-  const [sexo, setSexo] = useState(''); 
-  const [password2, setPassword2] = useState(''); 
-  const [motivoCambio, setMotivoCambio] = useState(''); 
-  const [error, setError] = useState(''); 
-  const [cargando, setCargando] = useState(false); 
+  useEffect(() => {
+    const fetchData = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) setAutorizado(true);
+      const { count } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+      if (count) setTotalSocios(count);
+    };
+    fetchData();
+  }, [supabase]);
 
-  useEffect(() => { 
-    const fetchData = async () => { 
-      const { data: { session } } = await supabase.auth.getSession(); 
-      if (session) setAutorizado(true); 
-      const { count } = await supabase.from('profiles').select('*', { count: 'exact', head: true }); 
-      if (count) setTotalSocios(count); 
-    }; 
-    fetchData(); 
-  }, [supabase]); 
+  const abrirRegistro = () => {
+    setEsLogin(false);
+    setMostrarLogin(true);
+  };
 
-  const handleGoogleLogin = async () => { 
-    setError(''); setCargando(true); 
-    const { error } = await supabase.auth.signInWithOAuth({ 
-      provider: 'google', 
-      options: { redirectTo: `${window.location.origin}/auth/callback` }, 
-    }); 
-    if (error) { setError(error.message); setCargando(false); } 
-  }; 
+  const handleGoogleLogin = async () => {
+    setError(''); setCargando(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+    if (error) { setError(error.message); setCargando(false); }
+  };
 
-  const handleAuth = async (e: React.FormEvent) => { 
-    e.preventDefault(); 
-    setError(''); setCargando(true); 
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(''); setCargando(true);
 
-    if (!esLogin) { 
-      if (password !== password2) { setError('Las contraseñas no coinciden.'); setCargando(false); return; } 
-      const { error } = await supabase.auth.signUp({ 
-        email, password, 
-        options: { 
-          emailRedirectTo: `${window.location.origin}/auth/callback`, 
-          data: { nombre, apellidos, edad: Number(edad), nacionalidad, provincia, sexo, motivo_cambio: motivoCambio || null } 
-        }, 
-      }); 
-      if (error) { setError(error.message); setCargando(false); return; } 
-      setEsLogin(true); setCargando(false); 
+    if (!esLogin) {
+      if (password !== password2) { setError('Las contraseñas no coinciden.'); setCargando(false); return; }
+      const { error } = await supabase.auth.signUp({
+        email, password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          data: { nombre, apellidos, edad: Number(edad), nacionalidad, provincia, sexo, motivo_cambio: motivoCambio || null }
+        },
+      });
+      if (error) { setError(error.message); setCargando(false); return; }
+      setEsLogin(true); setCargando(false);
       alert('¡Forja activada! Revisa tu email.');
-    } else { 
-      const { error } = await supabase.auth.signInWithPassword({ email, password }); 
-      if (error) { setError(error.message); setCargando(false); return; } 
-      window.location.href = '/perfil'; 
-    } 
-  }; 
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) { setError(error.message); setCargando(false); return; }
+      window.location.href = '/perfil';
+    }
+  };
 
-  return ( 
-    <div className="min-h-screen bg-black text-white flex flex-col items-center p-6 font-sans"> 
-      
-      <nav className="w-full max-w-7xl flex justify-between items-center py-6 z-50"> 
-        <div className="flex gap-6 italic items-center"> 
-          <a href="https://discord.gg/q2rtc8PX" target="_blank" className="text-[9px] font-black uppercase tracking-widest text-zinc-500 hover:text-orange-600 transition-all">Discord</a> 
-          <a href="https://www.tiktok.com/@mastesto" target="_blank" className="text-[9px] font-black uppercase tracking-widest text-zinc-500 hover:text-orange-600 transition-all">TikTok</a> 
-          <Link href="/nosotros" className="text-[9px] font-black uppercase tracking-widest text-zinc-500 hover:text-white transition-all underline decoration-zinc-800 underline-offset-4">
-            Conócenos más
-          </Link>
-        </div> 
-        <div className="flex gap-4"> 
-          {autorizado ? ( 
-            <Link href="/perfil" className="bg-white text-black px-6 py-2 rounded-full text-[9px] font-black uppercase tracking-tighter hover:scale-105 transition-all">Panel Operativo</Link> 
-          ) : ( 
-            <> 
-              <button onClick={() => { setEsLogin(true); setMostrarLogin(true); }} className="text-[9px] font-black uppercase text-zinc-400 hover:text-white">Sign In</button> 
-              <button onClick={() => { setEsLogin(false); setMostrarLogin(true); }} className="bg-orange-600 text-white px-6 py-2 rounded-full text-[9px] font-black uppercase tracking-tighter hover:bg-orange-500 transition-all">Alistarse</button> 
-            </> 
-          )} 
-        </div> 
-      </nav> 
+  return (
+    <div className="min-h-screen bg-black text-white flex flex-col items-center p-4 md:p-6 font-sans relative overflow-x-hidden selection:bg-orange-600 selection:text-white">
+      <FondoMastesto />
 
-      <main className="max-w-6xl w-full flex flex-col items-center py-12 z-10 text-center"> 
-        <ContadorSocios total={totalSocios} /> 
+      <nav className="fixed top-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-7xl z-50 rounded-full border border-zinc-900 bg-black/70 backdrop-blur-2xl px-4 md:px-6 py-3 flex justify-between items-center shadow-2xl">
+        <Link href="/" className="flex items-center gap-3 group">
+          <div className="h-9 w-9 rounded-full bg-orange-600 flex items-center justify-center text-black font-black shadow-[0_0_25px_rgba(234,88,12,0.35)] group-hover:scale-105 transition-all">M</div>
+          <div className="hidden sm:block text-left leading-none">
+            <p className="text-sm font-black tracking-tighter italic">MASTESTO</p>
+            <p className="text-[7px] text-zinc-600 font-black uppercase tracking-[0.25em]">Forge Protocol</p>
+          </div>
+        </Link>
 
-        <div className="relative group mb-16 px-4"> 
-          <img src="/logoweb.jpeg" alt="Logo" className="relative w-full max-w-3xl mx-auto rounded-[3rem] border border-zinc-900 shadow-2xl transition-all duration-700" /> 
-        </div> 
-
-        <OfertaFlash alistarse={() => { setEsLogin(false); setMostrarLogin(true); }} />
-
-        <ModulosSistema />
-
-        {/* --- INVOCACIÓN DEL COMPONENTE CON TERMINOLOGÍA DE REPORTES --- */}
-        <SeccionReportes supabase={supabase} />
-
-        <div className="flex flex-col items-center gap-4 opacity-40 mb-20">
-          <span className="text-[8px] font-black uppercase tracking-[0.4em] text-zinc-400">Pagos Seguros vía</span>
-          <img src="https://upload.wikimedia.org/wikipedia/commons/b/ba/Stripe_Logo%2C_revised_2016.svg" alt="Stripe" className="h-4 invert" />
+        <div className="hidden md:flex gap-6 italic items-center">
+          <a href="https://discord.gg/q2rtc8PX" target="_blank" className="text-[9px] font-black uppercase tracking-widest text-zinc-500 hover:text-orange-600 transition-all">Discord</a>
+          <a href="https://www.tiktok.com/@mastesto" target="_blank" className="text-[9px] font-black uppercase tracking-widest text-zinc-500 hover:text-orange-600 transition-all">TikTok</a>
+          <Link href="/nosotros" className="text-[9px] font-black uppercase tracking-widest text-zinc-500 hover:text-white transition-all">Conócenos</Link>
         </div>
 
-        <p className="text-[10px] font-medium text-zinc-500 uppercase tracking-[0.4em] max-w-md italic mb-10 leading-loose"> 
-          Forjando la <span className="text-white">disciplina absoluta</span>. <br/>Ingeniería de rendimiento humano. 
-        </p> 
+        <div className="flex gap-3 items-center">
+          {autorizado ? (
+            <Link href="/perfil" className="bg-white text-black px-5 py-2.5 rounded-full text-[9px] font-black uppercase tracking-tighter hover:scale-105 transition-all">Panel Operativo</Link>
+          ) : (
+            <>
+              <button onClick={() => { setEsLogin(true); setMostrarLogin(true); }} className="hidden sm:block text-[9px] font-black uppercase text-zinc-400 hover:text-white">Entrar</button>
+              <button onClick={abrirRegistro} className="bg-orange-600 text-white px-5 py-2.5 rounded-full text-[9px] font-black uppercase tracking-tighter hover:bg-orange-500 transition-all shadow-[0_0_25px_rgba(234,88,12,0.25)]">Alistarse</button>
+            </>
+          )}
+        </div>
+      </nav>
 
-        <GuiaInstalacion /> 
+      <main className="max-w-7xl w-full flex flex-col items-center pt-32 md:pt-36 z-10 text-center">
+        <section className="w-full min-h-[78vh] flex flex-col lg:flex-row items-center justify-between gap-12 px-4 mb-16">
+          <div className="w-full lg:w-[55%] text-center lg:text-left">
+            <ContadorSocios total={totalSocios} />
+            <div className="inline-flex items-center gap-2 rounded-full border border-orange-600/20 bg-orange-600/10 px-4 py-2 mb-6">
+              <span className="text-orange-500 text-xs">⚔️</span>
+              <span className="text-[9px] font-black uppercase tracking-[0.35em] text-orange-400 italic">Fogueo digital de disciplina</span>
+            </div>
 
-        <footer className="mt-20 py-10 opacity-20"> 
-          <p className="text-white text-[7px] font-black uppercase tracking-[1em]">Mastesto Engineering Protocol • 2026</p> 
-        </footer> 
-      </main> 
+            <h1 className="text-5xl sm:text-7xl lg:text-8xl font-black uppercase tracking-[-0.08em] leading-[0.82] mb-7">
+              Entra débil.<br />Sal forjado.
+            </h1>
+
+            <p className="max-w-2xl mx-auto lg:mx-0 text-sm md:text-base text-zinc-400 uppercase font-bold leading-relaxed italic mb-8">
+              Mastesto es una plataforma para construir disciplina real: hábitos, reportes, ranking, protocolo anti-tabaco y comunidad. No vienes a mirar. Vienes a foguearte.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-10">
+              <button onClick={abrirRegistro} className="bg-white text-black px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-orange-600 hover:text-white transition-all hover:scale-105">
+                Empezar la forja
+              </button>
+              <Link href="/nosotros" className="border border-zinc-800 bg-zinc-950/70 text-white px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:border-orange-600/60 transition-all">
+                Ver el sistema
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 max-w-xl mx-auto lg:mx-0">
+              {[
+                ['24/7', 'Acceso'],
+                ['3', 'Reportes'],
+                ['100%', 'Disciplina']
+              ].map(([a, b]) => (
+                <div key={b} className="rounded-2xl border border-zinc-900 bg-zinc-950/50 p-4">
+                  <p className="text-2xl font-black italic tracking-tighter">{a}</p>
+                  <p className="text-[7px] text-zinc-600 uppercase tracking-widest font-black">{b}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="w-full lg:w-[45%] relative">
+            <div className="absolute -inset-4 bg-orange-600/10 blur-3xl rounded-full" />
+            <div className="relative rounded-[3rem] border border-zinc-900 bg-zinc-950/50 p-3 shadow-2xl overflow-hidden">
+              <img src="/logoweb.jpeg" alt="Mastesto" className="w-full rounded-[2.5rem] border border-zinc-900 object-cover" />
+              <div className="absolute bottom-6 left-6 right-6 rounded-[2rem] border border-zinc-800 bg-black/70 backdrop-blur-xl p-5 text-left">
+                <p className="text-[8px] font-black uppercase tracking-[0.4em] text-orange-500 mb-2">Protocolo activo</p>
+                <p className="text-xl font-black uppercase tracking-tighter">Disciplina, voluntad y honor.</p>
+                <p className="text-[10px] text-zinc-500 uppercase font-bold mt-2">La comunidad no te motiva. Te exige.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <OfertaFlash alistarse={abrirRegistro} />
+        <ModulosSistema />
+        <SeccionReportes supabase={supabase} />
+
+        <section className="w-full max-w-6xl mx-auto px-4 mb-16">
+          <div className="rounded-[3rem] border border-zinc-900 bg-zinc-950/50 p-8 md:p-12 text-center relative overflow-hidden">
+            <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-500 mb-4">Pagos seguros vía</p>
+            <img src="https://upload.wikimedia.org/wikipedia/commons/b/ba/Stripe_Logo%2C_revised_2016.svg" alt="Stripe" className="h-6 invert mx-auto opacity-80 mb-8" />
+            <p className="text-[11px] font-medium text-zinc-500 uppercase tracking-[0.35em] max-w-xl mx-auto italic leading-loose">
+              Forjando la <span className="text-white">disciplina absoluta</span>. Ingeniería de rendimiento humano. Una red para quien quiere dejar de prometer y empezar a ejecutar.
+            </p>
+          </div>
+        </section>
+
+        <GuiaInstalacion />
+
+        <footer className="mt-14 py-10 opacity-40">
+          <p className="text-white text-[7px] font-black uppercase tracking-[0.8em]">Mastesto Engineering Protocol • 2026</p>
+        </footer>
+      </main>
 
       {/* --- MODAL DE LOGIN/REGISTRO COMPLETO --- */}
-      {mostrarLogin && ( 
-        <div className="fixed inset-0 bg-black/95 backdrop-blur-xl z-[100] flex items-center justify-center p-4"> 
-          <div className="bg-zinc-950 p-8 rounded-[2.5rem] border border-zinc-900 w-full max-w-md relative max-h-[90vh] overflow-y-auto custom-scrollbar"> 
-            <button onClick={() => setMostrarLogin(false)} className="absolute top-6 right-6 text-[8px] font-black uppercase text-zinc-600">Cerrar</button> 
-            
-            <div className="text-center mb-8"> 
-              <h2 className="text-lg font-black uppercase tracking-[0.2em] mb-2">{esLogin ? 'Identificación' : 'Alistamiento'}</h2> 
-              <p className="text-[9px] text-zinc-500 uppercase tracking-widest italic">{esLogin ? 'Acceso al Sistema' : 'Nuevo Operativo'}</p> 
-            </div> 
+      {mostrarLogin && (
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-xl z-[100] flex items-center justify-center p-4">
+          <div className="bg-zinc-950/95 p-8 rounded-[2.5rem] border border-zinc-800 w-full max-w-md relative max-h-[90vh] overflow-y-auto custom-scrollbar shadow-2xl">
+            <button onClick={() => setMostrarLogin(false)} className="absolute top-6 right-6 text-[8px] font-black uppercase text-zinc-600 hover:text-white">Cerrar</button>
 
-            <button onClick={handleGoogleLogin} disabled={cargando} className="w-full flex items-center justify-center gap-3 bg-white text-black py-3 rounded-xl text-[9px] font-black uppercase mb-6"> 
-              <img src="https://www.google.com/favicon.ico" alt="G" className="w-3 h-3" /> 
+            <div className="text-center mb-8">
+              <div className="h-12 w-12 rounded-full bg-orange-600 mx-auto mb-5 flex items-center justify-center text-black font-black">M</div>
+              <h2 className="text-xl font-black uppercase tracking-[0.18em] mb-2">{esLogin ? 'Identificación' : 'Alistamiento'}</h2>
+              <p className="text-[9px] text-zinc-500 uppercase tracking-widest italic">{esLogin ? 'Acceso al sistema' : 'Nuevo operativo'}</p>
+            </div>
+
+            <button onClick={handleGoogleLogin} disabled={cargando} className="w-full flex items-center justify-center gap-3 bg-white text-black py-3.5 rounded-xl text-[9px] font-black uppercase mb-6 hover:bg-orange-600 hover:text-white transition-all disabled:opacity-40">
+              <img src="https://www.google.com/favicon.ico" alt="G" className="w-3 h-3" />
               Google Sync
-            </button> 
+            </button>
 
-            <form onSubmit={handleAuth} className="space-y-4"> 
-              <input type="email" placeholder="EMAIL" value={email} onChange={(e)=>setEmail(e.target.value)} required className="w-full bg-black border border-zinc-800 rounded-xl py-3 px-4 text-[10px] outline-none" /> 
-               
-              {!esLogin && ( 
-                <> 
-                  <div className="grid grid-cols-2 gap-4"> 
-                    <input type="text" placeholder="NOMBRE" value={nombre} onChange={(e)=>setNombre(e.target.value)} required className="w-full bg-black border border-zinc-800 rounded-xl py-3 px-4 text-[10px]" /> 
-                    <input type="text" placeholder="APELLIDOS" value={apellidos} onChange={(e)=>setApellidos(e.target.value)} required className="w-full bg-black border border-zinc-800 rounded-xl py-3 px-4 text-[10px]" /> 
-                  </div> 
-                  <div className="grid grid-cols-2 gap-4"> 
-                    <input type="number" placeholder="EDAD" value={edad} onChange={(e)=>setEdad(e.target.value)} required className="w-full bg-black border border-zinc-800 rounded-xl py-3 px-4 text-[10px]" /> 
-                    <select value={sexo} onChange={(e)=>setSexo(e.target.value)} required className="w-full bg-black border border-zinc-800 rounded-xl py-3 px-4 text-[10px] text-zinc-400"> 
-                      <option value="">SEXO</option><option value="hombre">Hombre</option><option value="mujer">Mujer</option><option value="otro">Otro</option> 
-                    </select> 
-                  </div> 
-                  <input type="text" placeholder="NACIONALIDAD" value={nacionalidad} onChange={(e)=>setNacionalidad(e.target.value)} required className="w-full bg-black border border-zinc-800 rounded-xl py-3 px-4 text-[10px]" /> 
-                  <input type="text" placeholder="PROVINCIA" value={provincia} onChange={(e)=>setProvincia(e.target.value)} required className="w-full bg-black border border-zinc-800 rounded-xl py-3 px-4 text-[10px]" /> 
-                </> 
-              )} 
+            <form onSubmit={handleAuth} className="space-y-4">
+              <input type="email" placeholder="EMAIL" value={email} onChange={(e)=>setEmail(e.target.value)} required className="w-full bg-black border border-zinc-800 rounded-xl py-3 px-4 text-[10px] outline-none focus:border-orange-600/60" />
 
-              <input type="password" placeholder="CONTRASEÑA" value={password} onChange={(e)=>setPassword(e.target.value)} required className="w-full bg-black border border-zinc-800 rounded-xl py-3 px-4 text-[10px]" /> 
-               
-              {!esLogin && ( 
-                <> 
-                  <input type="password" placeholder="CONFIRMAR" value={password2} onChange={(e)=>setPassword2(e.target.value)} required className="w-full bg-black border border-zinc-800 rounded-xl py-3 px-4 text-[10px]" /> 
-                  <textarea placeholder="OBJETIVO" value={motivoCambio} onChange={(e)=>setMotivoCambio(e.target.value)} className="w-full bg-black border border-zinc-800 rounded-xl py-3 px-4 text-[10px] min-h-[80px]" /> 
-                </> 
-              )} 
+              {!esLogin && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <input type="text" placeholder="NOMBRE" value={nombre} onChange={(e)=>setNombre(e.target.value)} required className="w-full bg-black border border-zinc-800 rounded-xl py-3 px-4 text-[10px] focus:border-orange-600/60 outline-none" />
+                    <input type="text" placeholder="APELLIDOS" value={apellidos} onChange={(e)=>setApellidos(e.target.value)} required className="w-full bg-black border border-zinc-800 rounded-xl py-3 px-4 text-[10px] focus:border-orange-600/60 outline-none" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <input type="number" placeholder="EDAD" value={edad} onChange={(e)=>setEdad(e.target.value)} required className="w-full bg-black border border-zinc-800 rounded-xl py-3 px-4 text-[10px] focus:border-orange-600/60 outline-none" />
+                    <select value={sexo} onChange={(e)=>setSexo(e.target.value)} required className="w-full bg-black border border-zinc-800 rounded-xl py-3 px-4 text-[10px] text-zinc-400 focus:border-orange-600/60 outline-none">
+                      <option value="">SEXO</option><option value="hombre">Hombre</option><option value="mujer">Mujer</option><option value="otro">Otro</option>
+                    </select>
+                  </div>
+                  <input type="text" placeholder="NACIONALIDAD" value={nacionalidad} onChange={(e)=>setNacionalidad(e.target.value)} required className="w-full bg-black border border-zinc-800 rounded-xl py-3 px-4 text-[10px] focus:border-orange-600/60 outline-none" />
+                  <input type="text" placeholder="PROVINCIA" value={provincia} onChange={(e)=>setProvincia(e.target.value)} required className="w-full bg-black border border-zinc-800 rounded-xl py-3 px-4 text-[10px] focus:border-orange-600/60 outline-none" />
+                </>
+              )}
 
-              {error && <p className="text-[9px] text-red-500 text-center uppercase font-black">{error}</p>} 
+              <input type="password" placeholder="CONTRASEÑA" value={password} onChange={(e)=>setPassword(e.target.value)} required className="w-full bg-black border border-zinc-800 rounded-xl py-3 px-4 text-[10px] focus:border-orange-600/60 outline-none" />
 
-              <button type="submit" disabled={cargando} className="w-full bg-white text-black py-4 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-orange-600 hover:text-white transition-all"> 
-                {cargando ? 'Cargando...' : esLogin ? 'Entrar' : 'Registrar'} 
-              </button> 
-            </form> 
+              {!esLogin && (
+                <>
+                  <input type="password" placeholder="CONFIRMAR" value={password2} onChange={(e)=>setPassword2(e.target.value)} required className="w-full bg-black border border-zinc-800 rounded-xl py-3 px-4 text-[10px] focus:border-orange-600/60 outline-none" />
+                  <textarea placeholder="OBJETIVO" value={motivoCambio} onChange={(e)=>setMotivoCambio(e.target.value)} className="w-full bg-black border border-zinc-800 rounded-xl py-3 px-4 text-[10px] min-h-[80px] focus:border-orange-600/60 outline-none" />
+                </>
+              )}
 
-            <p className="text-center mt-8 text-[9px] text-zinc-600 uppercase font-bold"> 
-              {esLogin ? '¿No tienes cuenta?' : '¿Ya eres operativo?'} 
-              <button onClick={() => setEsLogin(!esLogin)} className="ml-2 text-white hover:text-orange-600 underline"> 
-                {esLogin ? 'Registrarse' : 'Identificarse'} 
-              </button> 
-            </p> 
-          </div> 
-        </div> 
-      )} 
-    </div> 
-  ); 
+              {error && <p className="text-[9px] text-red-500 text-center uppercase font-black">{error}</p>}
+
+              <button type="submit" disabled={cargando} className="w-full bg-white text-black py-4 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-orange-600 hover:text-white transition-all disabled:opacity-40">
+                {cargando ? 'Cargando...' : esLogin ? 'Entrar' : 'Registrar'}
+              </button>
+            </form>
+
+            <p className="text-center mt-8 text-[9px] text-zinc-600 uppercase font-bold">
+              {esLogin ? '¿No tienes cuenta?' : '¿Ya eres operativo?'}
+              <button onClick={() => setEsLogin(!esLogin)} className="ml-2 text-white hover:text-orange-600 underline">
+                {esLogin ? 'Registrarse' : 'Identificarse'}
+              </button>
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
