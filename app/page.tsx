@@ -1021,11 +1021,159 @@ Sin aceptar cookies no es posible usar Mastesto
           </div>
         </section>
 
-        <OfertaFlash alistarse={abrirRegistro} />
-        <ModulosSistema />
-        <SeccionReportes supabase={supabase} />
+       <OfertaFlash alistarse={abrirRegistro} />
+<ModulosSistema />
+<SeccionReportes supabase={supabase} />
 
-        <section className="w-full max-w-6xl mx-auto px-4 mb-16">
+{/* BLOG MASTESTO */}
+
+<section className="
+w-full
+max-w-6xl
+mx-auto
+px-4
+mb-20
+">
+
+<div className="
+rounded-[3rem]
+border
+border-orange-600/20
+bg-zinc-950/70
+p-8
+md:p-14
+relative
+overflow-hidden
+shadow-2xl
+">
+
+<div className="
+absolute
+top-[-180px]
+right-[-120px]
+w-[450px]
+h-[450px]
+rounded-full
+bg-orange-600/10
+blur-[120px]
+"/>
+
+<div className="
+absolute
+bottom-[-100px]
+left-[-80px]
+w-[250px]
+h-[250px]
+rounded-full
+bg-orange-500/10
+blur-[80px]
+"/>
+
+<p className="
+text-[9px]
+font-black
+uppercase
+tracking-[0.5em]
+text-orange-500
+mb-4
+italic
+">
+
+Mastesto Research
+
+</p>
+
+<h2 className="
+text-4xl
+md:text-6xl
+font-black
+tracking-tighter
+leading-none
+mb-6
+">
+
+No solo motivación.
+
+<br/>
+
+<span className="text-orange-500">
+
+Ciencia + hábitos + disciplina
+
+</span>
+
+</h2>
+
+<p className="
+text-sm
+text-zinc-400
+uppercase
+font-bold
+leading-relaxed
+max-w-2xl
+mb-8
+italic
+">
+
+Explora artículos premium sobre duchas frías,
+dejar vicios, testosterona, estudio,
+rendimiento y experiencias reales.
+
+</p>
+
+<div className="flex flex-wrap gap-4">
+
+<Link
+href="/blog"
+className="
+inline-flex
+bg-orange-600
+hover:bg-orange-500
+text-white
+px-8
+py-4
+rounded-2xl
+font-black
+uppercase
+tracking-[0.2em]
+transition-all
+hover:scale-105
+"
+>
+
+ENTRAR AL BLOG ⚔️
+
+</Link>
+
+<Link
+href="/blog/beneficios-ducha-fria"
+className="
+inline-flex
+border
+border-zinc-800
+bg-black
+px-8
+py-4
+rounded-2xl
+font-black
+uppercase
+tracking-[0.2em]
+hover:border-orange-600
+transition-all
+"
+>
+
+LEER ÚLTIMO ARTÍCULO
+
+</Link>
+
+</div>
+
+</div>
+
+</section>
+
+<section className="w-full max-w-6xl mx-auto px-4 mb-16">
           <div className="rounded-[3rem] border border-zinc-900 bg-zinc-950/50 p-8 md:p-12 text-center relative overflow-hidden">
             <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
             <p className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-500 mb-4">
