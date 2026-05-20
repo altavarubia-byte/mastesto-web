@@ -4,108 +4,75 @@ import { createClient } from '@supabase/supabase-js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-const supabase = createClient(
+const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
 export async function POST(req: Request) {
   try {
+    const { asunto, mensaje, adminEmail } = await req.json();
 
-    const body = await req.json();
-
-    const {
-      asunto,
-      contenido,
-      usuario
-    } = body;
-
-    if (!usuario) {
+    if (!adminEmail) {
       return NextResponse.json(
         { error: 'No autenticado' },
         { status: 401 }
       );
     }
 
-    // comprobar admin
-    const { data: perfil } = await supabase
+    const { data: admin } = await supabaseAdmin
       .from('profiles')
       .select('role')
-      .eq('email', usuario)
+      .eq('email', adminEmail)
       .single();
 
-    if (perfil?.role !== 'admin') {
+    if (admin?.role !== 'admin') {
       return NextResponse.json(
         { error: 'No autorizado' },
         { status: 403 }
       );
     }
 
-    // usuarios que aceptan marketing
-    const { data: usuarios } = await supabase
+    const { data: usuarios } = await supabaseAdmin
       .from('profiles')
       .select('email')
       .eq('acepta_marketing', true);
 
-    if (!usuarios?.length) {
-      return NextResponse.json({
-        ok: true,
-        enviados: 0
-      });
+    const emails = usuarios?.map((u) => u.email).filter(Boolean) || [];
+
+    if (emails.length === 0) {
+      return NextResponse.json({ enviados: 0 });
     }
 
-    const emails = usuarios
-      .map((u) => u.email)
-      .filter(Boolean);
-
     await resend.emails.send({
-
       from: 'Mastesto <noreply@mastesto.es>',
-
       to: emails,
-
       subject: asunto,
-
       html: `
-      <div style="
-      background:black;
-      color:white;
-      padding:40px;
-      font-family:Arial;
-      ">
+        <div style="background:#050505;color:white;padding:30px;font-family:Arial">
+          <h1 style="color:#ea580c">MASTESTO ⚔️</h1>
 
-      <h1 style="
-      color:#f97316;
-      ">
-      +TESTO ⚔️
-      </h1>
+          <p style="line-height:1.7">
+            ${mensaje.replace(/\n/g, '<br/>')}
+          </p>
 
-      ${contenido}
+          <hr style="border-color:#222;margin:30px 0"/>
 
-      <br/><br/>
-
-      <p style="opacity:.6">
-      mastesto.es
-      </p>
-
-      </div>
-      `
+          <p style="font-size:12px;color:#888">
+            Recibes este correo porque aceptaste comunicaciones comerciales.
+            Puedes darte de baja desde tu perfil.
+          </p>
+        </div>
+      `,
     });
 
     return NextResponse.json({
-      ok: true,
-      enviados: emails.length
+      enviados: emails.length,
     });
-
-  } catch (e:any) {
-
+  } catch (e: any) {
     return NextResponse.json(
-      {
-        error: e.message
-      },
-      {
-        status:500
-      }
+      { error: e.message || 'Error enviando correos' },
+      { status: 500 }
     );
   }
 }
