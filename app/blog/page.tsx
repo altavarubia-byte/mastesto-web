@@ -13,11 +13,13 @@ export const metadata = {
 };
 
 export default async function BlogPage() {
-  const { data: blogs } = await supabase
-    .from("blogs")
-    .select("*")
-    .eq("publicado", true)
-    .order("created_at", { ascending: false });
+ const { data: blogs, error } = await supabase
+  .from("blogs")
+  .select("*")
+  .order("created_at", { ascending: false });
+
+console.log(blogs);
+console.log(error);
 
   return (
     <main className="min-h-screen bg-black text-white px-6 py-20">
