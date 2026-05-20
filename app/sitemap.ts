@@ -1,12 +1,23 @@
-import { MetadataRoute } from 'next'
+import type { MetadataRoute } from 'next';
 
 export default function sitemap(): MetadataRoute.Sitemap {
 
 const blogs=[
 
 'beneficios-ducha-fria',
-'dejar-procrastinacion',
-'testosterona-natural'
+
+// ===== FUTUROS BLOGS =====
+
+// 'dejar-procrastinacion',
+// 'testosterona-natural',
+// 'como-dejar-fumar',
+// 'rutina-disciplina-manana',
+// 'beneficios-dejar-porno',
+// 'como-estudiar-sin-distracciones',
+// 'habitos-que-destruyen-tu-disciplina',
+// 'que-pasa-si-te-duchas-frio-30-dias',
+// 'como-dejar-el-movil',
+// 'rutina-para-mejorar-tu-vida'
 
 ];
 
@@ -15,26 +26,29 @@ return [
 {
 url:'https://mastesto.es',
 lastModified:new Date(),
-changeFrequency:'daily',
+changeFrequency:'daily' as const,
 priority:1
 },
 
 {
 url:'https://mastesto.es/blog',
 lastModified:new Date(),
-changeFrequency:'daily',
-priority:0.9
+changeFrequency:'daily' as const,
+priority:0.95
 },
 
 ...blogs.map((slug)=>({
 
 url:`https://mastesto.es/blog/${slug}`,
+
 lastModified:new Date(),
-changeFrequency:'weekly',
-priority:0.8
+
+changeFrequency:'weekly' as const,
+
+priority:0.85
 
 }))
 
-]
+];
 
 }
