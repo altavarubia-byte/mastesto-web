@@ -413,7 +413,8 @@ content="Ciencia, experiencias y beneficios reales de ducharse con agua fría."
             </>
           )
         )}
-      </article>
+ </article>
     </main>
-  );
+  </>
+);
 }
