@@ -107,6 +107,12 @@ export default function PerfilPage() {
   const [socioId, setSocioId] = useState('');
   const [statusMsg, setStatusMsg] = useState('');
 
+  // EMAIL MARKETING
+  const [asuntoMarketing, setAsuntoMarketing] = useState('');
+  const [mensajeMarketing, setMensajeMarketing] = useState('');
+  const [enviandoMarketing, setEnviandoMarketing] = useState(false);
+  const [esAdminReal, setEsAdminReal] = useState(false);
+
   // PROTOCOLO TABACO
   const [showTabacoModal, setShowTabacoModal] = useState(false);
   const [datosTabaco, setDatosTabaco] = useState({ cigarrillosDia: '', precioPaquete: '', unidadesPaquete: '20' });
@@ -265,9 +271,18 @@ export default function PerfilPage() {
           .order('updated_at', { ascending: false });
         if (socios) setSociosCuestionario(socios);
       }
+      const { data: perfilAdmin } = await supabase
+.from('profiles')
+.select('role')
+.eq('email', user.email)
+.single();
 
+setEsAdminReal(
+perfilAdmin?.role==="admin"
+);
       setLoading(false);
     };
+    
     getData();
   }, [supabase, router]);
 
@@ -462,7 +477,51 @@ export default function PerfilPage() {
     }
     setSubiendoPdfDieta(false);
   };
+  const enviarMarketing = async () => {
+  if (!asuntoMarketing.trim() || !mensajeMarketing.trim()) {
+    alert('Falta asunto o mensaje');
+    return;
+  }
 
+  const confirmar = confirm(
+    'Vas a enviar este correo a todos los usuarios que aceptaron comunicaciones comerciales. ¿Continuar?'
+  );
+
+  if (!confirmar) return;
+
+  setEnviandoMarketing(true);
+
+  try {
+    const res = await fetch('/api/admin/enviar-marketing', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        asunto: asuntoMarketing,
+        mensaje: mensajeMarketing,
+        adminEmail: user.email,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.error || 'Error enviando correos');
+      setEnviandoMarketing(false);
+      return;
+    }
+
+    alert(`Correos enviados: ${data.enviados || 0}`);
+
+    setAsuntoMarketing('');
+    setMensajeMarketing('');
+  } catch {
+    alert('Error enviando correos');
+  }
+
+  setEnviandoMarketing(false);
+};
   const abrirPdfDieta = async (filePath: string) => {
     const { data, error } = await supabase.storage.from('dietas').createSignedUrl(filePath, 60 * 10);
     if (!error && data?.signedUrl) window.open(data.signedUrl, '_blank');
@@ -642,6 +701,46 @@ export default function PerfilPage() {
               </form>
             </div>
           )}
+          {esAdminReal && (
+  <div className="bg-zinc-950 border border-zinc-900 p-8 rounded-[2.5rem]">
+    <h4
+      className="text-[10px] font-black uppercase mb-6 text-center italic tracking-widest"
+      style={{ color: colorAcento }}
+    >
+      Campaña Email Mastesto
+    </h4>
+
+    <input
+      value={asuntoMarketing}
+      onChange={(e) => setAsuntoMarketing(e.target.value)}
+      placeholder="ASUNTO DEL CORREO"
+      className="w-full bg-black border border-zinc-800 p-4 rounded-xl text-[10px] uppercase font-bold text-white outline-none focus:border-zinc-500 mb-4"
+    />
+
+    <textarea
+      value={mensajeMarketing}
+      onChange={(e) => setMensajeMarketing(e.target.value)}
+      placeholder="MENSAJE DEL CORREO"
+      className="w-full bg-black border border-zinc-800 p-4 rounded-xl text-[10px] uppercase font-bold text-white outline-none focus:border-zinc-500 h-40 resize-none mb-4"
+    />
+
+    <button
+      onClick={enviarMarketing}
+      disabled={enviandoMarketing}
+      className="w-full py-4 rounded-xl font-black text-[10px] uppercase hover:bg-white hover:text-black transition-all disabled:opacity-30"
+      style={{
+        backgroundColor: colorAcento,
+        color: 'black',
+      }}
+    >
+      {enviandoMarketing ? 'ENVIANDO CORREOS...' : 'ENVIAR A USUARIOS SUSCRITOS'}
+    </button>
+
+    <p className="text-[8px] text-zinc-600 uppercase font-bold italic text-center mt-4 leading-relaxed">
+      Solo se enviará a usuarios con acepta_marketing = true.
+    </p>
+  </div>
+)}
 
           {isAdmin && (
             <div className="bg-zinc-950 border border-zinc-900 p-8 rounded-[2.5rem]">
