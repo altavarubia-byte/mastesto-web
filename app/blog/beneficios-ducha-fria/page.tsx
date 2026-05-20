@@ -1,5 +1,6 @@
 'use client';
 
+import Head from 'next/head';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
@@ -31,6 +32,34 @@ export default function BlogAguaFriaPage() {
   }, [supabase]);
 
   return (
+    <>
+<Head>
+
+<title>
+Beneficios reales de ducharse con agua fría | Mastesto
+</title>
+
+<meta
+name="description"
+content="Qué dice la ciencia sobre las duchas frías: estudios, beneficios reales, disciplina, energía y experiencias."
+/>
+
+<meta
+name="keywords"
+content="ducha fría, beneficios agua fría, disciplina, hábitos, estudios agua fría, Mastesto"
+/>
+
+<meta
+property="og:title"
+content="Beneficios reales de ducharse con agua fría | Mastesto"
+/>
+
+<meta
+property="og:description"
+content="Ciencia, experiencias y beneficios reales de ducharse con agua fría."
+/>
+
+</Head>
     <main className="min-h-screen bg-black text-white selection:bg-orange-600 selection:text-white">
       <section className="relative overflow-hidden px-6 py-24 text-center border-b border-zinc-900">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(234,88,12,0.22),transparent_35%),linear-gradient(to_bottom,#050505,#000)]" />
