@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: any) {
     .from("blogs")
     .select("titulo, descripcion, meta_title, meta_description, imagen_url")
     .eq("slug", slug)
-    .single();
+    .maybesingle();
 
   if (!blog) {
     return {
