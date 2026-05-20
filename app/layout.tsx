@@ -23,10 +23,10 @@ export const viewport: Viewport = {
 // Metadatos con instrucción de concisión
 export const metadata: Metadata = {
   title: {
-    default: '+TESTO | Forja de Voluntad',
+    default: 'Mastesto | Disciplina, hábitos y mejora personal',
     template: '%s | +TESTO'
   },
-  description: 'Plataforma de alta intensidad para la reconstrucción de hábitos y disciplina.',
+  description: 'Únete a Mastesto. Plataforma de disciplina, hábitos, estudio, dejar vicios, IA, rutinas y comunidad para mejorar tu vida.',
   manifest: '/manifest.json',
   icons: {
     icon: '/favicon.ico',
