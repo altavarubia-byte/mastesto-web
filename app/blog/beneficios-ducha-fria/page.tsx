@@ -252,3 +252,61 @@ Qué errores hacen abandonar al 90%.
 Y qué experiencia describen las personas que mantienen el hábito durante meses.
 
 </p>
+
+  {!user && (
+
+<div className="
+bg-zinc-950
+border
+border-orange-600/30
+rounded-[2rem]
+p-10
+text-center
+mt-14
+">
+
+<p className="text-5xl mb-4">
+🔒
+</p>
+
+<h3 className="
+text-3xl
+font-black
+mb-4
+">
+
+Continúa leyendo
+
+</h3>
+
+<p className="
+text-zinc-400
+mb-6
+">
+
+Crea una cuenta gratuita para desbloquear:
+protocolo Mastesto, experiencias reales,
+errores frecuentes y guía de 7 días.
+
+</p>
+
+<Link
+href="/registro"
+className="
+bg-orange-600
+text-black
+px-8
+py-4
+rounded-xl
+font-black
+inline-block
+"
+>
+
+CREAR CUENTA ⚔️
+
+</Link>
+
+</div>
+
+)}
