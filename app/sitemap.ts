@@ -8,7 +8,7 @@ const blogs=[
 
 // ===== FUTUROS BLOGS =====
 
-// 'dejar-procrastinacion',
+'dejar-procrastinacion',
 // 'testosterona-natural',
 // 'como-dejar-fumar',
 // 'rutina-disciplina-manana',
