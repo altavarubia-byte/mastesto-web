@@ -54,7 +54,7 @@ export async function POST(req: Request) {
     }
 
     const { data, error } = await resend.emails.send({
-      from: 'Mastesto <onboarding@resend.dev>',
+      from:'Mastesto <noreply@mastesto.es>',
       to: emails,
       subject: asunto,
       html: `
