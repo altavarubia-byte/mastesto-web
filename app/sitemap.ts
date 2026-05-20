@@ -8,7 +8,7 @@ const blogs=[
 
 // ===== FUTUROS BLOGS =====
 
-'dejar-procrastinacion',
+// 'dejar-procrastinacion',
 // 'testosterona-natural',
 // 'como-dejar-fumar',
 // 'rutina-disciplina-manana',
@@ -24,14 +24,14 @@ const blogs=[
 return [
 
 {
-url:'https://mastesto.es',
+url:'https://www.mastesto.es',
 lastModified:new Date(),
 changeFrequency:'daily' as const,
 priority:1
 },
 
 {
-url:'https://mastesto.es/blog',
+url:'https://www.mastesto.es/blog',
 lastModified:new Date(),
 changeFrequency:'daily' as const,
 priority:0.95
@@ -39,7 +39,7 @@ priority:0.95
 
 ...blogs.map((slug)=>({
 
-url:`https://mastesto.es/blog/${slug}`,
+url:`https://www.mastesto.es/blog/${slug}`,
 
 lastModified:new Date(),
 
