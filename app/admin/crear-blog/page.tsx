@@ -5,10 +5,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 
-const BlogEditor = dynamic(() => import('@/app/components/BlogEditor'), {
+const BlogEditor = dynamic(() => import('../../components/BlogEditor'), {
   ssr: false,
 });
-
 export default function CrearBlogPage() {
   const router = useRouter();
 
