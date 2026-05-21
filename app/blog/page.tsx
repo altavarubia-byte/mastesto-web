@@ -19,8 +19,6 @@ export default async function BlogPage() {
   .eq("publicado", true)
   .order("created_at", { ascending: false });
 
-console.log(blogs);
-console.log(error);
 
   return (
     <main className="min-h-screen bg-black text-white px-6 py-20">
