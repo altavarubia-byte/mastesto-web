@@ -152,6 +152,27 @@ export default function CrearBlogPage() {
     );
   }
 
+  const subirImagenContenido = async (file: File) => {
+  const slugFinal = slug.trim() || generarSlug(titulo || 'blog');
+  const ext = file.name.split('.').pop();
+  const path = `contenido/${slugFinal}-${Date.now()}.${ext}`;
+
+  const { error } = await supabase.storage
+    .from('blog-images')
+    .upload(path, file);
+
+  if (error) {
+    alert(error.message);
+    throw error;
+  }
+
+  const { data } = supabase.storage
+    .from('blog-images')
+    .getPublicUrl(path);
+
+  return data.publicUrl;
+};
+
   return (
     <main className="min-h-screen bg-black text-white px-6 py-10 selection:bg-orange-600 selection:text-black">
       <div className="max-w-7xl mx-auto">
