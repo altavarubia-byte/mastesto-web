@@ -1,5 +1,6 @@
 'use client';
 
+import CanvasBlogEditor from '@/components/CanvasBlogEditor';
 import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
@@ -19,7 +20,8 @@ export default function CrearBlogPage() {
       ),
     []
   );
-
+  
+  const [canvasItems, setCanvasItems] = useState<any[]>([]);
   const [user, setUser] = useState<any>(null);
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
@@ -120,6 +122,7 @@ export default function CrearBlogPage() {
       imagen_url: imagenUrl || null,
       imagen_path: imagenPath || null,
       fondo,
+      canvas_json: canvasItems,
       meta_title: metaTitle || titulo,
       meta_description: metaDescription || descripcion,
       publicado,
@@ -463,6 +466,13 @@ oro:
   setContent={setContenido}
   onUploadImage={subirImagenContenido}
 />
+            <div className="mt-8">
+  <CanvasBlogEditor
+    items={canvasItems}
+    setItems={setCanvasItems}
+    onUploadImage={subirImagenContenido}
+  />
+</div>
 
             <div className="mt-6 bg-zinc-950 border border-zinc-900 rounded-[2rem] p-6">
               <p className="text-[10px] font-black uppercase text-zinc-500 mb-3">
