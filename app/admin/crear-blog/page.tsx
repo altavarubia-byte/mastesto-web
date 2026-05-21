@@ -259,16 +259,60 @@ export default function CrearBlogPage() {
               className="w-full bg-black border border-zinc-800 rounded-xl p-4 mb-4 text-sm outline-none focus:border-orange-600"
             />
 
-            <select
-              value={fondo}
-              onChange={(e) => setFondo(e.target.value)}
-              className="w-full bg-black border border-zinc-800 rounded-xl p-4 mb-4 text-sm outline-none focus:border-orange-600"
-            >
-              <option value="oscuro">Fondo oscuro Mastesto</option>
-              <option value="fuego">Fondo fuego</option>
-              <option value="hielo">Fondo hielo</option>
-              <option value="premium">Fondo premium elegante</option>
-            </select>
+           <select
+  value={fondo}
+  onChange={(e) => setFondo(e.target.value)}
+  className="
+  w-full
+  bg-black
+  border
+  border-zinc-800
+  rounded-xl
+  p-4
+  mb-4
+  text-sm
+  outline-none
+  focus:border-orange-600
+  "
+>
+
+<option value="oscuro">
+⚫ Oscuro Mastesto
+</option>
+
+<option value="fuego">
+🔥 Fuego
+</option>
+
+<option value="hielo">
+🧊 Hielo
+</option>
+
+<option value="premium">
+💎 Premium elegante
+</option>
+
+<option value="rojo">
+🩸 Rojo agresivo
+</option>
+
+<option value="verde">
+🟢 Verde militar
+</option>
+
+<option value="morado">
+🟣 Morado nocturno
+</option>
+
+<option value="blanco">
+⚪ Blanco limpio
+</option>
+
+<option value="oro">
+🟡 Dorado
+</option>
+
+</select>
 
             <div className="bg-black border border-zinc-800 rounded-xl p-4 mb-4">
               <p className="text-[9px] uppercase font-black text-zinc-500 mb-3">
