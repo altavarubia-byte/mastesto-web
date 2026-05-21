@@ -74,6 +74,29 @@ export default function BlogEditor({
   }}
   className="w-12 h-10 bg-black rounded-xl border border-zinc-800 cursor-pointer"
 />
+        <select
+  defaultValue="16px"
+  onChange={(e) => {
+    editor
+      .chain()
+      .focus()
+      .setMark('textStyle', {
+        style: `font-size: ${e.target.value}`,
+      })
+      .run();
+  }}
+  className="px-4 py-2 bg-black rounded-xl text-white text-xs border border-zinc-800"
+>
+  <option value="10px">10</option>
+  <option value="12px">12</option>
+  <option value="14px">14</option>
+  <option value="16px">16</option>
+  <option value="18px">18</option>
+  <option value="24px">24</option>
+  <option value="32px">32</option>
+  <option value="48px">48</option>
+  <option value="72px">72</option>
+</select>
 
         <button type="button" onClick={() => editor.chain().focus().toggleBold().run()} className="px-4 py-2 bg-black rounded-xl">
           B
