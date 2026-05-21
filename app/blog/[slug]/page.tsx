@@ -95,23 +95,46 @@ ${fondoClase}
   html={blog.contenido_html || blog.contenido || ""}
 />
 {blog.canvas_json && blog.canvas_json.length > 0 && (
-  <div className="relative h-[1000px] mt-16 bg-black rounded-[2rem] overflow-hidden border border-zinc-900">
-    {blog.canvas_json.map((item: any) => (
-      <img
-        key={item.id}
-        src={item.url}
-        alt=""
-        style={{
-          position: 'absolute',
-          left: item.x,
-          top: item.y,
-          width: item.width,
-          height: item.height,
-          objectFit: 'cover',
-        }}
-        className="rounded-2xl"
-      />
-    ))}
+  <div className="relative h-[1200px] mt-16 bg-black rounded-[2rem] overflow-hidden border border-zinc-900">
+    {blog.canvas_json.map((item: any) =>
+      item.type === 'image' ? (
+        <img
+          key={item.id}
+          src={item.url}
+          alt=""
+          style={{
+            position: 'absolute',
+            left: item.x,
+            top: item.y,
+            width: item.width,
+            height: item.height,
+            objectFit: 'cover',
+          }}
+          className="rounded-2xl"
+        />
+      ) : (
+        <div
+          key={item.id}
+          style={{
+            position: 'absolute',
+            left: item.x,
+            top: item.y,
+            width: item.width,
+            height: item.height,
+            fontSize: item.fontSize,
+            color: item.color,
+            fontFamily: item.fontFamily,
+            fontWeight: item.bold ? 900 : 400,
+            fontStyle: item.italic ? 'italic' : 'normal',
+            textDecoration: item.underline ? 'underline' : 'none',
+            whiteSpace: 'pre-wrap',
+            lineHeight: 1.2,
+          }}
+        >
+          {item.text}
+        </div>
+      )
+    )}
   </div>
 )}
       </article>
