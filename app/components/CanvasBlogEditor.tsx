@@ -26,24 +26,21 @@ export default function CanvasBlogEditor({
   const addImage = async (file: File) => {
     const url = await onUploadImage(file);
 
-    const nuevo: CanvasItem = {
-      id: crypto.randomUUID(),
-      url,
-      x: 40,
-      y: 40,
-      width: 300,
-      height: 220,
-    };
-
-    setItems([...items, nuevo]);
+    setItems([
+      ...items,
+      {
+        id: crypto.randomUUID(),
+        url,
+        x: 40,
+        y: 40,
+        width: 300,
+        height: 220,
+      },
+    ]);
   };
 
   const updateItem = (id: string, cambios: Partial<CanvasItem>) => {
-    setItems(
-      items.map((item) =>
-        item.id === id ? { ...item, ...cambios } : item
-      )
-    );
+    setItems(items.map((item) => (item.id === id ? { ...item, ...cambios } : item)));
   };
 
   const deleteItem = (id: string) => {
@@ -79,70 +76,57 @@ export default function CanvasBlogEditor({
         </label>
       </div>
 
-     <div className="relative h-[1000px] w-full bg-black overflow-hidden">
+      <div className="relative h-[1000px] w-full bg-black overflow-hidden">
         <div className="absolute inset-0 opacity-20 bg-[linear-gradient(to_right,#27272a_1px,transparent_1px),linear-gradient(to_bottom,#27272a_1px,transparent_1px)] bg-[size:40px_40px]" />
 
         {items.map((item) => (
           <Rnd
-  key={item.id}
-  default={{
-    x: item.x,
-    y: item.y,
-    width: item.width,
-    height: item.height,
-  }}
-
-  position={{
-    x: item.x,
-    y: item.y,
-  }}
-
-  enableResizing={true}
-
-  dragGrid={[1,1]}
-  dragHandleClassName="drag-handle"
-  bounds="parent"
-
-  onDragStop={(e,d)=>{
-
-    updateItem(item.id,{
-      x:d.x,
-      y:d.y
-    })
-
-  }}
-
-  onResizeStop={(
-    e,
-    direction,
-    ref,
-    delta,
-    position
-  )=>{
-
-    updateItem(item.id,{
-      width:parseInt(ref.style.width),
-      height:parseInt(ref.style.height),
-      x:position.x,
-      y:position.y
-    })
-
-  }}
->
+            key={item.id}
+            size={{
+              width: item.width,
+              height: item.height,
+            }}
+            position={{
+              x: item.x,
+              y: item.y,
+            }}
+            bounds="parent"
+            enableResizing
+            dragGrid={[1, 1]}
+            dragHandleClassName="drag-handle"
+            onMouseDown={() => setSeleccionado(item.id)}
+            onDragStop={(_, d) => {
+              updateItem(item.id, {
+                x: d.x,
+                y: d.y,
+              });
+            }}
+            onResizeStop={(_, __, ref, ___, position) => {
+              updateItem(item.id, {
+                width: parseInt(ref.style.width, 10),
+                height: parseInt(ref.style.height, 10),
+                x: position.x,
+                y: position.y,
+              });
+            }}
+            className={seleccionado === item.id ? 'ring-2 ring-orange-500 rounded-2xl' : ''}
+          >
             <div className="relative w-full h-full drag-handle cursor-move">
-  <img
-    src={item.url}
-    alt=""
-    className="w-full h-full object-cover rounded-2xl select-none cursor-move"
-    draggable={false}
-  />
-</div>
+              <img
+                src={item.url}
+                alt=""
+                className="w-full h-full object-cover rounded-2xl select-none cursor-move"
+                draggable={false}
+              />
 
               {seleccionado === item.id && (
                 <button
                   type="button"
-                  onClick={() => deleteItem(item.id)}
-                  className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-red-600 text-white text-xs font-black"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteItem(item.id);
+                  }}
+                  className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-red-600 text-white text-xs font-black z-20"
                 >
                   ×
                 </button>
