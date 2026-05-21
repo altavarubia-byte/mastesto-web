@@ -170,3 +170,7 @@
 .ProseMirror .resize-cursor {
   cursor: nwse-resize;
 }
+
+.ProseMirror span[style*="fontSize"]{
+  font-size: inherit;
+}
