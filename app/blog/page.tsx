@@ -1,3 +1,4 @@
+import BotonBorrarBlog from '@/components/BotonBorrarBlog';
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 
@@ -98,6 +99,15 @@ export default async function BlogPage() {
                     <span>{blog.lectura_min || 7} min</span>
                     <span className="text-orange-500">Leer →</span>
                   </div>
+                  {esAdminReal && (
+
+<BotonBorrarBlog
+id={blog.id}
+titulo={blog.titulo}
+imagen_path={blog.imagen_path}
+/>
+
+)}
 
         
 
