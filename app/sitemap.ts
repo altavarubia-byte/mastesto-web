@@ -5,7 +5,8 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
-
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const { data } = await supabase
