@@ -69,7 +69,16 @@ fondos[blog.fondo || 'oscuro']
 || fondos.oscuro;
 
   return (
-    <main className="min-h-screen bg-black text-white px-6 py-20">
+    <main
+className={`
+min-h-screen
+px-6
+py-20
+transition-all
+duration-700
+${fondoClase}
+`}
+>
       <article className="max-w-4xl mx-auto">
         <Link href="/blog" className="text-orange-500 text-xs font-black uppercase tracking-widest">
           ← Volver al blog
