@@ -79,7 +79,7 @@ export default function CanvasBlogEditor({
         </label>
       </div>
 
-      <div className="relative h-[700px] bg-black overflow-hidden">
+     <div className="relative h-[1000px] w-full bg-black overflow-hidden">
         <div className="absolute inset-0 opacity-20 bg-[linear-gradient(to_right,#27272a_1px,transparent_1px),linear-gradient(to_bottom,#27272a_1px,transparent_1px)] bg-[size:40px_40px]" />
 
         {items.map((item) => (
