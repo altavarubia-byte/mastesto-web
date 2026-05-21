@@ -33,6 +33,41 @@ export default async function BlogPost({
     );
   }
 
+  const fondos:any = {
+
+oscuro:
+'bg-black text-white',
+
+fuego:
+'bg-gradient-to-b from-black via-orange-950 to-black text-white',
+
+hielo:
+'bg-gradient-to-b from-slate-950 via-cyan-950 to-black text-white',
+
+premium:
+'bg-gradient-to-b from-zinc-950 via-black to-zinc-950 text-white',
+
+rojo:
+'bg-gradient-to-b from-black via-red-950 to-black text-white',
+
+verde:
+'bg-gradient-to-b from-black via-green-950 to-black text-white',
+
+morado:
+'bg-gradient-to-b from-black via-purple-950 to-black text-white',
+
+blanco:
+'bg-zinc-100 text-black',
+
+oro:
+'bg-gradient-to-b from-black via-yellow-900 to-black text-white'
+
+};
+
+const fondoClase =
+fondos[blog.fondo || 'oscuro']
+|| fondos.oscuro;
+
   return (
     <main className="min-h-screen bg-black text-white px-6 py-20">
       <article className="max-w-4xl mx-auto">
