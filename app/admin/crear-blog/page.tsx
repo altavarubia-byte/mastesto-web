@@ -172,6 +172,36 @@ export default function CrearBlogPage() {
 
   return data.publicUrl;
 };
+  const fondosPreview:any={
+
+oscuro:
+'bg-black',
+
+fuego:
+'bg-gradient-to-br from-black via-orange-950 to-black',
+
+hielo:
+'bg-gradient-to-br from-black via-cyan-950 to-black',
+
+premium:
+'bg-gradient-to-br from-zinc-950 via-black to-zinc-950',
+
+rojo:
+'bg-gradient-to-br from-black via-red-950 to-black',
+
+verde:
+'bg-gradient-to-br from-black via-green-950 to-black',
+
+morado:
+'bg-gradient-to-br from-black via-purple-950 to-black',
+
+blanco:
+'bg-zinc-100 text-black',
+
+oro:
+'bg-gradient-to-br from-black via-yellow-900 to-black'
+
+};
 
   return (
     <main className="min-h-screen bg-black text-white px-6 py-10 selection:bg-orange-600 selection:text-black">
