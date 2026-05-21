@@ -51,27 +51,20 @@ export default function BlogEditor({
     <div className="bg-zinc-950 border border-zinc-900 rounded-[2rem] overflow-hidden">
       <div className="flex flex-wrap gap-2 p-4 border-b border-zinc-900">
         <select
-  defaultValue="16px"
+  defaultValue=""
   onChange={(e) => {
-    editor
-      .chain()
-      .focus()
-      .setMark('textStyle', {
-        style: `font-size: ${e.target.value}`,
-      })
-      .run();
+    editor.chain().focus().setFontFamily(e.target.value).run();
   }}
   className="px-4 py-2 bg-black rounded-xl text-white text-xs border border-zinc-800"
 >
-  <option value="10px">10</option>
-  <option value="12px">12</option>
-  <option value="14px">14</option>
-  <option value="16px">16</option>
-  <option value="18px">18</option>
-  <option value="24px">24</option>
-  <option value="32px">32</option>
-  <option value="48px">48</option>
-  <option value="72px">72</option>
+  <option value="" disabled>Fuente</option>
+  <option value="Arial">Arial</option>
+  <option value="Georgia">Georgia</option>
+  <option value="Times New Roman">Times New Roman</option>
+  <option value="Courier New">Courier New</option>
+  <option value="Verdana">Verdana</option>
+  <option value="Impact">Impact</option>
+  <option value="monospace">Monospace</option>
 </select>
         <input
   type="color"
