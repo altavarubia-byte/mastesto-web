@@ -100,7 +100,7 @@ export default function CanvasBlogEditor({
   enableResizing={true}
 
   dragGrid={[1,1]}
-
+  dragHandleClassName="drag-handle"
   bounds="parent"
 
   onDragStop={(e,d)=>{
@@ -129,13 +129,14 @@ export default function CanvasBlogEditor({
 
   }}
 >
-            <div className="relative w-full h-full">
-              <img
-  src={item.url}
-  alt=""
-  className="w-full h-full object-cover rounded-2xl select-none cursor-move"
-  draggable={false}
-/>
+            <div className="relative w-full h-full drag-handle cursor-move">
+  <img
+    src={item.url}
+    alt=""
+    className="w-full h-full object-cover rounded-2xl select-none cursor-move"
+    draggable={false}
+  />
+</div>
 
               {seleccionado === item.id && (
                 <button
