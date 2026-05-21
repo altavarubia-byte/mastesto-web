@@ -34,7 +34,7 @@ imagen_path
 
 if(res.ok){
 
-window.location.reload();
+window.location.href = "/blog";
 
 }else{
 
