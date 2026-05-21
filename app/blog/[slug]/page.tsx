@@ -64,7 +64,7 @@ export default async function BlogPost({
           <p className="text-zinc-400 text-lg mb-10">{blog.descripcion}</p>
         )}
 
-        <div className="relative h-[4000px] mt-16 bg-black rounded-[2rem] overflow-hidden border border-zinc-900">
+        <div className="relative h-[4000px] mt-16 rounded-[2rem] overflow-hidden border border-zinc-900 bg-transparent">
           {blog.canvas_json?.map((item: any) =>
             item.type === "image" ? (
               <img
