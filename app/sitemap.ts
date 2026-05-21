@@ -1,54 +1,51 @@
 import type { MetadataRoute } from 'next';
+import { createClient } from '@supabase/supabase-js';
 
-export default function sitemap(): MetadataRoute.Sitemap {
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
-const blogs=[
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
-'beneficios-ducha-fria',
+  const { data: blogs } = await supabase
+    .from('blogs')
+    .select('slug,updated_at')
+    .eq('publicado', true);
 
-// ===== FUTUROS BLOGS =====
+  const blogUrls = (blogs || []).map((blog) => ({
+    url: `https://www.mastesto.es/blog/${blog.slug}`,
 
-'dejar-procrastinacion',
-// 'testosterona-natural',
-// 'como-dejar-fumar',
-// 'rutina-disciplina-manana',
-// 'beneficios-dejar-porno',
-// 'como-estudiar-sin-distracciones',
-// 'habitos-que-destruyen-tu-disciplina',
-// 'que-pasa-si-te-duchas-frio-30-dias',
-// 'como-dejar-el-movil',
-// 'rutina-para-mejorar-tu-vida'
+    lastModified: blog.updated_at
+      ? new Date(blog.updated_at)
+      : new Date(),
 
-];
+    changeFrequency: 'weekly' as const,
 
-return [
+    priority: 0.85,
+  }));
 
-{
-url:'https://www.mastesto.es',
-lastModified:new Date(),
-changeFrequency:'daily' as const,
-priority:1
-},
+  return [
+    {
+      url: 'https://www.mastesto.es',
 
-{
-url:'https://www.mastesto.es/blog',
-lastModified:new Date(),
-changeFrequency:'daily' as const,
-priority:0.95
-},
+      lastModified: new Date(),
 
-...blogs.map((slug)=>({
+      changeFrequency: 'daily',
 
-url:`https://www.mastesto.es/blog/${slug}`,
+      priority: 1,
+    },
 
-lastModified:new Date(),
+    {
+      url: 'https://www.mastesto.es/blog',
 
-changeFrequency:'weekly' as const,
+      lastModified: new Date(),
 
-priority:0.85
+      changeFrequency: 'daily',
 
-}))
+      priority: 0.95,
+    },
 
-];
-
+    ...blogUrls,
+  ];
 }
