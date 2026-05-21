@@ -29,16 +29,22 @@ export default async function BlogPost({
   }
 
   const fondos: any = {
-    oscuro: "bg-black text-white",
-    fuego: "bg-gradient-to-b from-black via-orange-950 to-black text-white",
-    hielo: "bg-gradient-to-b from-slate-950 via-cyan-950 to-black text-white",
-    premium: "bg-gradient-to-b from-zinc-950 via-black to-zinc-950 text-white",
-    rojo: "bg-gradient-to-b from-black via-red-950 to-black text-white",
-    verde: "bg-gradient-to-b from-black via-green-950 to-black text-white",
-    morado: "bg-gradient-to-b from-black via-purple-950 to-black text-white",
-    blanco: "bg-zinc-100 text-black",
-    oro: "bg-gradient-to-b from-black via-yellow-900 to-black text-white",
-  };
+  oscuro: "bg-black text-white",
+  fuego: "bg-gradient-to-b from-black via-orange-950 to-black text-white",
+  rojo: "bg-gradient-to-b from-black via-red-950 to-black text-white",
+  oro: "bg-gradient-to-b from-black via-yellow-900 to-black text-white",
+  hielo: "bg-gradient-to-b from-slate-950 via-cyan-950 to-black text-white",
+  azul: "bg-gradient-to-b from-black via-blue-950 to-black text-white",
+  morado: "bg-gradient-to-b from-black via-purple-950 to-black text-white",
+  verde: "bg-gradient-to-b from-black via-green-950 to-black text-white",
+  blanco: "bg-zinc-100 text-black",
+  carbon: "bg-[radial-gradient(circle_at_top,#27272a,transparent_35%),linear-gradient(to_bottom,#050505,#000)] text-white",
+  neon: "bg-[radial-gradient(circle_at_top,#22c55e55,transparent_35%),linear-gradient(to_bottom,#020617,#000)] text-white",
+  amanecer: "bg-gradient-to-b from-orange-950 via-rose-950 to-black text-white",
+  tormenta: "bg-gradient-to-b from-slate-950 via-zinc-800 to-black text-white",
+  arena: "bg-gradient-to-b from-yellow-950 via-stone-900 to-black text-white",
+  premium: "bg-gradient-to-b from-zinc-950 via-black to-zinc-950 text-white",
+};
 
   const fondoClase = fondos[blog.fondo || "oscuro"] || fondos.oscuro;
 
