@@ -390,7 +390,15 @@ oro:
             </button>
           </section>
 
-          <section>
+          <section
+  className={`
+    rounded-[2rem]
+    p-4
+    transition-all
+    duration-500
+    ${fondosPreview[fondo]}
+  `}
+>
             <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               <div>
                 <p className="text-orange-500 text-[10px] uppercase font-black tracking-[0.4em]">
