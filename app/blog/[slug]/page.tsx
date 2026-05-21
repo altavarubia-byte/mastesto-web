@@ -1,3 +1,4 @@
+import BlogContenidoPremium from "@/components/BlogContenidoPremium";
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 
@@ -90,12 +91,9 @@ ${fondoClase}
           <p className="text-zinc-400 text-lg mb-10">{blog.descripcion}</p>
         )}
 
-        <div
-          className="prose prose-invert max-w-none"
-          dangerouslySetInnerHTML={{
-            __html: blog.contenido_html || blog.contenido || "",
-          }}
-        />
+        <BlogContenidoPremium
+  html={blog.contenido_html || blog.contenido || ""}
+/>
       </article>
     </main>
   );
