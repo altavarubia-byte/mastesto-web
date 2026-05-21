@@ -13,9 +13,10 @@ export const metadata = {
 };
 
 export default async function BlogPage() {
- const { data: blogs, error } = await supabase
+ const { data: blogs } = await supabase
   .from("blogs")
-  .select("*")
+  .select("id,titulo,slug,descripcion,imagen_url,tags,lectura_min,created_at")
+  .eq("publicado", true)
   .order("created_at", { ascending: false });
 
 console.log(blogs);
