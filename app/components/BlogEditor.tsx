@@ -96,6 +96,23 @@ export default function BlogEditor({
         </button>
       </div>
 
+      <label className="px-4 py-2 bg-black rounded-xl cursor-pointer">
+  🖼️
+  <input
+    type="file"
+    accept="image/*"
+    hidden
+    onChange={async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const url = await onUploadImage(file);
+
+      editor.chain().focus().setImage({ src: url }).run();
+    }}
+  />
+</label>
+
       <div className="p-8 min-h-[600px] prose prose-invert max-w-none">
         <EditorContent editor={editor} />
       </div>
