@@ -91,9 +91,9 @@ ${fondoClase}
           <p className="text-zinc-400 text-lg mb-10">{blog.descripcion}</p>
         )}
 
-        <BlogContenidoPremium
-  html={blog.contenido_html || blog.contenido || ""}
-/>
+       // <BlogContenidoPremium
+  //html={blog.contenido_html || blog.contenido || ""}
+// />
 {blog.canvas_json && blog.canvas_json.length > 0 && (
   <div className="relative h-[4000px] mt-16 bg-black rounded-[2rem] overflow-hidden border border-zinc-900">
     {blog.canvas_json.map((item: any) =>
