@@ -333,7 +333,11 @@ export default function CrearBlogPage() {
               </div>
             </div>
 
-            <BlogEditor content={contenido} setContent={setContenido} />
+            <BlogEditor
+  content={contenido}
+  setContent={setContenido}
+  onUploadImage={subirImagenContenido}
+/>
 
             <div className="mt-6 bg-zinc-950 border border-zinc-900 rounded-[2rem] p-6">
               <p className="text-[10px] font-black uppercase text-zinc-500 mb-3">
