@@ -95,7 +95,7 @@ ${fondoClase}
   html={blog.contenido_html || blog.contenido || ""}
 />
 {blog.canvas_json && blog.canvas_json.length > 0 && (
-  <div className="relative h-[1200px] mt-16 bg-black rounded-[2rem] overflow-hidden border border-zinc-900">
+  <div className="relative h-[4000px] mt-16 bg-black rounded-[2rem] overflow-hidden border border-zinc-900">
     {blog.canvas_json.map((item: any) =>
       item.type === 'image' ? (
         <img
