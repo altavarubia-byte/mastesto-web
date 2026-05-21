@@ -13,6 +13,7 @@ export const metadata = {
 };
 
 export default async function BlogPage() {
+ const esAdminReal = true;
  const { data: blogs } = await supabase
   .from("blogs")
   .select("id,titulo,slug,descripcion,imagen_url,tags,lectura_min,created_at")
