@@ -98,46 +98,9 @@ export default async function BlogPage() {
                     <span>{blog.lectura_min || 7} min</span>
                     <span className="text-orange-500">Leer →</span>
                   </div>
-                  {esAdminReal && (
-  <button
-    onClick={async (e) => {
-      e.preventDefault();
 
-      const ok = confirm(
-        `¿Eliminar "${blog.titulo}"?`
-      );
+        
 
-      if (!ok) return;
-
-      const res = await fetch('/api/admin/borrar-blog', {
-        method: 'POST',
-        headers: {
-          'Content-Type':'application/json'
-        },
-        body: JSON.stringify({
-          id: blog.id,
-          imagen_path: blog.imagen_path
-        })
-      });
-
-      if(res.ok){
-        location.reload();
-      }else{
-        alert("Error eliminando");
-      }
-    }}
-    className="
-      mt-4
-      text-red-500
-      text-[9px]
-      uppercase
-      font-black
-      hover:text-red-400
-    "
-  >
-    Eliminar ⚠️
-  </button>
-)}
                 </div>
               </Link>
             ))}
