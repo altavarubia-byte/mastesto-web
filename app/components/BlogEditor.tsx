@@ -1,5 +1,6 @@
 'use client';
 
+
 import Color from '@tiptap/extension-color';
 import Dropcursor from '@tiptap/extension-dropcursor';
 import FontFamily from '@tiptap/extension-font-family';
@@ -10,29 +11,6 @@ import Underline from '@tiptap/extension-underline';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import ResizeImage from 'tiptap-extension-resize-image';
-
-const FontSize = TextStyle.extend({
-  addAttributes() {
-    return {
-      fontSize: {
-        default: null,
-
-        parseHTML: element =>
-          element.style.fontSize,
-
-        renderHTML: attributes => {
-          if (!attributes.fontSize) {
-            return {};
-          }
-
-          return {
-            style: `font-size:${attributes.fontSize}`,
-          };
-        },
-      },
-    };
-  },
-});
 
 export default function BlogEditor({
   content,
@@ -48,7 +26,6 @@ export default function BlogEditor({
   StarterKit,
   Underline,
   TextStyle,
-  FontSize,
   Color,
   FontFamily.configure({
     types: ['textStyle'],
@@ -98,29 +75,6 @@ export default function BlogEditor({
   }}
   className="w-12 h-10 bg-black rounded-xl border border-zinc-800 cursor-pointer"
 />
-        <select
-  defaultValue="16"
-  onChange={(e) => {
-    editor
-      .chain()
-      .focus()
-      .setMark('textStyle', {
-        fontSize: `${e.target.value}px`,
-      })
-      .run();
-  }}
-  className="px-4 py-2 bg-black rounded-xl text-white text-xs border border-zinc-800"
->
-  <option value="10">10</option>
-  <option value="12">12</option>
-  <option value="14">14</option>
-  <option value="16">16</option>
-  <option value="18">18</option>
-  <option value="24">24</option>
-  <option value="32">32</option>
-  <option value="48">48</option>
-  <option value="72">72</option>
-</select>
 
         <button type="button" onClick={() => editor.chain().focus().toggleBold().run()} className="px-4 py-2 bg-black rounded-xl">
           B

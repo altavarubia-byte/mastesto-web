@@ -1,6 +1,6 @@
 'use client';
 
-import CanvasBlogEditor from '@/components/CanvasBlogEditor';
+import CanvasBlogEditor from '../../components/CanvasBlogEditor';
 import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
@@ -20,12 +20,11 @@ export default function CrearBlogPage() {
       ),
     []
   );
-  
-  const [canvasItems, setCanvasItems] = useState<any[]>([]);
+
   const [user, setUser] = useState<any>(null);
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
-  const [generandoSeo, setGenerandoSeo] = useState(false);
+const [canvasItems, setCanvasItems] = useState<any[]>([]);
   const [titulo, setTitulo] = useState('');
   const [slug, setSlug] = useState('');
   const [descripcion, setDescripcion] = useState('');
@@ -206,40 +205,6 @@ oro:
 
 };
 
-  const generarSEO = async () => {
-  if (!titulo.trim() || !contenido.trim()) {
-    alert('Primero escribe título y contenido');
-    return;
-  }
-
-  setGenerandoSeo(true);
-
-  const res = await fetch('/api/admin/generar-seo-blog', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      titulo,
-      contenido,
-    }),
-  });
-
-  const data = await res.json();
-
-  if (data.error) {
-    alert(data.error);
-    setGenerandoSeo(false);
-    return;
-  }
-
-  setMetaTitle(data.meta_title || titulo);
-  setMetaDescription(data.meta_description || descripcion);
-  setTags((data.tags || []).join(', '));
-
-  setGenerandoSeo(false);
-};
-
   return (
     <main className="min-h-screen bg-black text-white px-6 py-10 selection:bg-orange-600 selection:text-black">
       <div className="max-w-7xl mx-auto">
@@ -310,15 +275,6 @@ oro:
               placeholder="Meta description SEO opcional"
               className="w-full bg-black border border-zinc-800 rounded-xl p-4 mb-4 h-20 text-sm outline-none focus:border-orange-600 resize-none"
             />
-
-            <button
-  type="button"
-  onClick={generarSEO}
-  disabled={generandoSeo}
-  className="w-full bg-zinc-900 border border-orange-600/30 text-orange-500 rounded-xl py-4 font-black uppercase text-[10px] mb-4 disabled:opacity-40"
->
-  {generandoSeo ? 'Generando SEO...' : 'Generar SEO con IA ⚡'}
-</button>
 
             <input
               value={tags}
