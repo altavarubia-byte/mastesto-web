@@ -9,9 +9,11 @@ import Image from '@tiptap/extension-image';
 export default function BlogEditor({
   content,
   setContent,
+  onUploadImage,
 }: {
   content: string;
   setContent: (value: string) => void;
+  onUploadImage: (file: File) => Promise<string>;
 }) {
   const editor = useEditor({
     extensions: [
