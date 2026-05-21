@@ -11,6 +11,29 @@ import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import ResizeImage from 'tiptap-extension-resize-image';
 
+const FontSize = TextStyle.extend({
+  addAttributes() {
+    return {
+      fontSize: {
+        default: null,
+
+        parseHTML: element =>
+          element.style.fontSize,
+
+        renderHTML: attributes => {
+          if (!attributes.fontSize) {
+            return {};
+          }
+
+          return {
+            style: `font-size:${attributes.fontSize}`,
+          };
+        },
+      },
+    };
+  },
+});
+
 export default function BlogEditor({
   content,
   setContent,
@@ -25,6 +48,7 @@ export default function BlogEditor({
   StarterKit,
   Underline,
   TextStyle,
+  FontSize,
   Color,
   FontFamily.configure({
     types: ['textStyle'],
