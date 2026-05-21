@@ -28,7 +28,7 @@
   --chart-4: rgb(115, 115, 115);
   --chart-5: rgb(115, 115, 115);
   --sidebar: rgb(250, 250, 250);
-  --sidebar-foreground: rgb(10, 10, 10);
+  --sidebar-foreground: rgb(28, 25, 25);
   --sidebar-primary: rgb(23, 23, 23);
   --sidebar-primary-foreground: rgb(250, 250, 250);
   --sidebar-accent: rgb(245, 245, 245);
@@ -161,4 +161,12 @@
   --shadow-lg: var(--shadow-lg);
   --shadow-xl: var(--shadow-xl);
   --shadow-2xl: var(--shadow-2xl);
+}
+.ProseMirror img {
+  max-width: 100%;
+  border-radius: 24px;
+}
+
+.ProseMirror .resize-cursor {
+  cursor: nwse-resize;
 }
