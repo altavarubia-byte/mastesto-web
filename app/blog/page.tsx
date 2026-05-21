@@ -16,7 +16,7 @@ export default async function BlogPage() {
  const esAdminReal = true;
  const { data: blogs } = await supabase
   .from("blogs")
-  .select("id,titulo,slug,descripcion,imagen_url,tags,lectura_min,created_at")
+  .select("id,titulo,slug,descripcion,imagen_url,imagen_path,tags,lectura_min,created_at")
   .eq("publicado", true)
   .order("created_at", { ascending: false });
 
