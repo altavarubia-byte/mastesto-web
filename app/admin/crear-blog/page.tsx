@@ -174,37 +174,23 @@ const [canvasItems, setCanvasItems] = useState<any[]>([]);
 
   return data.publicUrl;
 };
-  const fondosPreview:any={
-
-oscuro:
-'bg-black',
-
-fuego:
-'bg-gradient-to-br from-black via-orange-950 to-black',
-
-hielo:
-'bg-gradient-to-br from-black via-cyan-950 to-black',
-
-premium:
-'bg-gradient-to-br from-zinc-950 via-black to-zinc-950',
-
-rojo:
-'bg-gradient-to-br from-black via-red-950 to-black',
-
-verde:
-'bg-gradient-to-br from-black via-green-950 to-black',
-
-morado:
-'bg-gradient-to-br from-black via-purple-950 to-black',
-
-blanco:
-'bg-zinc-100 text-black',
-
-oro:
-'bg-gradient-to-br from-black via-yellow-900 to-black'
-
+ const fondosPreview:any = {
+  oscuro: 'bg-black',
+  fuego: 'bg-gradient-to-br from-black via-orange-950 to-black',
+  rojo: 'bg-gradient-to-br from-black via-red-950 to-black',
+  oro: 'bg-gradient-to-br from-black via-yellow-900 to-black',
+  hielo: 'bg-gradient-to-br from-slate-950 via-cyan-950 to-black',
+  azul: 'bg-gradient-to-br from-black via-blue-950 to-black',
+  morado: 'bg-gradient-to-br from-black via-purple-950 to-black',
+  verde: 'bg-gradient-to-br from-black via-green-950 to-black',
+  blanco: 'bg-zinc-100 text-black',
+  carbon: 'bg-[radial-gradient(circle_at_top,#27272a,transparent_35%),linear-gradient(to_bottom,#050505,#000)]',
+  neon: 'bg-[radial-gradient(circle_at_top,#22c55e55,transparent_35%),linear-gradient(to_bottom,#020617,#000)]',
+  amanecer: 'bg-gradient-to-br from-orange-950 via-rose-950 to-black',
+  tormenta: 'bg-gradient-to-br from-slate-950 via-zinc-800 to-black',
+  arena: 'bg-gradient-to-br from-yellow-950 via-stone-900 to-black',
+  premium: 'bg-gradient-to-br from-zinc-950 via-black to-zinc-950',
 };
-
   return (
     <main className="min-h-screen bg-black text-white px-6 py-10 selection:bg-orange-600 selection:text-black">
       <div className="max-w-7xl mx-auto">
@@ -308,41 +294,21 @@ oro:
   "
 >
 
-<option value="oscuro">
-⚫ Oscuro Mastesto
-</option>
-
-<option value="fuego">
-🔥 Fuego
-</option>
-
-<option value="hielo">
-🧊 Hielo
-</option>
-
-<option value="premium">
-💎 Premium elegante
-</option>
-
-<option value="rojo">
-🩸 Rojo agresivo
-</option>
-
-<option value="verde">
-🟢 Verde militar
-</option>
-
-<option value="morado">
-🟣 Morado nocturno
-</option>
-
-<option value="blanco">
-⚪ Blanco limpio
-</option>
-
-<option value="oro">
-🟡 Dorado
-</option>
+<option value="oscuro">⚫ Oscuro Mastesto</option>
+<option value="fuego">🔥 Fuego</option>
+<option value="rojo">🩸 Rojo agresivo</option>
+<option value="oro">🟡 Oro</option>
+<option value="hielo">🧊 Hielo</option>
+<option value="azul">🔵 Azul profundo</option>
+<option value="morado">🟣 Morado nocturno</option>
+<option value="verde">🟢 Verde militar</option>
+<option value="blanco">⚪ Blanco limpio</option>
+<option value="carbon">⬛ Carbono</option>
+<option value="neon">💚 Neón</option>
+<option value="amanecer">🌅 Amanecer</option>
+<option value="tormenta">⛈️ Tormenta</option>
+<option value="arena">🏜️ Arena</option>
+<option value="premium">💎 Premium elegante</option>
 
 </select>
 
