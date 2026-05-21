@@ -84,37 +84,51 @@ export default function CanvasBlogEditor({
 
         {items.map((item) => (
           <Rnd
-            key={item.id}
-            size={{
-              width: item.width,
-              height: item.height,
-            }}
-            position={{
-              x: item.x,
-              y: item.y,
-            }}
-            bounds="parent"
-            onDragStart={() => setSeleccionado(item.id)}
-            onClick={() => setSeleccionado(item.id)}
-            onDragStop={(_, d) => {
-              updateItem(item.id, {
-                x: d.x,
-                y: d.y,
-              });
-            }}
-            onResizeStop={(_, __, ref, ___, position) => {
-              updateItem(item.id, {
-                width: Number(ref.style.width.replace('px', '')),
-                height: Number(ref.style.height.replace('px', '')),
-                x: position.x,
-                y: position.y,
-              });
-            }}
-            className={`
-              group
-              ${seleccionado === item.id ? 'ring-2 ring-orange-500' : ''}
-            `}
-          >
+  key={item.id}
+  default={{
+    x: item.x,
+    y: item.y,
+    width: item.width,
+    height: item.height,
+  }}
+
+  position={{
+    x: item.x,
+    y: item.y,
+  }}
+
+  enableResizing={true}
+
+  dragGrid={[1,1]}
+
+  bounds="parent"
+
+  onDragStop={(e,d)=>{
+
+    updateItem(item.id,{
+      x:d.x,
+      y:d.y
+    })
+
+  }}
+
+  onResizeStop={(
+    e,
+    direction,
+    ref,
+    delta,
+    position
+  )=>{
+
+    updateItem(item.id,{
+      width:parseInt(ref.style.width),
+      height:parseInt(ref.style.height),
+      x:position.x,
+      y:position.y
+    })
+
+  }}
+>
             <div className="relative w-full h-full">
               <img
                 src={item.url}
