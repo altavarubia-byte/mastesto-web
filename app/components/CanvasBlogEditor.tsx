@@ -131,11 +131,11 @@ export default function CanvasBlogEditor({
 >
             <div className="relative w-full h-full">
               <img
-                src={item.url}
-                alt=""
-                className="w-full h-full object-cover rounded-2xl select-none pointer-events-none"
-                draggable={false}
-              />
+  src={item.url}
+  alt=""
+  className="w-full h-full object-cover rounded-2xl select-none cursor-move"
+  draggable={false}
+/>
 
               {seleccionado === item.id && (
                 <button
