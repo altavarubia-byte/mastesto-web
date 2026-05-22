@@ -66,39 +66,61 @@ export default async function BlogPost({
 
         <div className="relative h-[4000px] mt-16 rounded-[2rem] overflow-hidden border border-zinc-900 bg-transparent">
           {blog.canvas_json?.map((item: any) =>
-            item.type === "image" ? (
-              <img
-                key={item.id}
-                src={item.url}
-                alt=""
-                style={{
-                  position: "absolute",
-                  left: item.x,
-                  top: item.y,
-                  width: item.width,
-                  height: item.height,
-                  objectFit: "cover",
-                }}
-                className="rounded-2xl"
-              />
-            ) : (
-              <div
-                key={item.id}
-                style={{
-                  position: "absolute",
-                  left: item.x,
-                  top: item.y,
-                  width: item.width,
-                  height: item.height,
-                  fontSize: item.fontSize,
-                  color: item.color,
-                  fontFamily: item.fontFamily,
-                  fontWeight: item.bold ? 900 : 400,
-                  fontStyle: item.italic ? "italic" : "normal",
-                  textDecoration: item.underline ? "underline" : "none",
-                  whiteSpace: "pre-wrap",
-                  lineHeight: 1.2,
-                }}
+  item.type === "image" ? (
+    <img
+      key={item.id}
+      src={item.url}
+      alt=""
+      style={{
+        position: "absolute",
+        left: item.x,
+        top: item.y,
+        width: item.width,
+        height: item.height,
+        objectFit: "cover",
+        zIndex: item.zIndex || 1,
+      }}
+      className="rounded-2xl"
+    />
+  ) : item.type === "shape" ? (
+    <div
+      key={item.id}
+      style={{
+        position: "absolute",
+        left: item.x,
+        top: item.y,
+        width: item.width,
+        height: item.height,
+        zIndex: item.zIndex || 1,
+        background: item.backgroundColor || "#f97316",
+        border: `3px solid ${item.borderColor || "#ffffff"}`,
+        borderRadius: item.shapeType === "circle" ? "9999px" : "24px",
+      }}
+    />
+  ) : (
+    <div
+      key={item.id}
+      style={{
+        position: "absolute",
+        left: item.x,
+        top: item.y,
+        width: item.width,
+        height: item.height,
+        zIndex: item.zIndex || 1,
+        fontSize: item.fontSize,
+        color: item.color,
+        fontFamily: item.fontFamily,
+        fontWeight: item.bold ? 900 : 400,
+        fontStyle: item.italic ? "italic" : "normal",
+        textDecoration: item.underline ? "underline" : "none",
+        whiteSpace: "pre-wrap",
+        lineHeight: 1.2,
+      }}
+    >
+      {item.text}
+    </div>
+  )
+)}
               >
                 {item.text}
               </div>
