@@ -368,6 +368,7 @@ if (
         color_acento: colorAcento,
         ghost_mode: ghostMode,
         fecha_dejo_fumar: new Date(nuevaFecha).toISOString(),
+        acepta_marketing: aceptaMarketing
       },
     });
     setEditandoPerfil(false);
