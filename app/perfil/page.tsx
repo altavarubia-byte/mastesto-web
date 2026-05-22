@@ -918,7 +918,34 @@ if (
           <div className="bg-zinc-950 border border-zinc-800 w-full max-w-2xl rounded-[3rem] p-10 shadow-2xl">
             <h3 className="font-black text-[12px] uppercase tracking-[0.5em] mb-10 italic text-center" style={{ color: colorAcento }}>Centro de Configuración</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8"><div className="space-y-6"><div><label className="text-[8px] font-black text-zinc-500 uppercase mb-2 block italic">Nombre Real</label><input value={nuevoNombre} onChange={(e) => setNuevoNombre(e.target.value)} className="w-full bg-black border border-zinc-900 p-4 rounded-xl text-[10px] text-white outline-none focus:border-zinc-500 uppercase" /></div><div><label className="text-[8px] font-black text-zinc-500 uppercase mb-2 block italic">Callsign (Alias)</label><input value={alias} onChange={(e) => setAlias(e.target.value)} className="w-full bg-black border border-zinc-800 p-4 rounded-xl text-[10px] outline-none uppercase font-black italic" style={{ color: colorAcento }} /></div><div><label className="text-[8px] font-black text-zinc-500 uppercase mb-2 block italic">Declaración de Misión (Bio)</label><textarea value={bio} onChange={(e) => setBio(e.target.value)} className="w-full bg-black border border-zinc-800 p-4 rounded-xl text-[10px] text-white outline-none h-20 resize-none italic" /></div></div><div className="space-y-6"><div><label className="text-[8px] font-black text-zinc-500 uppercase mb-2 block italic">Color de Acento Hex</label><input value={colorAcento} onChange={(e) => setColorAcento(e.target.value)} className="w-full bg-black border border-zinc-800 p-4 rounded-xl text-[10px] font-mono outline-none" style={{ color: colorAcento }} /></div><div><label className="text-[8px] font-black text-zinc-500 uppercase mb-2 block italic">Fecha del Cambio (Desintoxicación)</label><input type="date" value={nuevaFecha} onChange={(e) => setNuevaFecha(e.target.value)} className="w-full bg-black border border-zinc-800 p-4 rounded-xl text-[10px] text-white outline-none font-mono" /></div><div className="flex items-center justify-between p-4 bg-black/40 border border-zinc-900 rounded-xl"><span className="text-[8px] font-black text-zinc-500 uppercase italic">Modo Fantasma</span><input type="checkbox" checked={ghostMode} onChange={(e) => setGhostMode(e.target.checked)} className="w-4 h-4 accent-zinc-500" /></div></div></div>
-            
+            <div className="flex items-center justify-between p-4 bg-black/40 border border-zinc-900 rounded-xl">
+  
+  <div>
+    <span className="text-[8px] font-black text-zinc-500 uppercase mb-1 block italic">
+      Correos +TESTO
+    </span>
+
+    <p className="text-[7px] text-zinc-600 uppercase">
+      Novedades, retos y mejoras
+    </p>
+  </div>
+
+  <label className="relative inline-flex cursor-pointer items-center">
+    <input
+      type="checkbox"
+      checked={aceptaMarketing === true}
+      onChange={(e) =>
+        setAceptaMarketing(e.target.checked)
+      }
+      className="peer sr-only"
+    />
+
+    <div className="h-6 w-11 rounded-full bg-zinc-800 peer-checked:bg-orange-600 transition-all" />
+
+    <div className="absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-all peer-checked:translate-x-5" />
+  </label>
+
+</div>
             <div className="flex gap-4 mt-10"><button onClick={() => setEditandoPerfil(false)} className="flex-1 py-4 bg-zinc-900 text-zinc-400 hover:text-white rounded-xl text-[10px] font-black uppercase transition-all">Cancelar</button><button onClick={guardarAjustes} className="flex-1 py-4 bg-white text-black hover:opacity-80 rounded-xl text-[10px] font-black uppercase transition-all">Guardar Protocolo</button></div>
           </div>
         </div>
