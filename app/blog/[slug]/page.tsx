@@ -29,22 +29,24 @@ export default async function BlogPost({
   }
 
   const fondos: any = {
-  oscuro: "bg-black text-white",
-  fuego: "bg-gradient-to-b from-black via-orange-950 to-black text-white",
-  rojo: "bg-gradient-to-b from-black via-red-950 to-black text-white",
-  oro: "bg-gradient-to-b from-black via-yellow-900 to-black text-white",
-  hielo: "bg-gradient-to-b from-slate-950 via-cyan-950 to-black text-white",
-  azul: "bg-gradient-to-b from-black via-blue-950 to-black text-white",
-  morado: "bg-gradient-to-b from-black via-purple-950 to-black text-white",
-  verde: "bg-gradient-to-b from-black via-green-950 to-black text-white",
-  blanco: "bg-zinc-100 text-black",
-  carbon: "bg-[radial-gradient(circle_at_top,#27272a,transparent_35%),linear-gradient(to_bottom,#050505,#000)] text-white",
-  neon: "bg-[radial-gradient(circle_at_top,#22c55e55,transparent_35%),linear-gradient(to_bottom,#020617,#000)] text-white",
-  amanecer: "bg-gradient-to-b from-orange-950 via-rose-950 to-black text-white",
-  tormenta: "bg-gradient-to-b from-slate-950 via-zinc-800 to-black text-white",
-  arena: "bg-gradient-to-b from-yellow-950 via-stone-900 to-black text-white",
-  premium: "bg-gradient-to-b from-zinc-950 via-black to-zinc-950 text-white",
-};
+    oscuro: "bg-black text-white",
+    fuego: "bg-gradient-to-b from-black via-orange-950 to-black text-white",
+    rojo: "bg-gradient-to-b from-black via-red-950 to-black text-white",
+    oro: "bg-gradient-to-b from-black via-yellow-900 to-black text-white",
+    hielo: "bg-gradient-to-b from-slate-950 via-cyan-950 to-black text-white",
+    azul: "bg-gradient-to-b from-black via-blue-950 to-black text-white",
+    morado: "bg-gradient-to-b from-black via-purple-950 to-black text-white",
+    verde: "bg-gradient-to-b from-black via-green-950 to-black text-white",
+    blanco: "bg-zinc-100 text-black",
+    carbon:
+      "bg-[radial-gradient(circle_at_top,#27272a,transparent_35%),linear-gradient(to_bottom,#050505,#000)] text-white",
+    neon:
+      "bg-[radial-gradient(circle_at_top,#22c55e55,transparent_35%),linear-gradient(to_bottom,#020617,#000)] text-white",
+    amanecer: "bg-gradient-to-b from-orange-950 via-rose-950 to-black text-white",
+    tormenta: "bg-gradient-to-b from-slate-950 via-zinc-800 to-black text-white",
+    arena: "bg-gradient-to-b from-yellow-950 via-stone-900 to-black text-white",
+    premium: "bg-gradient-to-b from-zinc-950 via-black to-zinc-950 text-white",
+  };
 
   const fondoClase = fondos[blog.fondo || "oscuro"] || fondos.oscuro;
 
@@ -66,61 +68,57 @@ export default async function BlogPost({
 
         <div className="relative h-[4000px] mt-16 rounded-[2rem] overflow-hidden border border-zinc-900 bg-transparent">
           {blog.canvas_json?.map((item: any) =>
-  item.type === "image" ? (
-    <img
-      key={item.id}
-      src={item.url}
-      alt=""
-      style={{
-        position: "absolute",
-        left: item.x,
-        top: item.y,
-        width: item.width,
-        height: item.height,
-        objectFit: "cover",
-        zIndex: item.zIndex || 1,
-      }}
-      className="rounded-2xl"
-    />
-  ) : item.type === "shape" ? (
-    <div
-      key={item.id}
-      style={{
-        position: "absolute",
-        left: item.x,
-        top: item.y,
-        width: item.width,
-        height: item.height,
-        zIndex: item.zIndex || 1,
-        background: item.backgroundColor || "#f97316",
-        border: `3px solid ${item.borderColor || "#ffffff"}`,
-        borderRadius: item.shapeType === "circle" ? "9999px" : "24px",
-      }}
-    />
-  ) : (
-    <div
-      key={item.id}
-      style={{
-        position: "absolute",
-        left: item.x,
-        top: item.y,
-        width: item.width,
-        height: item.height,
-        zIndex: item.zIndex || 1,
-        fontSize: item.fontSize,
-        color: item.color,
-        fontFamily: item.fontFamily,
-        fontWeight: item.bold ? 900 : 400,
-        fontStyle: item.italic ? "italic" : "normal",
-        textDecoration: item.underline ? "underline" : "none",
-        whiteSpace: "pre-wrap",
-        lineHeight: 1.2,
-      }}
-    >
-      {item.text}
-    </div>
-  )
-)}
+            item.type === "image" ? (
+              <img
+                key={item.id}
+                src={item.url}
+                alt=""
+                style={{
+                  position: "absolute",
+                  left: item.x,
+                  top: item.y,
+                  width: item.width,
+                  height: item.height,
+                  objectFit: "cover",
+                  zIndex: item.zIndex || 1,
+                }}
+                className="rounded-2xl"
+              />
+            ) : item.type === "shape" ? (
+              <div
+                key={item.id}
+                style={{
+                  position: "absolute",
+                  left: item.x,
+                  top: item.y,
+                  width: item.width,
+                  height: item.height,
+                  zIndex: item.zIndex || 1,
+                  background: item.backgroundColor || "#f97316",
+                  border: `3px solid ${item.borderColor || "#ffffff"}`,
+                  borderRadius:
+                    item.shapeType === "circle" ? "9999px" : "24px",
+                }}
+              />
+            ) : (
+              <div
+                key={item.id}
+                style={{
+                  position: "absolute",
+                  left: item.x,
+                  top: item.y,
+                  width: item.width,
+                  height: item.height,
+                  zIndex: item.zIndex || 1,
+                  fontSize: item.fontSize,
+                  color: item.color,
+                  fontFamily: item.fontFamily,
+                  fontWeight: item.bold ? 900 : 400,
+                  fontStyle: item.italic ? "italic" : "normal",
+                  textDecoration: item.underline ? "underline" : "none",
+                  whiteSpace: "pre-wrap",
+                  lineHeight: 1.2,
+                }}
               >
                 {item.text}
               </div>
