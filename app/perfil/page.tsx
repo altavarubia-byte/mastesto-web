@@ -918,10 +918,63 @@ if (
           <div className="bg-zinc-950 border border-zinc-800 w-full max-w-2xl rounded-[3rem] p-10 shadow-2xl">
             <h3 className="font-black text-[12px] uppercase tracking-[0.5em] mb-10 italic text-center" style={{ color: colorAcento }}>Centro de Configuración</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8"><div className="space-y-6"><div><label className="text-[8px] font-black text-zinc-500 uppercase mb-2 block italic">Nombre Real</label><input value={nuevoNombre} onChange={(e) => setNuevoNombre(e.target.value)} className="w-full bg-black border border-zinc-900 p-4 rounded-xl text-[10px] text-white outline-none focus:border-zinc-500 uppercase" /></div><div><label className="text-[8px] font-black text-zinc-500 uppercase mb-2 block italic">Callsign (Alias)</label><input value={alias} onChange={(e) => setAlias(e.target.value)} className="w-full bg-black border border-zinc-800 p-4 rounded-xl text-[10px] outline-none uppercase font-black italic" style={{ color: colorAcento }} /></div><div><label className="text-[8px] font-black text-zinc-500 uppercase mb-2 block italic">Declaración de Misión (Bio)</label><textarea value={bio} onChange={(e) => setBio(e.target.value)} className="w-full bg-black border border-zinc-800 p-4 rounded-xl text-[10px] text-white outline-none h-20 resize-none italic" /></div></div><div className="space-y-6"><div><label className="text-[8px] font-black text-zinc-500 uppercase mb-2 block italic">Color de Acento Hex</label><input value={colorAcento} onChange={(e) => setColorAcento(e.target.value)} className="w-full bg-black border border-zinc-800 p-4 rounded-xl text-[10px] font-mono outline-none" style={{ color: colorAcento }} /></div><div><label className="text-[8px] font-black text-zinc-500 uppercase mb-2 block italic">Fecha del Cambio (Desintoxicación)</label><input type="date" value={nuevaFecha} onChange={(e) => setNuevaFecha(e.target.value)} className="w-full bg-black border border-zinc-800 p-4 rounded-xl text-[10px] text-white outline-none font-mono" /></div><div className="flex items-center justify-between p-4 bg-black/40 border border-zinc-900 rounded-xl"><span className="text-[8px] font-black text-zinc-500 uppercase italic">Modo Fantasma</span><input type="checkbox" checked={ghostMode} onChange={(e) => setGhostMode(e.target.checked)} className="w-4 h-4 accent-zinc-500" /></div></div></div>
+            
             <div className="flex gap-4 mt-10"><button onClick={() => setEditandoPerfil(false)} className="flex-1 py-4 bg-zinc-900 text-zinc-400 hover:text-white rounded-xl text-[10px] font-black uppercase transition-all">Cancelar</button><button onClick={guardarAjustes} className="flex-1 py-4 bg-white text-black hover:opacity-80 rounded-xl text-[10px] font-black uppercase transition-all">Guardar Protocolo</button></div>
           </div>
         </div>
       )}
+      {marketingModal && (
+  <div className="fixed inset-0 z-[220] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4">
+    <div className="relative w-full max-w-md rounded-[2.5rem] border border-orange-500/25 bg-zinc-950 p-8 text-center shadow-[0_0_80px_rgba(234,88,12,0.25)] overflow-hidden">
+      
+      <div className="absolute top-[-80px] right-[-80px] w-48 h-48 rounded-full bg-orange-600/20 blur-[70px]" />
+      <div className="absolute bottom-[-80px] left-[-80px] w-48 h-48 rounded-full bg-orange-600/10 blur-[70px]" />
+
+      <div className="relative z-10">
+        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-orange-600/15 text-4xl border border-orange-500/20">
+          📩
+        </div>
+
+        <p
+          className="mb-3 text-[9px] font-black uppercase tracking-[0.45em]"
+          style={{ color: colorAcento }}
+        >
+          Comunicación Mastesto
+        </p>
+
+        <h2 className="mb-5 text-3xl font-black uppercase tracking-tighter text-white">
+          ¿Quieres recibir correos?
+        </h2>
+
+        <p className="mb-8 text-sm leading-relaxed text-zinc-400">
+          Podemos enviarte novedades, retos, contenido premium, avisos importantes
+          y mejoras de la plataforma. Tú decides si quieres recibirlos.
+        </p>
+
+        <div className="flex flex-col gap-3">
+          <button
+            onClick={() => guardarPreferenciaMarketing(true)}
+            className="w-full rounded-xl py-4 text-[10px] font-black uppercase tracking-[0.25em] text-black transition-all hover:scale-[1.02]"
+            style={{ backgroundColor: colorAcento }}
+          >
+            Sí, quiero recibirlos
+          </button>
+
+          <button
+            onClick={() => guardarPreferenciaMarketing(false)}
+            className="w-full rounded-xl bg-zinc-900 py-4 text-[10px] font-black uppercase tracking-[0.25em] text-zinc-300 transition-all hover:bg-zinc-800 hover:text-white"
+          >
+            No, gracias
+          </button>
+        </div>
+
+        <p className="mt-6 text-[8px] uppercase leading-relaxed tracking-widest text-zinc-600">
+          Podrás cambiar esta decisión después en Ajustes Tácticos.
+        </p>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }
