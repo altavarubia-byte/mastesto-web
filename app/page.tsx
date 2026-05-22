@@ -7,90 +7,12 @@ import { createBrowserClient } from '@supabase/ssr';
 function FondoMastesto() {
   return (
     <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-black">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(234,88,12,0.22),transparent_34%),linear-gradient(to_bottom,#030303,#000000_45%,#050505)]" />
-      <div className="absolute left-1/2 top-0 h-[720px] w-[720px] -translate-x-1/2 rounded-full bg-orange-600/10 blur-[130px]" />
-      <div className="absolute inset-0 opacity-[0.05] [background-image:linear-gradient(to_right,#fff_1px,transparent_1px),linear-gradient(to_bottom,#fff_1px,transparent_1px)] [background-size:72px_72px]" />
-      <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black to-transparent" />
-      <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-black to-transparent" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(234,88,12,0.18),transparent_32%),radial-gradient(circle_at_80%_20%,rgba(255,255,255,0.05),transparent_25%),linear-gradient(to_bottom,#050505,#000_45%,#050505)]" />
+      <div className="absolute left-1/2 top-0 h-[720px] w-[720px] -translate-x-1/2 rounded-full bg-orange-600/10 blur-[140px]" />
+      <div className="absolute inset-0 opacity-[0.04] [background-image:linear-gradient(to_right,#fff_1px,transparent_1px),linear-gradient(to_bottom,#fff_1px,transparent_1px)] [background-size:80px_80px]" />
+      <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black to-transparent" />
     </div>
-  );
-}
-
-function ModulosSistema() {
-  const modulos = [
-    {
-      num: '01',
-      titulo: 'Panel de progreso',
-      desc: 'Control de disciplina, hábitos y avance personal desde un panel claro.',
-    },
-    {
-      num: '02',
-      titulo: 'Control de hábitos',
-      desc: 'Seguimiento para reducir distracciones, tabaco, pantallas y pérdida de foco.',
-    },
-    {
-      num: '03',
-      titulo: 'Dietas personalizadas',
-      desc: 'Planes de alimentación enfocados en rendimiento, constancia y cambio físico.',
-    },
-    {
-      num: '04',
-      titulo: 'Rutinas de entrenamiento',
-      desc: 'Estructura semanal para entrenar con cabeza y dejar de improvisar.',
-    },
-    {
-      num: '05',
-      titulo: 'Ranking de constancia',
-      desc: 'Sistema de progreso para convertir la disciplina en algo visible.',
-    },
-  ];
-
-  return (
-    <section id="sistema" className="mx-auto mb-20 w-full max-w-6xl scroll-mt-28 px-4">
-      <div className="mb-8 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-        <div className="text-left">
-          <p className="mb-3 text-[10px] font-black uppercase italic tracking-[0.5em] text-orange-500">
-            Sistema +TESTO
-          </p>
-          <h2 className="text-3xl font-black uppercase leading-none tracking-tighter md:text-5xl">
-            No es motivación.
-            <br />
-            Es estructura.
-          </h2>
-        </div>
-
-        <p className="max-w-md text-left text-xs font-bold uppercase italic leading-relaxed text-zinc-500 md:text-right md:text-sm">
-          Disciplina, hábitos, dieta, entrenamiento, comunidad y seguimiento.
-          Todo diseñado para volver cada día con un objetivo claro.
-        </p>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        {modulos.map((m) => (
-          <div
-            key={m.num}
-            className="group relative overflow-hidden rounded-[2rem] border border-zinc-900 bg-zinc-950/70 p-6 text-left transition-all duration-300 hover:-translate-y-1 hover:border-orange-600/50"
-          >
-            <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-orange-600/10 blur-2xl transition-all group-hover:bg-orange-600/20" />
-
-            <div className="mb-7 flex items-center justify-between">
-              <span className="text-[10px] font-black tracking-widest text-orange-500">
-                {m.num}
-              </span>
-              <span className="text-lg">⚔️</span>
-            </div>
-
-            <h4 className="mb-3 text-[12px] font-black uppercase leading-tight tracking-widest text-white">
-              {m.titulo}
-            </h4>
-
-            <p className="text-[10px] uppercase italic leading-relaxed text-zinc-500">
-              {m.desc}
-            </p>
-          </div>
-        ))}
-      </div>
-    </section>
   );
 }
 
@@ -110,52 +32,41 @@ function ContadorSocial() {
 
     cargarDatos();
     const intervalo = setInterval(cargarDatos, 15000);
-
     return () => clearInterval(intervalo);
   }, []);
 
   return (
-    <div className="mb-8 grid max-w-4xl grid-cols-1 gap-4 lg:mx-0 md:grid-cols-2">
+    <div className="grid gap-4 md:grid-cols-2">
       <a
         href="https://discord.gg/a7a3Skg2"
         target="_blank"
         rel="noopener noreferrer"
-        className="block rounded-[2rem] border border-zinc-900 bg-zinc-950/70 p-6 shadow-2xl backdrop-blur-xl transition-all hover:scale-[1.02] hover:border-[#5865F2]"
+        className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 text-left backdrop-blur-xl transition hover:border-[#5865F2]/70 hover:bg-white/[0.05]"
       >
-        <div className="flex items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#5865F2] text-3xl">
-            🎮
+        <p className="mb-3 text-[10px] font-black uppercase tracking-[0.35em] text-zinc-500">
+          Discord
+        </p>
+
+        <div className="flex items-end gap-6">
+          <div>
+            <p className="text-3xl font-black text-white">
+              {stats.discord.usuarios ?? '--'}
+            </p>
+            <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-600">
+              Miembros
+            </p>
           </div>
 
-          <div className="text-left">
-            <p className="mb-1 text-[8px] font-black uppercase tracking-[0.4em] text-zinc-500">
-              Discord
-            </p>
-
-            <div className="flex items-center gap-4">
-              <div>
-                <p className="text-3xl font-black text-white">
-                  {stats.discord.usuarios ?? '--'}
-                </p>
-                <p className="text-[8px] font-bold uppercase text-zinc-600">
-                  Miembros
-                </p>
-              </div>
-
-              <div className="h-10 w-px bg-zinc-800" />
-
-              <div>
-                <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 animate-pulse rounded-full bg-green-500" />
-                  <p className="text-3xl font-black text-green-500">
-                    {stats.discord.activos ?? '--'}
-                  </p>
-                </div>
-                <p className="text-[8px] font-bold uppercase text-green-500">
-                  Activos
-                </p>
-              </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-green-500" />
+              <p className="text-3xl font-black text-green-500">
+                {stats.discord.activos ?? '--'}
+              </p>
             </div>
+            <p className="text-[9px] font-bold uppercase tracking-widest text-green-500">
+              Activos
+            </p>
           </div>
         </div>
       </a>
@@ -164,43 +75,137 @@ function ContadorSocial() {
         href="https://www.tiktok.com/@mastesto"
         target="_blank"
         rel="noopener noreferrer"
-        className="block rounded-[2rem] border border-zinc-900 bg-zinc-950/70 p-6 shadow-2xl backdrop-blur-xl transition-all hover:scale-[1.02] hover:border-pink-500"
+        className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 text-left backdrop-blur-xl transition hover:border-pink-500/70 hover:bg-white/[0.05]"
       >
-        <div className="flex items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r from-pink-500 to-cyan-400 text-3xl">
-            🎵
+        <p className="mb-3 text-[10px] font-black uppercase tracking-[0.35em] text-zinc-500">
+          TikTok
+        </p>
+
+        <div className="flex items-end gap-6">
+          <div>
+            <p className="text-3xl font-black text-white">
+              {stats.tiktok.seguidores ?? '--'}
+            </p>
+            <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-600">
+              Seguidores
+            </p>
           </div>
 
-          <div className="text-left">
-            <p className="mb-1 text-[8px] font-black uppercase tracking-[0.4em] text-zinc-500">
-              TikTok
+          <div>
+            <p className="text-3xl font-black text-pink-500">
+              {stats.tiktok.likes ?? '--'}
             </p>
-
-            <div className="flex items-center gap-4">
-              <div>
-                <p className="text-3xl font-black text-white">
-                  {stats.tiktok.seguidores ?? '--'}
-                </p>
-                <p className="text-[8px] font-bold uppercase text-zinc-600">
-                  Seguidores
-                </p>
-              </div>
-
-              <div className="h-10 w-px bg-zinc-800" />
-
-              <div>
-                <p className="text-3xl font-black text-pink-500">
-                  {stats.tiktok.likes ?? '--'}
-                </p>
-                <p className="text-[8px] font-bold uppercase text-pink-500">
-                  Likes
-                </p>
-              </div>
-            </div>
+            <p className="text-[9px] font-bold uppercase tracking-widest text-pink-500">
+              Likes
+            </p>
           </div>
         </div>
       </a>
     </div>
+  );
+}
+
+function ModulosSistema() {
+  const modulos = [
+    {
+      num: '01',
+      titulo: 'Objetivo',
+      desc: 'Define qué quieres cambiar y convierte la intención en una misión clara.',
+    },
+    {
+      num: '02',
+      titulo: 'Rutina',
+      desc: 'Estructura diaria para entrenar, estudiar, alimentarte y controlar hábitos.',
+    },
+    {
+      num: '03',
+      titulo: 'Seguimiento',
+      desc: 'Panel operativo, reportes y progreso visible para no perder dirección.',
+    },
+    {
+      num: '04',
+      titulo: 'Comunidad',
+      desc: 'Un entorno privado para compartir avances y mantener responsabilidad.',
+    },
+  ];
+
+  return (
+    <section id="sistema" className="mx-auto w-full max-w-6xl px-4 py-24 scroll-mt-28">
+      <div className="mb-12 max-w-3xl text-left">
+        <p className="mb-4 text-[10px] font-black uppercase tracking-[0.45em] text-orange-500">
+          El sistema
+        </p>
+
+        <h2 className="text-4xl font-black uppercase leading-none tracking-tighter md:text-6xl">
+          No necesitas más motivación.
+          <br />
+          <span className="text-orange-500">Necesitas estructura.</span>
+        </h2>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-4">
+        {modulos.map((m) => (
+          <div
+            key={m.num}
+            className="group rounded-[2rem] border border-white/10 bg-zinc-950/70 p-7 text-left transition hover:-translate-y-1 hover:border-orange-500/60"
+          >
+            <p className="mb-8 text-[10px] font-black tracking-[0.35em] text-orange-500">
+              {m.num}
+            </p>
+
+            <h3 className="mb-4 text-xl font-black uppercase tracking-tight text-white">
+              {m.titulo}
+            </h3>
+
+            <p className="text-sm leading-relaxed text-zinc-500">
+              {m.desc}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function SeccionBeneficios() {
+  const beneficios = [
+    'Panel operativo',
+    'Dietas personalizadas',
+    'Rutinas de entrenamiento',
+    'Control de hábitos',
+    'Blog premium',
+    'Comunidad privada',
+  ];
+
+  return (
+    <section className="mx-auto w-full max-w-6xl px-4 pb-24">
+      <div className="relative overflow-hidden rounded-[3rem] border border-orange-500/20 bg-zinc-950/70 p-8 md:p-14">
+        <div className="absolute right-[-160px] top-[-180px] h-[420px] w-[420px] rounded-full bg-orange-600/10 blur-[110px]" />
+
+        <div className="relative z-10 grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+          <div className="text-left">
+            <p className="mb-4 text-[10px] font-black uppercase tracking-[0.45em] text-orange-500">
+              Qué recibes
+            </p>
+
+            <h2 className="text-4xl font-black uppercase leading-none tracking-tighter md:text-6xl">
+              Herramientas para crear constancia.
+            </h2>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            {beneficios.map((item) => (
+              <div
+                key={item}
+                className="rounded-2xl border border-white/10 bg-black/45 p-5 text-left text-[11px] font-black uppercase tracking-widest text-zinc-300"
+              >
+                <span className="text-orange-500">✓</span> {item}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -278,80 +283,58 @@ function SeccionReportes({ supabase }: { supabase: any }) {
 
   if (loading) {
     return (
-      <div className="my-10 text-center text-[10px] font-black uppercase italic text-zinc-700 animate-pulse">
+      <div className="my-10 text-center text-[10px] font-black uppercase tracking-widest text-zinc-700 animate-pulse">
         Cargando muro de progreso...
       </div>
     );
   }
 
   return (
-    <section id="comunidad" className="mx-auto mb-20 w-full max-w-6xl scroll-mt-28 px-4 text-white">
-      <div className="grid items-stretch gap-4 lg:grid-cols-[0.72fr_1.28fr]">
-        <div className="relative overflow-hidden rounded-[2.5rem] border border-orange-600/25 bg-black/60 p-8 text-left shadow-2xl">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_20%,rgba(234,88,12,0.20),transparent_28%)]" />
-          <div className="relative z-10">
-            <p className="mb-4 text-[10px] font-black uppercase italic tracking-[0.5em] text-orange-500">
-              Muro de progreso
-            </p>
+    <section id="comunidad" className="mx-auto w-full max-w-6xl px-4 pb-24 scroll-mt-28">
+      <div className="mb-10 max-w-3xl text-left">
+        <p className="mb-4 text-[10px] font-black uppercase tracking-[0.45em] text-orange-500">
+          Comunidad
+        </p>
 
-            <h2 className="mb-5 text-3xl font-black uppercase leading-none tracking-tighter md:text-5xl">
-              Comparte avances.
-              <br />
-              Construye constancia.
-            </h2>
+        <h2 className="text-4xl font-black uppercase leading-none tracking-tighter md:text-6xl">
+          Muro de progreso.
+        </h2>
 
-            <p className="mb-8 text-xs font-bold uppercase italic leading-relaxed text-zinc-400">
-              Logros, aprendizajes, caídas y victorias personales. Un espacio
-              para hacer visible el progreso.
-            </p>
+        <p className="mt-5 text-sm leading-relaxed text-zinc-500 md:text-base">
+          Comparte avances, aprendizajes, compromisos y victorias personales.
+          La disciplina se vuelve más fuerte cuando se hace visible.
+        </p>
+      </div>
 
-            <ul className="space-y-4 text-[10px] font-black uppercase tracking-widest text-zinc-400">
-              <li className="flex gap-3">
-                <span className="text-orange-500">🔥</span> Reportes reales
-              </li>
-              <li className="flex gap-3">
-                <span className="text-orange-500">⚔️</span> Comunidad privada
-              </li>
-              <li className="flex gap-3">
-                <span className="text-orange-500">🧱</span> Disciplina visible
-              </li>
-            </ul>
+      <div className="grid gap-5 lg:grid-cols-[0.8fr_1.2fr]">
+        <div className="rounded-[2.5rem] border border-orange-500/20 bg-zinc-950/60 p-8 text-left">
+          <h3 className="mb-5 text-3xl font-black uppercase tracking-tighter">
+            Hoy también cuenta.
+          </h3>
+
+          <p className="mb-8 text-sm leading-relaxed text-zinc-500">
+            No hace falta publicar grandes victorias. Un avance pequeño,
+            repetido muchas veces, cambia una identidad.
+          </p>
+
+          <div className="space-y-4 text-[11px] font-black uppercase tracking-widest text-zinc-400">
+            <p><span className="text-orange-500">01</span> Reporta progreso</p>
+            <p><span className="text-orange-500">02</span> Mantén constancia</p>
+            <p><span className="text-orange-500">03</span> Vuelve mañana</p>
           </div>
         </div>
 
-        <div className="relative overflow-hidden rounded-[2.5rem] border border-zinc-900 bg-zinc-950/70 p-6 text-left shadow-2xl backdrop-blur-xl md:p-8">
-          <div className="absolute left-0 top-0 h-[1px] w-full bg-gradient-to-r from-transparent via-orange-600/60 to-transparent" />
-
-          <div className="relative z-10 mb-7 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-            <div>
-              <p className="mb-2 text-[10px] font-black uppercase italic tracking-[0.5em] text-orange-500">
-                Comunidad
-              </p>
-              <p className="text-[10px] font-bold uppercase italic tracking-widest text-zinc-500">
-                Reportes directos de miembros.
-              </p>
-            </div>
-
-            {user && (
-              <div className="rounded-2xl border border-zinc-900 bg-black/70 px-5 py-3 font-mono text-[9px] font-black uppercase tracking-widest text-zinc-400">
-                Tus reportes:{' '}
-                <span className={misReportesCount >= 3 ? 'text-red-500' : 'text-orange-500'}>
-                  {misReportesCount}/3
-                </span>
-              </div>
-            )}
-          </div>
-
+        <div className="rounded-[2.5rem] border border-white/10 bg-zinc-950/70 p-6 text-left md:p-8">
           {user ? (
             misReportesCount < 3 ? (
-              <form onSubmit={enviarReporte} className="relative z-10 mb-8 space-y-3">
+              <form onSubmit={enviarReporte} className="mb-8 space-y-3">
                 <div className="relative">
                   <textarea
                     value={nuevoReporte}
                     onChange={(e) => setNuevoReporte(e.target.value)}
                     maxLength={500}
-                    placeholder="COMPARTE TU AVANCE, LOGRO O COMPROMISO DE HOY... "
-                    className="h-28 w-full resize-none rounded-2xl border border-zinc-900 bg-black/70 p-5 text-[11px] font-bold uppercase text-white outline-none transition-all placeholder:text-zinc-700 focus:border-orange-600/60"
+                    placeholder="COMPARTE TU AVANCE, LOGRO O COMPROMISO DE HOY..."
+                    className="h-28 w-full resize-none rounded-2xl border border-white/10 bg-black/70 p-5 text-[11px] font-bold uppercase text-white outline-none placeholder:text-zinc-700 focus:border-orange-500/70"
                   />
                   <span className="absolute bottom-4 right-4 font-mono text-[7px] text-zinc-600">
                     {nuevoReporte.length}/500
@@ -361,37 +344,37 @@ function SeccionReportes({ supabase }: { supabase: any }) {
                 <button
                   type="submit"
                   disabled={enviando || !nuevoReporte.trim()}
-                  className="w-full rounded-xl bg-white py-4 text-[10px] font-black uppercase tracking-widest text-black transition-all hover:bg-orange-600 hover:text-white disabled:opacity-20"
+                  className="w-full rounded-xl bg-white py-4 text-[10px] font-black uppercase tracking-[0.25em] text-black transition hover:bg-orange-600 hover:text-white disabled:opacity-20"
                 >
                   {enviando ? 'Publicando...' : 'Publicar reporte'}
                 </button>
               </form>
             ) : (
-              <div className="relative z-10 mb-8 rounded-2xl border border-red-950 bg-red-950/10 p-5 text-center">
-                <p className="text-[8px] font-black uppercase italic tracking-widest text-red-500">
+              <div className="mb-8 rounded-2xl border border-red-950 bg-red-950/10 p-5 text-center">
+                <p className="text-[9px] font-black uppercase tracking-widest text-red-500">
                   Límite de reportes alcanzado.
                 </p>
               </div>
             )
           ) : (
-            <div className="relative z-10 mb-8 rounded-2xl border border-zinc-900 bg-black/50 p-5 text-center italic">
-              <p className="text-[8px] font-black uppercase tracking-widest text-zinc-500">
-                Inicia sesión para publicar tu reporte de progreso.
+            <div className="mb-8 rounded-2xl border border-white/10 bg-black/50 p-5 text-center">
+              <p className="text-[9px] font-black uppercase tracking-widest text-zinc-500">
+                Inicia sesión para publicar tu reporte.
               </p>
             </div>
           )}
 
-          <div className="custom-scrollbar relative z-10 max-h-[420px] space-y-3 overflow-y-auto pr-2">
+          <div className="custom-scrollbar max-h-[420px] space-y-3 overflow-y-auto pr-2">
             {reportes.length > 0 ? (
               reportes.map((reporte) => (
                 <div
                   key={reporte.id}
-                  className="rounded-2xl border bg-black/40 p-5 transition-all duration-300 hover:translate-x-1 hover:bg-black/70"
+                  className="rounded-2xl border bg-black/40 p-5 transition hover:bg-black/70"
                   style={{ borderColor: `${reporte.color_acento}22` }}
                 >
                   <div className="mb-2 flex items-center justify-between">
                     <span
-                      className="text-[10px] font-black uppercase italic tracking-wider"
+                      className="text-[10px] font-black uppercase tracking-wider"
                       style={{ color: reporte.color_acento }}
                     >
                       @{reporte.alias}
@@ -411,7 +394,7 @@ function SeccionReportes({ supabase }: { supabase: any }) {
                 </div>
               ))
             ) : (
-              <p className="py-10 text-center text-[8px] font-black uppercase italic text-zinc-700">
+              <p className="py-10 text-center text-[9px] font-black uppercase tracking-widest text-zinc-700">
                 Todavía no hay reportes. Sé el primero en publicar tu avance.
               </p>
             )}
@@ -422,55 +405,89 @@ function SeccionReportes({ supabase }: { supabase: any }) {
   );
 }
 
+function SeccionBlog() {
+  return (
+    <section className="mx-auto w-full max-w-6xl px-4 pb-24">
+      <div className="relative overflow-hidden rounded-[3rem] border border-white/10 bg-zinc-950/70 p-8 text-left md:p-14">
+        <div className="absolute bottom-[-120px] left-[-100px] h-[300px] w-[300px] rounded-full bg-orange-600/10 blur-[90px]" />
+
+        <p className="mb-4 text-[10px] font-black uppercase tracking-[0.45em] text-orange-500">
+          Mastesto Research
+        </p>
+
+        <h2 className="mb-6 text-4xl font-black uppercase leading-none tracking-tighter md:text-6xl">
+          Ciencia, hábitos
+          <br />
+          <span className="text-orange-500">y disciplina.</span>
+        </h2>
+
+        <p className="mb-8 max-w-2xl text-sm leading-relaxed text-zinc-500 md:text-base">
+          Artículos sobre duchas frías, dejar vicios, estudio, rendimiento,
+          hábitos y transformación personal.
+        </p>
+
+        <div className="flex flex-wrap gap-4">
+          <Link
+            href="/blog"
+            className="rounded-2xl bg-orange-600 px-8 py-4 text-[10px] font-black uppercase tracking-[0.25em] text-white transition hover:bg-orange-500"
+          >
+            Entrar al blog
+          </Link>
+
+          <Link
+            href="/blog/beneficios-ducha-fria"
+            className="rounded-2xl border border-white/10 bg-black px-8 py-4 text-[10px] font-black uppercase tracking-[0.25em] text-white transition hover:border-orange-500"
+          >
+            Leer último artículo
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function GuiaInstalacion() {
   return (
-    <section id="faq" className="mx-auto mb-10 mt-8 w-full max-w-6xl scroll-mt-28 px-4">
-      <div className="group relative overflow-hidden rounded-[3rem] border border-zinc-900 bg-zinc-950/60 p-8 shadow-2xl backdrop-blur-xl md:p-10">
-        <div className="absolute left-0 top-0 h-1 w-full bg-gradient-to-r from-transparent via-orange-600/30 to-transparent" />
-
+    <section id="faq" className="mx-auto w-full max-w-6xl px-4 pb-24 scroll-mt-28">
+      <div className="rounded-[3rem] border border-white/10 bg-zinc-950/60 p-8 md:p-10">
         <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="text-left">
-            <p className="mb-3 text-[9px] font-black uppercase italic tracking-[0.5em] text-orange-500">
+            <p className="mb-3 text-[10px] font-black uppercase tracking-[0.45em] text-orange-500">
               Acceso rápido
             </p>
-            <h2 className="text-2xl font-black uppercase tracking-tighter md:text-4xl">
+
+            <h2 className="text-3xl font-black uppercase tracking-tighter md:text-5xl">
               Instálalo en tu móvil.
             </h2>
           </div>
 
-          <p className="max-w-md text-left text-[10px] font-bold uppercase italic text-zinc-500 md:text-right">
+          <p className="max-w-md text-left text-sm leading-relaxed text-zinc-500 md:text-right">
             Acceso directo desde pantalla de inicio para entrar cada día sin excusas.
           </p>
         </div>
 
-        <div className="relative z-10 grid gap-10 text-left md:grid-cols-2">
-          <div className="space-y-6 rounded-[2rem] border border-zinc-900 bg-black/35 p-6">
-            <div className="flex items-center gap-4 border-b border-zinc-900 pb-4">
-              <span className="text-3xl">🍎</span>
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-200">
-                iOS / Safari
-              </h3>
-            </div>
+        <div className="grid gap-5 text-left md:grid-cols-2">
+          <div className="rounded-[2rem] border border-white/10 bg-black/35 p-6">
+            <h3 className="mb-5 text-[11px] font-black uppercase tracking-widest text-zinc-200">
+              iOS / Safari
+            </h3>
 
-            <ul className="space-y-4 text-[9px] font-bold uppercase italic text-zinc-500">
-              <li>01 · Abre mastesto.es</li>
-              <li>02 · Pulsa compartir</li>
-              <li>03 · Añadir a pantalla de inicio</li>
+            <ul className="space-y-3 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+              <li><span className="text-orange-500">01</span> Abre mastesto.es</li>
+              <li><span className="text-orange-500">02</span> Pulsa compartir</li>
+              <li><span className="text-orange-500">03</span> Añadir a pantalla de inicio</li>
             </ul>
           </div>
 
-          <div className="space-y-6 rounded-[2rem] border border-zinc-900 bg-black/35 p-6">
-            <div className="flex items-center gap-4 border-b border-zinc-900 pb-4">
-              <span className="text-3xl">🤖</span>
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-200">
-                Android / Chrome
-              </h3>
-            </div>
+          <div className="rounded-[2rem] border border-white/10 bg-black/35 p-6">
+            <h3 className="mb-5 text-[11px] font-black uppercase tracking-widest text-zinc-200">
+              Android / Chrome
+            </h3>
 
-            <ul className="space-y-4 text-[9px] font-bold uppercase italic text-zinc-500">
-              <li>01 · Entra desde Chrome</li>
-              <li>02 · Abre el menú de 3 puntos</li>
-              <li>03 · Pulsa instalar aplicación</li>
+            <ul className="space-y-3 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+              <li><span className="text-orange-500">01</span> Entra desde Chrome</li>
+              <li><span className="text-orange-500">02</span> Abre el menú de 3 puntos</li>
+              <li><span className="text-orange-500">03</span> Instalar aplicación</li>
             </ul>
           </div>
         </div>
@@ -509,10 +526,7 @@ export default function Page() {
 
   useEffect(() => {
     const aceptadas = localStorage.getItem('mastesto-cookies');
-
-    if (aceptadas === 'true') {
-      setCookiesAceptadas(true);
-    }
+    if (aceptadas === 'true') setCookiesAceptadas(true);
   }, []);
 
   useEffect(() => {
@@ -623,9 +637,9 @@ export default function Page() {
     >
       <FondoMastesto />
 
-      <nav className="fixed left-1/2 top-4 z-50 flex w-[calc(100%-2rem)] max-w-7xl -translate-x-1/2 items-center justify-between rounded-full border border-zinc-900 bg-black/75 px-4 py-3 shadow-2xl backdrop-blur-2xl md:px-6">
-        <Link href="/" className="group flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-600 font-black text-black shadow-[0_0_25px_rgba(234,88,12,0.35)] transition-all group-hover:scale-105">
+      <nav className="fixed left-1/2 top-4 z-50 flex w-[calc(100%-2rem)] max-w-7xl -translate-x-1/2 items-center justify-between rounded-full border border-white/10 bg-black/75 px-4 py-3 shadow-2xl backdrop-blur-2xl md:px-6">
+        <Link href="/" className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-600 font-black text-black shadow-[0_0_25px_rgba(234,88,12,0.35)]">
             M
           </div>
 
@@ -637,18 +651,18 @@ export default function Page() {
           </div>
         </Link>
 
-        <div className="hidden items-center gap-6 italic md:flex">
-          <Link href="/nosotros" className="text-[9px] font-black uppercase tracking-widest text-zinc-500 transition-all hover:text-orange-600">
+        <div className="hidden items-center gap-6 md:flex">
+          <Link href="/nosotros" className="text-[9px] font-black uppercase tracking-widest text-zinc-500 hover:text-orange-500">
             Misión
           </Link>
-          <a href="#sistema" className="text-[9px] font-black uppercase tracking-widest text-zinc-500 transition-all hover:text-orange-600">
+          <a href="#sistema" className="text-[9px] font-black uppercase tracking-widest text-zinc-500 hover:text-orange-500">
             Sistema
           </a>
-          <a href="#comunidad" className="text-[9px] font-black uppercase tracking-widest text-zinc-500 transition-all hover:text-orange-600">
+          <a href="#comunidad" className="text-[9px] font-black uppercase tracking-widest text-zinc-500 hover:text-orange-500">
             Comunidad
           </a>
-          <a href="#faq" className="text-[9px] font-black uppercase tracking-widest text-zinc-500 transition-all hover:text-orange-600">
-            FAQ
+          <a href="#faq" className="text-[9px] font-black uppercase tracking-widest text-zinc-500 hover:text-orange-500">
+            App
           </a>
         </div>
 
@@ -656,7 +670,7 @@ export default function Page() {
           {autorizado ? (
             <Link
               href="/perfil"
-              className="rounded-full bg-white px-5 py-2.5 text-[9px] font-black uppercase tracking-tighter text-black transition-all hover:scale-105"
+              className="rounded-full bg-white px-5 py-2.5 text-[9px] font-black uppercase text-black transition hover:bg-orange-500"
             >
               Panel
             </Link>
@@ -667,14 +681,14 @@ export default function Page() {
                   setEsLogin(true);
                   setMostrarLogin(true);
                 }}
-                className="block text-[9px] font-black uppercase text-zinc-400 transition-all hover:text-white"
+                className="text-[9px] font-black uppercase text-zinc-400 hover:text-white"
               >
                 Entrar
               </button>
 
               <button
                 onClick={abrirRegistro}
-                className="rounded-full bg-orange-600 px-5 py-2.5 text-[9px] font-black uppercase tracking-tighter text-white shadow-[0_0_25px_rgba(234,88,12,0.25)] transition-all hover:bg-orange-500"
+                className="rounded-full bg-orange-600 px-5 py-2.5 text-[9px] font-black uppercase text-white transition hover:bg-orange-500"
               >
                 Empezar
               </button>
@@ -684,7 +698,7 @@ export default function Page() {
       </nav>
 
       {!cookiesAceptadas && (
-        <div className="fixed inset-0 z-[999999] flex h-screen w-screen touch-none select-none items-center justify-center overflow-hidden bg-black px-5 backdrop-blur-2xl">
+        <div className="fixed inset-0 z-[999999] flex h-screen w-screen items-center justify-center overflow-hidden bg-black px-5 backdrop-blur-2xl">
           <div className="w-full max-w-md rounded-[2rem] border border-orange-500/20 bg-zinc-950 p-7 text-center shadow-[0_0_80px_rgba(255,120,0,0.25)]">
             <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-orange-600/15 text-4xl">
               🍪
@@ -710,7 +724,7 @@ export default function Page() {
 
               <button
                 onClick={aceptarCookies}
-                className="w-full rounded-xl bg-orange-600 py-4 font-black transition-all hover:bg-orange-500"
+                className="w-full rounded-xl bg-orange-600 py-4 font-black text-white transition hover:bg-orange-500"
               >
                 ACEPTAR Y ENTRAR
               </button>
@@ -719,14 +733,12 @@ export default function Page() {
         </div>
       )}
 
-      <main className="z-10 flex w-full max-w-7xl flex-col items-center pt-32 text-center md:pt-36">
-        <section className="mb-16 flex min-h-[78vh] w-full flex-col items-center justify-between gap-12 px-4 lg:flex-row">
-          <div className="w-full text-center lg:w-[55%] lg:text-left">
-            <ContadorSocial />
-
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-orange-600/20 bg-orange-600/10 px-4 py-2">
-              <span className="text-xs text-orange-500">⚔️</span>
-              <span className="text-[9px] font-black uppercase italic tracking-[0.35em] text-orange-400">
+      <main className="z-10 w-full">
+        <section className="mx-auto flex min-h-screen w-full max-w-7xl flex-col items-center justify-center gap-12 px-4 pt-28 lg:flex-row lg:pt-32">
+          <div className="w-full text-center lg:w-[58%] lg:text-left">
+            <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-orange-500/20 bg-orange-500/10 px-4 py-2">
+              <span className="h-2 w-2 rounded-full bg-orange-500" />
+              <span className="text-[9px] font-black uppercase tracking-[0.35em] text-orange-400">
                 Sistema de disciplina personal
               </span>
             </div>
@@ -737,38 +749,39 @@ export default function Page() {
               <span className="text-orange-500">Te sobran distracciones.</span>
             </h1>
 
-            <p className="mx-auto mb-8 max-w-2xl text-sm font-bold uppercase italic leading-relaxed text-zinc-400 md:text-base lg:mx-0">
-              +TESTO es una plataforma para recuperar disciplina, ordenar tus hábitos
-              y construir una versión más fuerte, enfocada y constante de ti mismo.
+            <p className="mx-auto mb-9 max-w-2xl text-base leading-relaxed text-zinc-400 md:text-lg lg:mx-0">
+              +TESTO es una plataforma para recuperar disciplina, ordenar tus
+              hábitos y construir una versión más fuerte, enfocada y constante
+              de ti mismo.
             </p>
 
-            <div className="mb-10 flex flex-col justify-center gap-4 sm:flex-row lg:justify-start">
+            <div className="mb-12 flex flex-col justify-center gap-4 sm:flex-row lg:justify-start">
               <button
                 onClick={abrirRegistro}
-                className="rounded-2xl bg-orange-600 px-8 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-white shadow-[0_0_30px_rgba(234,88,12,0.25)] transition-all hover:scale-105 hover:bg-orange-500"
+                className="rounded-2xl bg-orange-600 px-8 py-4 text-[10px] font-black uppercase tracking-[0.25em] text-white shadow-[0_0_30px_rgba(234,88,12,0.25)] transition hover:scale-105 hover:bg-orange-500"
               >
                 Empezar ahora
               </button>
 
               <Link
                 href="/nosotros"
-                className="rounded-2xl border border-zinc-800 bg-zinc-950/70 px-8 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-white transition-all hover:border-orange-600/60"
+                className="rounded-2xl border border-white/10 bg-white/[0.03] px-8 py-4 text-[10px] font-black uppercase tracking-[0.25em] text-white transition hover:border-orange-500"
               >
                 Ver misión
               </Link>
             </div>
 
-            <div className="mx-auto grid max-w-xl grid-cols-3 gap-3 lg:mx-0">
+            <div className="grid max-w-xl gap-3 sm:grid-cols-3">
               {[
                 ['Hábitos', 'Diarios'],
                 ['Rutinas', 'Guiadas'],
                 ['Progreso', 'Visible'],
               ].map(([a, b]) => (
-                <div key={b} className="rounded-2xl border border-zinc-900 bg-zinc-950/50 p-4">
-                  <p className="text-xl font-black italic tracking-tighter md:text-2xl">
+                <div key={b} className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                  <p className="text-xl font-black uppercase tracking-tighter text-white">
                     {a}
                   </p>
-                  <p className="text-[7px] font-black uppercase tracking-widest text-zinc-600">
+                  <p className="text-[8px] font-black uppercase tracking-[0.25em] text-zinc-600">
                     {b}
                   </p>
                 </div>
@@ -776,26 +789,24 @@ export default function Page() {
             </div>
           </div>
 
-          <div className="relative w-full lg:w-[45%]">
-            <div className="absolute -inset-4 rounded-full bg-orange-600/10 blur-3xl" />
-
-            <div className="relative overflow-hidden rounded-[3rem] border border-zinc-900 bg-zinc-950/50 p-3 shadow-2xl">
+          <div className="w-full lg:w-[42%]">
+            <div className="relative rounded-[3rem] border border-white/10 bg-zinc-950/70 p-4 shadow-2xl">
               <img
                 src="/logoweb.jpeg"
                 alt="Mastesto"
-                className="w-full rounded-[2.5rem] border border-zinc-900 object-cover"
+                className="w-full rounded-[2.4rem] border border-white/10 object-cover"
               />
 
-              <div className="absolute bottom-6 left-6 right-6 rounded-[2rem] border border-zinc-800 bg-black/75 p-5 text-left backdrop-blur-xl">
-                <p className="mb-2 text-[8px] font-black uppercase tracking-[0.4em] text-orange-500">
+              <div className="mt-4 rounded-[2rem] border border-white/10 bg-black/60 p-6 text-left">
+                <p className="mb-2 text-[9px] font-black uppercase tracking-[0.35em] text-orange-500">
                   Protocolo activo
                 </p>
 
-                <p className="text-xl font-black uppercase tracking-tighter">
+                <h2 className="mb-3 text-2xl font-black uppercase leading-none tracking-tighter">
                   Disciplina, control y progreso.
-                </p>
+                </h2>
 
-                <p className="mt-2 text-[10px] font-bold uppercase text-zinc-500">
+                <p className="text-sm leading-relaxed text-zinc-500">
                   Una estructura para dejar de prometer y empezar a ejecutar.
                 </p>
               </div>
@@ -803,98 +814,33 @@ export default function Page() {
           </div>
         </section>
 
+        <section className="mx-auto w-full max-w-6xl px-4 pb-10">
+          <ContadorSocial />
+        </section>
+
         <ModulosSistema />
-
-        <section className="mx-auto mb-20 w-full max-w-6xl px-4">
-          <div className="relative overflow-hidden rounded-[3rem] border border-orange-600/20 bg-zinc-950/70 p-8 shadow-2xl md:p-14">
-            <div className="absolute right-[-120px] top-[-180px] h-[450px] w-[450px] rounded-full bg-orange-600/10 blur-[120px]" />
-
-            <p className="mb-4 text-[9px] font-black uppercase italic tracking-[0.5em] text-orange-500">
-              Qué recibes al entrar
-            </p>
-
-            <h2 className="mb-6 text-4xl font-black leading-none tracking-tighter md:text-6xl">
-              Herramientas para
-              <br />
-              <span className="text-orange-500">crear constancia.</span>
-            </h2>
-
-            <div className="grid gap-4 text-left md:grid-cols-3">
-              {[
-                'Panel operativo',
-                'Dietas personalizadas',
-                'Rutinas de entrenamiento',
-                'Control de hábitos',
-                'Blog premium',
-                'Comunidad privada',
-              ].map((item) => (
-                <div
-                  key={item}
-                  className="rounded-2xl border border-zinc-900 bg-black/40 p-5 text-[10px] font-black uppercase tracking-widest text-zinc-300"
-                >
-                  ✓ {item}
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
+        <SeccionBeneficios />
         <SeccionReportes supabase={supabase} />
-
-        <section className="mx-auto mb-20 w-full max-w-6xl px-4">
-          <div className="relative overflow-hidden rounded-[3rem] border border-orange-600/20 bg-zinc-950/70 p-8 shadow-2xl md:p-14">
-            <p className="mb-4 text-[9px] font-black uppercase italic tracking-[0.5em] text-orange-500">
-              Mastesto Research
-            </p>
-
-            <h2 className="mb-6 text-4xl font-black leading-none tracking-tighter md:text-6xl">
-              Ciencia, hábitos
-              <br />
-              <span className="text-orange-500">y disciplina.</span>
-            </h2>
-
-            <p className="mb-8 max-w-2xl text-sm font-bold uppercase italic leading-relaxed text-zinc-400">
-              Artículos sobre duchas frías, dejar vicios, estudio, rendimiento,
-              hábitos y transformación personal.
-            </p>
-
-            <div className="flex flex-wrap gap-4">
-              <Link
-                href="/blog"
-                className="inline-flex rounded-2xl bg-orange-600 px-8 py-4 font-black uppercase tracking-[0.2em] text-white transition-all hover:scale-105 hover:bg-orange-500"
-              >
-                Entrar al blog
-              </Link>
-
-              <Link
-                href="/blog/beneficios-ducha-fria"
-                className="inline-flex rounded-2xl border border-zinc-800 bg-black px-8 py-4 font-black uppercase tracking-[0.2em] transition-all hover:border-orange-600"
-              >
-                Leer último artículo
-              </Link>
-            </div>
-          </div>
-        </section>
-
+        <SeccionBlog />
         <GuiaInstalacion />
 
-        <footer className="mt-28 w-full border-t border-zinc-900/50 pb-12 pt-16">
+        <footer className="w-full border-t border-white/10 pb-12 pt-16">
           <div className="mx-auto max-w-6xl px-4">
             <div className="flex flex-col items-center">
               <div className="mb-10 flex flex-wrap items-center justify-center gap-6 md:gap-10">
-                <Link href="/contacto" className="text-[8px] font-black uppercase tracking-[0.35em] text-zinc-600 transition-all hover:text-orange-500">
+                <Link href="/contacto" className="text-[8px] font-black uppercase tracking-[0.35em] text-zinc-600 hover:text-orange-500">
                   Contacto
                 </Link>
 
                 <div className="h-1 w-1 rounded-full bg-zinc-800" />
 
-                <Link href="/privacidad" className="text-[8px] font-black uppercase tracking-[0.35em] text-zinc-600 transition-all hover:text-orange-500">
+                <Link href="/privacidad" className="text-[8px] font-black uppercase tracking-[0.35em] text-zinc-600 hover:text-orange-500">
                   Privacidad
                 </Link>
 
                 <div className="h-1 w-1 rounded-full bg-zinc-800" />
 
-                <Link href="/terminos" className="text-[8px] font-black uppercase tracking-[0.35em] text-zinc-600 transition-all hover:text-orange-500">
+                <Link href="/terminos" className="text-[8px] font-black uppercase tracking-[0.35em] text-zinc-600 hover:text-orange-500">
                   Términos
                 </Link>
               </div>
@@ -921,7 +867,7 @@ export default function Page() {
 
       {mostrarLogin && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 p-4 backdrop-blur-xl">
-          <div className="custom-scrollbar relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[2.5rem] border border-zinc-800 bg-zinc-950/95 p-8 shadow-2xl">
+          <div className="custom-scrollbar relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[2.5rem] border border-white/10 bg-zinc-950/95 p-8 shadow-2xl">
             <button
               onClick={() => setMostrarLogin(false)}
               className="absolute right-6 top-6 text-[8px] font-black uppercase text-zinc-600 hover:text-white"
@@ -946,7 +892,7 @@ export default function Page() {
             <button
               onClick={handleGoogleLogin}
               disabled={cargando}
-              className="mb-6 flex w-full items-center justify-center gap-3 rounded-xl bg-white py-3.5 text-[9px] font-black uppercase text-black transition-all hover:bg-orange-600 hover:text-white disabled:opacity-40"
+              className="mb-6 flex w-full items-center justify-center gap-3 rounded-xl bg-white py-3.5 text-[9px] font-black uppercase text-black transition hover:bg-orange-600 hover:text-white disabled:opacity-40"
             >
               <img src="https://www.google.com/favicon.ico" alt="G" className="h-3 w-3" />
               Continuar con Google
@@ -959,20 +905,47 @@ export default function Page() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full rounded-xl border border-zinc-800 bg-black px-4 py-3 text-[10px] outline-none focus:border-orange-600/60"
+                className="w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-[10px] outline-none focus:border-orange-500/70"
               />
 
               {!esLogin && (
                 <>
                   <div className="grid grid-cols-2 gap-4">
-                    <input type="text" placeholder="NOMBRE" value={nombre} onChange={(e) => setNombre(e.target.value)} required className="w-full rounded-xl border border-zinc-800 bg-black px-4 py-3 text-[10px] outline-none focus:border-orange-600/60" />
-                    <input type="text" placeholder="APELLIDOS" value={apellidos} onChange={(e) => setApellidos(e.target.value)} required className="w-full rounded-xl border border-zinc-800 bg-black px-4 py-3 text-[10px] outline-none focus:border-orange-600/60" />
+                    <input
+                      type="text"
+                      placeholder="NOMBRE"
+                      value={nombre}
+                      onChange={(e) => setNombre(e.target.value)}
+                      required
+                      className="w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-[10px] outline-none focus:border-orange-500/70"
+                    />
+
+                    <input
+                      type="text"
+                      placeholder="APELLIDOS"
+                      value={apellidos}
+                      onChange={(e) => setApellidos(e.target.value)}
+                      required
+                      className="w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-[10px] outline-none focus:border-orange-500/70"
+                    />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <input type="number" placeholder="EDAD" value={edad} onChange={(e) => setEdad(e.target.value)} required className="w-full rounded-xl border border-zinc-800 bg-black px-4 py-3 text-[10px] outline-none focus:border-orange-600/60" />
+                    <input
+                      type="number"
+                      placeholder="EDAD"
+                      value={edad}
+                      onChange={(e) => setEdad(e.target.value)}
+                      required
+                      className="w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-[10px] outline-none focus:border-orange-500/70"
+                    />
 
-                    <select value={sexo} onChange={(e) => setSexo(e.target.value)} required className="w-full rounded-xl border border-zinc-800 bg-black px-4 py-3 text-[10px] text-zinc-400 outline-none focus:border-orange-600/60">
+                    <select
+                      value={sexo}
+                      onChange={(e) => setSexo(e.target.value)}
+                      required
+                      className="w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-[10px] text-zinc-400 outline-none focus:border-orange-500/70"
+                    >
                       <option value="">SEXO</option>
                       <option value="hombre">Hombre</option>
                       <option value="mujer">Mujer</option>
@@ -980,9 +953,23 @@ export default function Page() {
                     </select>
                   </div>
 
-                  <input type="text" placeholder="NACIONALIDAD" value={nacionalidad} onChange={(e) => setNacionalidad(e.target.value)} required className="w-full rounded-xl border border-zinc-800 bg-black px-4 py-3 text-[10px] outline-none focus:border-orange-600/60" />
+                  <input
+                    type="text"
+                    placeholder="NACIONALIDAD"
+                    value={nacionalidad}
+                    onChange={(e) => setNacionalidad(e.target.value)}
+                    required
+                    className="w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-[10px] outline-none focus:border-orange-500/70"
+                  />
 
-                  <input type="text" placeholder="PROVINCIA" value={provincia} onChange={(e) => setProvincia(e.target.value)} required className="w-full rounded-xl border border-zinc-800 bg-black px-4 py-3 text-[10px] outline-none focus:border-orange-600/60" />
+                  <input
+                    type="text"
+                    placeholder="PROVINCIA"
+                    value={provincia}
+                    onChange={(e) => setProvincia(e.target.value)}
+                    required
+                    className="w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-[10px] outline-none focus:border-orange-500/70"
+                  />
                 </>
               )}
 
@@ -992,14 +979,26 @@ export default function Page() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full rounded-xl border border-zinc-800 bg-black px-4 py-3 text-[10px] outline-none focus:border-orange-600/60"
+                className="w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-[10px] outline-none focus:border-orange-500/70"
               />
 
               {!esLogin && (
                 <>
-                  <input type="password" placeholder="CONFIRMAR CONTRASEÑA" value={password2} onChange={(e) => setPassword2(e.target.value)} required className="w-full rounded-xl border border-zinc-800 bg-black px-4 py-3 text-[10px] outline-none focus:border-orange-600/60" />
+                  <input
+                    type="password"
+                    placeholder="CONFIRMAR CONTRASEÑA"
+                    value={password2}
+                    onChange={(e) => setPassword2(e.target.value)}
+                    required
+                    className="w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-[10px] outline-none focus:border-orange-500/70"
+                  />
 
-                  <textarea placeholder="¿QUÉ QUIERES CAMBIAR?" value={motivoCambio} onChange={(e) => setMotivoCambio(e.target.value)} className="min-h-[80px] w-full rounded-xl border border-zinc-800 bg-black px-4 py-3 text-[10px] outline-none focus:border-orange-600/60" />
+                  <textarea
+                    placeholder="¿QUÉ QUIERES CAMBIAR?"
+                    value={motivoCambio}
+                    onChange={(e) => setMotivoCambio(e.target.value)}
+                    className="min-h-[80px] w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-[10px] outline-none focus:border-orange-500/70"
+                  />
                 </>
               )}
 
@@ -1012,7 +1011,7 @@ export default function Page() {
               <button
                 type="submit"
                 disabled={cargando}
-                className="w-full rounded-xl bg-white py-4 text-[10px] font-black uppercase tracking-[0.2em] text-black transition-all hover:bg-orange-600 hover:text-white disabled:opacity-40"
+                className="w-full rounded-xl bg-white py-4 text-[10px] font-black uppercase tracking-[0.2em] text-black transition hover:bg-orange-600 hover:text-white disabled:opacity-40"
               >
                 {cargando ? 'Cargando...' : esLogin ? 'Entrar' : 'Crear cuenta'}
               </button>
