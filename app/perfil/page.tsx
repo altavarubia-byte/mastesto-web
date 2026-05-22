@@ -343,6 +343,22 @@ if (
     };
   }, [fechaInicio, datosTabaco, user, hitosSaludYLogros]);
 
+  const guardarPreferenciaMarketing = async (valor: boolean) => {
+  if (!user) return;
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      acepta_marketing: valor
+    })
+    .eq('email', user.email);
+
+  if (!error) {
+    setAceptaMarketing(valor);
+    setMarketingModal(false);
+  }
+};
+  
   const guardarAjustes = async () => {
     await supabase.auth.updateUser({
       data: {
