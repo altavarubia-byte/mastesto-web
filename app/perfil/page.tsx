@@ -4,6 +4,8 @@ import { useEffect, useState, useRef, useMemo } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 
+
+
 // --- COMPONENTE DE TAREA ---
 function CardTarea({ tarea, userNick, supabase, colorAcento }: any) {
   const [segundos, setSegundos] = useState(tarea.duracion_minutos * 60);
@@ -76,6 +78,8 @@ export default function PerfilPage() {
       ),
     []
   );
+  const [marketingModal, setMarketingModal] = useState(false);
+  const [aceptaMarketing, setAceptaMarketing] = useState<boolean | null>(null);
 
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
