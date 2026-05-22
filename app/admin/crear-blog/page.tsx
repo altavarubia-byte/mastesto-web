@@ -37,7 +37,7 @@ const [canvasItems, setCanvasItems] = useState<any[]>([]);
   const [fondo, setFondo] = useState('oscuro');
   const [publicado, setPublicado] = useState(true);
   const [destacado, setDestacado] = useState(false);
-
+  const [soloSocios, setSoloSocios] = useState(true);
   useEffect(() => {
     const cargar = async () => {
       const {
@@ -124,6 +124,7 @@ const [canvasItems, setCanvasItems] = useState<any[]>([]);
       canvas_json: canvasItems,
       meta_title: metaTitle || titulo,
       meta_description: metaDescription || descripcion,
+      solo_socios: soloSocios,
       publicado,
       destacado,
       autor_email: user.email,
@@ -339,6 +340,16 @@ const [canvasItems, setCanvasItems] = useState<any[]>([]);
               />
               Publicar directamente
             </label>
+
+            <label className="flex items-center gap-3 text-[10px] font-black uppercase text-zinc-400">
+  <input
+    type="checkbox"
+    checked={soloSocios}
+    onChange={(e) => setSoloSocios(e.target.checked)}
+    className="accent-orange-600"
+  />
+  Solo usuarios registrados pueden leer completo
+</label>
 
             <label className="flex items-center gap-3 text-xs text-zinc-400 uppercase font-black mb-6">
               <input
