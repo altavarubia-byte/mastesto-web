@@ -276,14 +276,25 @@ export default function PerfilPage() {
         if (socios) setSociosCuestionario(socios);
       }
       const { data: perfilAdmin } = await supabase
-.from('profiles')
-.select('role')
-.eq('email', user.email)
-.single();
+  .from('profiles')
+  .select('role, acepta_marketing')
+  .eq('email', user.email)
+  .single();
 
 setEsAdminReal(
-perfilAdmin?.role==="admin"
+  perfilAdmin?.role === "admin"
 );
+
+setAceptaMarketing(
+  perfilAdmin?.acepta_marketing ?? null
+);
+
+if (
+  perfilAdmin?.acepta_marketing === null ||
+  perfilAdmin?.acepta_marketing === undefined
+) {
+  setMarketingModal(true);
+}
       setLoading(false);
     };
     
