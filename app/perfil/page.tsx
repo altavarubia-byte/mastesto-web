@@ -360,20 +360,23 @@ if (
 };
   
   const guardarAjustes = async () => {
-    await supabase.auth.updateUser({
-      data: {
-        nombre: nuevoNombre,
-        alias,
-        mision: bio,
-        color_acento: colorAcento,
-        ghost_mode: ghostMode,
-        fecha_dejo_fumar: new Date(nuevaFecha).toISOString(),
-        acepta_marketing: aceptaMarketing
-      },
-    });
-    setEditandoPerfil(false);
-    window.location.reload();
-  };
+  if (!user?.email) return;
+
+  const { error: authError } = await supabase.auth.updateUser({
+    data: {
+      nombre: nuevoNombre,
+      alias,
+      mision: bio,
+      color_acento: colorAcento,
+      ghost_mode: ghostMode,
+      fecha_dejo_fumar: new Date(nuevaFecha).toISOString(),
+    },
+  });
+
+  if (authError) {
+    alert(authError.message);
+    return;
+  }
 
   const enviarTareaAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
