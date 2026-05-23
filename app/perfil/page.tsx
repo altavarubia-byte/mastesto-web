@@ -344,55 +344,58 @@ if (
   }, [fechaInicio, datosTabaco, user, hitosSaludYLogros]);
 
   const guardarPreferenciaMarketing = async (valor: boolean) => {
-  if (!user) return;
+    if (!user?.email) return;
 
-  const { error } = await supabase
-    .from('profiles')
-    .update({
-      acepta_marketing: valor
-    })
-    .eq('email', user.email);
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        acepta_marketing: valor,
+      })
+      .eq('email', user.email);
 
-  if (!error) {
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
     setAceptaMarketing(valor);
     setMarketingModal(false);
-  }
-};
-  
+  };
+
   const guardarAjustes = async () => {
-  if (!user?.email) return;
+    if (!user?.email) return;
 
-  const { error: authError } = await supabase.auth.updateUser({
-    data: {
-      nombre: nuevoNombre,
-      alias,
-      mision: bio,
-      color_acento: colorAcento,
-      ghost_mode: ghostMode,
-      fecha_dejo_fumar: new Date(nuevaFecha).toISOString(),
-    },
-  });
+    const { error: authError } = await supabase.auth.updateUser({
+      data: {
+        nombre: nuevoNombre,
+        alias,
+        mision: bio,
+        color_acento: colorAcento,
+        ghost_mode: ghostMode,
+        fecha_dejo_fumar: new Date(nuevaFecha).toISOString(),
+      },
+    });
+
     if (authError) {
-  alert(authError.message);
-  return;
-}
+      alert(authError.message);
+      return;
+    }
 
-const { error: profileError } = await supabase
-  .from('profiles')
-  .update({
-    acepta_marketing: aceptaMarketing
-  })
-  .eq('email', user.email);
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({
+        acepta_marketing: aceptaMarketing,
+      })
+      .eq('email', user.email);
 
-if (profileError) {
-  alert(profileError.message);
-  return;
-}
+    if (profileError) {
+      alert(profileError.message);
+      return;
+    }
 
-  if (authError) {
-    alert(authError.message);
-    return;
-  }
+    setEditandoPerfil(false);
+    window.location.reload();
+  };
 
   const enviarTareaAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
