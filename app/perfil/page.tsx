@@ -717,7 +717,7 @@ if (
     </span>
   </button>
 )}
-)}
+
 
                 <button onClick={() => { setEditandoPerfil(true); setMenuAbierto(false); }} className="w-full text-left p-3 text-[9px] font-black uppercase text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-xl transition-all">
                   Ajustes Tácticos
