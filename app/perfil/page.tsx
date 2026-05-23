@@ -679,53 +679,42 @@ if (
                 </button>
                 {esAdminReal && (
     <button
-    onClick={() => router.push('/admin/crear-blog')}
-    className="w-full text-left p-3 text-[9px] font-black uppercase text-orange-500 hover:text-white hover:bg-orange-600 rounded-xl transition-all flex justify-between items-center group"
-  >
-    Crear Blog
-    <span className="opacity-70">✍️</span>
-  </button>
-              <button
-  onClick={() => router.push('/rendimiento')}
-  className="
-  w-full
-  text-left
-  p-3
-  text-[9px]
-  font-black
-  uppercase
-  text-zinc-400
-  hover:text-white
-  hover:bg-zinc-900
-  rounded-xl
-  transition-all
-  flex
-  justify-between
-  items-center
-  group"
+  onClick={abrirMisDietas}
+  className="w-full text-left p-3 text-[9px] font-black uppercase text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-xl transition-all flex justify-between items-center group"
 >
+  Mis Dietas
+  <span
+    style={{ color: colorAcento }}
+    className="opacity-0 group-hover:opacity-100"
+  >
+    →
+  </span>
+</button>
 
+<button
+  onClick={() => {
+    setMenuAbierto(false);
+    router.push('/rendimiento');
+  }}
+  className="w-full text-left p-3 text-[9px] font-black uppercase text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-xl transition-all flex justify-between items-center group"
+>
   Rendimiento
-
   <span
     style={{ color: colorAcento }}
     className="opacity-0 group-hover:opacity-100"
   >
     📊
   </span>
-
 </button>
-)}
-                {esAdminReal && (
-  <a
-    href="/api/exportar-bd"
-    target="_blank"
-    rel="noopener noreferrer"
+
+{esAdminReal && (
+  <button
+    onClick={() => router.push('/admin/crear-blog')}
     className="w-full text-left p-3 text-[9px] font-black uppercase text-orange-500 hover:text-white hover:bg-orange-600 rounded-xl transition-all flex justify-between items-center group"
   >
-    Exportar Base Datos
-    <span className="opacity-70">📁</span>
-  </a>
+    Crear Blog
+    <span className="opacity-70">✍️</span>
+  </button>
 )}
 
                 <button onClick={() => { setEditandoPerfil(true); setMenuAbierto(false); }} className="w-full text-left p-3 text-[9px] font-black uppercase text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-xl transition-all">
