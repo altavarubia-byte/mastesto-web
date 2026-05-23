@@ -670,58 +670,22 @@ if (
                   Hazte Socio <span className="text-white">⚡</span>
                 </button>
 
-                <button onClick={() => router.push('/ranking')} className="w-full text-left p-3 text-[9px] font-black uppercase text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-xl transition-all flex justify-between items-center group">
-                  Leaderboard <span style={{ color: colorAcento }} className="opacity-0 group-hover:opacity-100">→</span>
-                </button>
+              <button
+  onClick={() => router.push('/ranking')}
+  className="w-full text-left p-3 text-[9px] font-black uppercase text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-xl transition-all flex justify-between items-center group"
+>
+  Leaderboard
+  <span style={{ color: colorAcento }} className="opacity-0 group-hover:opacity-100">
+    →
+  </span>
+</button>
 
-               {esAdminReal && (
-  <>
-    <button
-      onClick={() => router.push('/admin/crear-blog')}
-      className="w-full text-left p-3 text-[9px] font-black uppercase text-orange-500 hover:text-white hover:bg-orange-600 rounded-xl transition-all flex justify-between items-center group"
-    >
-      Crear Blog
-      <span className="opacity-70">
-        ✍️
-      </span>
-    </button>
-
-    {esAdminReal && (
-  <>
-    <button
-      onClick={() => router.push('/admin/crear-blog')}
-      className="w-full text-left p-3 text-[9px] font-black uppercase text-orange-500 hover:text-white hover:bg-orange-600 rounded-xl transition-all flex justify-between items-center group"
-    >
-      Crear Blog
-      <span className="opacity-70">
-        ✍️
-      </span>
-    </button>
-
-    <button
-      onClick={() => {
-        setMenuAbierto(false);
-        router.push('/admin/exportar');
-      }}
-      className="w-full text-left p-3 text-[9px] font-black uppercase text-cyan-500 hover:text-white hover:bg-cyan-700 rounded-xl transition-all flex justify-between items-center group"
-    >
-      Exportar BD
-
-      <span className="opacity-70">
-        📁
-      </span>
-    </button>
-  </>
-)}
-               <button
+<button
   onClick={abrirMisDietas}
   className="w-full text-left p-3 text-[9px] font-black uppercase text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-xl transition-all flex justify-between items-center group"
 >
   Mis Dietas
-  <span
-    style={{ color: colorAcento }}
-    className="opacity-0 group-hover:opacity-100"
-  >
+  <span style={{ color: colorAcento }} className="opacity-0 group-hover:opacity-100">
     →
   </span>
 </button>
@@ -734,14 +698,12 @@ if (
   className="w-full text-left p-3 text-[9px] font-black uppercase text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-xl transition-all flex justify-between items-center group"
 >
   Rendimiento
-  <span
-    style={{ color: colorAcento }}
-    className="opacity-0 group-hover:opacity-100"
-  >
+  <span style={{ color: colorAcento }} className="opacity-0 group-hover:opacity-100">
     📊
   </span>
 </button>
-  <button
+
+<button
   onClick={() => {
     setMenuAbierto(false);
     router.push('/teleco');
@@ -749,14 +711,11 @@ if (
   className="w-full text-left p-3 text-[9px] font-black uppercase text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-xl transition-all flex justify-between items-center group"
 >
   Simulación WiFi
-
-  <span
-    style={{ color: colorAcento }}
-    className="opacity-0 group-hover:opacity-100"
-  >
+  <span style={{ color: colorAcento }} className="opacity-0 group-hover:opacity-100">
     📡
   </span>
 </button>
+
 <button
   onClick={() => {
     setMenuAbierto(false);
@@ -765,23 +724,34 @@ if (
   className="w-full text-left p-3 text-[9px] font-black uppercase text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-xl transition-all flex justify-between items-center group"
 >
   Arquitectura
-  <span
-    style={{ color: colorAcento }}
-    className="opacity-0 group-hover:opacity-100"
-  >
+  <span style={{ color: colorAcento }} className="opacity-0 group-hover:opacity-100">
     🏗️
   </span>
 </button>
+
 {esAdminReal && (
-  <button
-    onClick={() => router.push('/admin/crear-blog')}
-    className="w-full text-left p-3 text-[9px] font-black uppercase text-orange-500 hover:text-white hover:bg-orange-600 rounded-xl transition-all flex justify-between items-center group"
-  >
-    Crear Blog
-    <span className="opacity-70">
-      ✍️
-    </span>
-  </button>
+  <>
+    <button
+      onClick={() => {
+        setMenuAbierto(false);
+        router.push('/admin/crear-blog');
+      }}
+      className="w-full text-left p-3 text-[9px] font-black uppercase text-orange-500 hover:text-white hover:bg-orange-600 rounded-xl transition-all flex justify-between items-center group"
+    >
+      Crear Blog
+      <span className="opacity-70">✍️</span>
+    </button>
+
+    <a
+      href="/api/exportar-bd"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="w-full text-left p-3 text-[9px] font-black uppercase text-cyan-500 hover:text-white hover:bg-cyan-700 rounded-xl transition-all flex justify-between items-center group"
+    >
+      Exportar BD
+      <span className="opacity-70">📁</span>
+    </a>
+  </>
 )}
 
 
