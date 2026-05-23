@@ -8,7 +8,7 @@ type Punto = {
   potencia: number;
 };
 
-const paso = 0.5;
+const paso = 0.25;
 
 function potencia(
   routerX: number,
@@ -117,14 +117,7 @@ export default function TelecoPage() {
           puntos.reduce((acc, p) => {
             return (
               acc +
-              potencia(
-                rx,
-                ry,
-                p.x,
-                p.y,
-                form.frecuencia,
-                form.material
-              )
+              potencia(rx, ry, p.x, p.y, form.frecuencia, form.material)
             );
           }, 0) / puntos.length;
 
@@ -143,6 +136,20 @@ export default function TelecoPage() {
 
   const mediaActual =
     puntos.reduce((acc, p) => acc + p.potencia, 0) / puntos.length;
+
+  const moverRouterDesdeEvento = (
+    e: React.PointerEvent<HTMLDivElement>
+  ) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+
+    const nuevoX = ((e.clientX - rect.left) / rect.width) * ancho;
+    const nuevoY = ((e.clientY - rect.top) / rect.height) * alto;
+
+    setRouter({
+      x: Math.min(ancho, Math.max(0, Number(nuevoX.toFixed(2)))),
+      y: Math.min(alto, Math.max(0, Number(nuevoY.toFixed(2)))),
+    });
+  };
 
   if (!configurado) {
     return (
@@ -164,10 +171,7 @@ export default function TelecoPage() {
                 min="2"
                 value={form.ancho}
                 onChange={(e) =>
-                  setForm({
-                    ...form,
-                    ancho: Number(e.target.value),
-                  })
+                  setForm({ ...form, ancho: Number(e.target.value) })
                 }
                 className="w-full bg-black border border-zinc-800 rounded-xl p-4 text-white"
               />
@@ -180,10 +184,7 @@ export default function TelecoPage() {
                 min="2"
                 value={form.alto}
                 onChange={(e) =>
-                  setForm({
-                    ...form,
-                    alto: Number(e.target.value),
-                  })
+                  setForm({ ...form, alto: Number(e.target.value) })
                 }
                 className="w-full bg-black border border-zinc-800 rounded-xl p-4 text-white"
               />
@@ -197,10 +198,7 @@ export default function TelecoPage() {
                 step="0.1"
                 value={form.altura}
                 onChange={(e) =>
-                  setForm({
-                    ...form,
-                    altura: Number(e.target.value),
-                  })
+                  setForm({ ...form, altura: Number(e.target.value) })
                 }
                 className="w-full bg-black border border-zinc-800 rounded-xl p-4 text-white"
               />
@@ -214,10 +212,7 @@ export default function TelecoPage() {
                 max="12"
                 value={form.habitaciones}
                 onChange={(e) =>
-                  setForm({
-                    ...form,
-                    habitaciones: Number(e.target.value),
-                  })
+                  setForm({ ...form, habitaciones: Number(e.target.value) })
                 }
                 className="w-full bg-black border border-zinc-800 rounded-xl p-4 text-white"
               />
@@ -228,10 +223,7 @@ export default function TelecoPage() {
               <select
                 value={form.frecuencia}
                 onChange={(e) =>
-                  setForm({
-                    ...form,
-                    frecuencia: e.target.value,
-                  })
+                  setForm({ ...form, frecuencia: e.target.value })
                 }
                 className="w-full bg-black border border-zinc-800 rounded-xl p-4 text-white"
               >
@@ -245,10 +237,7 @@ export default function TelecoPage() {
               <select
                 value={form.material}
                 onChange={(e) =>
-                  setForm({
-                    ...form,
-                    material: e.target.value,
-                  })
+                  setForm({ ...form, material: e.target.value })
                 }
                 className="w-full bg-black border border-zinc-800 rounded-xl p-4 text-white"
               >
@@ -288,18 +277,28 @@ export default function TelecoPage() {
       </h1>
 
       <p className="text-zinc-400 max-w-3xl mb-10">
-        Mapa de calor dinámico con router desplazable, estimación de cobertura y
-        cálculo automático del punto óptimo. La validación avanzada se realizará
-        posteriormente con Sionna RT y trazado de rayos.
+        Mapa de calor dinámico con router desplazable, estimación de cobertura,
+        trazado visual de rayos y cálculo automático del punto óptimo. La
+        validación avanzada se realizará posteriormente con Sionna RT en 3D.
       </p>
 
       <div className="grid lg:grid-cols-3 gap-8">
         <section className="lg:col-span-2 border border-zinc-800 rounded-[2rem] p-6 bg-zinc-950">
-          <div className="relative w-full aspect-[10/8] bg-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden">
+          <div
+            className="relative w-full aspect-[10/8] bg-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden touch-none select-none"
+            onPointerDown={(e) => {
+              moverRouterDesdeEvento(e);
+              e.currentTarget.setPointerCapture(e.pointerId);
+            }}
+            onPointerMove={(e) => {
+              if (e.buttons !== 1) return;
+              moverRouterDesdeEvento(e);
+            }}
+          >
             {habitaciones.map((h) => (
               <div
                 key={h.nombre}
-                className="absolute border border-zinc-600/70 flex items-center justify-center text-[9px] uppercase font-black text-zinc-500"
+                className="absolute border border-zinc-600/70 flex items-center justify-center text-[9px] uppercase font-black text-zinc-500 pointer-events-none"
                 style={{
                   left: `${(h.x / ancho) * 100}%`,
                   top: `${(h.y / alto) * 100}%`,
@@ -314,14 +313,14 @@ export default function TelecoPage() {
             {puntos.map((p) => (
               <div
                 key={`${p.x}-${p.y}`}
-                className={`absolute rounded-full blur-sm ${colorPorPotencia(
+                className={`absolute rounded-full blur-sm pointer-events-none ${colorPorPotencia(
                   p.potencia
                 )}`}
                 style={{
                   left: `${(p.x / ancho) * 100}%`,
                   top: `${(p.y / alto) * 100}%`,
-                  width: "4%",
-                  height: "5%",
+                  width: "2.8%",
+                  height: "3.5%",
                   transform: "translate(-50%, -50%)",
                 }}
               />
@@ -358,34 +357,18 @@ export default function TelecoPage() {
             </svg>
 
             <div
-              className="absolute w-7 h-7 rounded-full bg-white text-black flex items-center justify-center text-xs font-black cursor-grab z-20 shadow-2xl"
+              className="absolute w-8 h-8 rounded-full bg-white text-black flex items-center justify-center text-xs font-black z-20 shadow-2xl pointer-events-none"
               style={{
                 left: `${(router.x / ancho) * 100}%`,
                 top: `${(router.y / alto) * 100}%`,
                 transform: "translate(-50%, -50%)",
-              }}
-              draggable
-              onDragEnd={(e) => {
-                const rect =
-                  e.currentTarget.parentElement!.getBoundingClientRect();
-
-                const nuevoX =
-                  ((e.clientX - rect.left) / rect.width) * ancho;
-
-                const nuevoY =
-                  ((e.clientY - rect.top) / rect.height) * alto;
-
-                setRouter({
-                  x: Math.min(ancho, Math.max(0, Number(nuevoX.toFixed(2)))),
-                  y: Math.min(alto, Math.max(0, Number(nuevoY.toFixed(2)))),
-                });
               }}
             >
               📡
             </div>
 
             <div
-              className="absolute w-6 h-6 rounded-full border-2 border-white z-30 animate-pulse"
+              className="absolute w-6 h-6 rounded-full border-2 border-white z-30 animate-pulse pointer-events-none"
               style={{
                 left: `${(puntoOptimo.x / ancho) * 100}%`,
                 top: `${(puntoOptimo.y / alto) * 100}%`,
@@ -472,12 +455,12 @@ export default function TelecoPage() {
 
           <div className="border border-zinc-800 rounded-2xl p-6 bg-zinc-950">
             <h3 className="text-xl font-black uppercase italic mb-4">
-              Próximo módulo Sionna RT
+              Próximo módulo Sionna RT 3D
             </h3>
 
             <ul className="space-y-3 text-sm text-zinc-400">
               <li>✓ Exportar plano a JSON</li>
-              <li>✓ Generar escena tridimensional</li>
+              <li>✓ Generar escena tridimensional del piso</li>
               <li>✓ Ejecutar ray tracing con Sionna RT</li>
               <li>✓ Mostrar rayos reales sobre el plano</li>
               <li>✓ Comparar modelo rápido vs simulación avanzada</li>
