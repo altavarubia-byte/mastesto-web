@@ -685,6 +685,36 @@ if (
     Crear Blog
     <span className="opacity-70">✍️</span>
   </button>
+              <button
+  onClick={() => router.push('/rendimiento')}
+  className="
+  w-full
+  text-left
+  p-3
+  text-[9px]
+  font-black
+  uppercase
+  text-zinc-400
+  hover:text-white
+  hover:bg-zinc-900
+  rounded-xl
+  transition-all
+  flex
+  justify-between
+  items-center
+  group"
+>
+
+  Rendimiento
+
+  <span
+    style={{ color: colorAcento }}
+    className="opacity-0 group-hover:opacity-100"
+  >
+    📊
+  </span>
+
+</button>
 )}
                 {esAdminReal && (
   <a
