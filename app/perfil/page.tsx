@@ -705,6 +705,22 @@ if (
     📊
   </span>
 </button>
+  <button
+  onClick={() => {
+    setMenuAbierto(false);
+    router.push('/teleco');
+  }}
+  className="w-full text-left p-3 text-[9px] font-black uppercase text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-xl transition-all flex justify-between items-center group"
+>
+  Simulación WiFi
+
+  <span
+    style={{ color: colorAcento }}
+    className="opacity-0 group-hover:opacity-100"
+  >
+    📡
+  </span>
+</button>
 <button
   onClick={() => {
     setMenuAbierto(false);
