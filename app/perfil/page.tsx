@@ -695,6 +695,7 @@ if (
   onClick={() => {
     setMenuAbierto(false);
     router.push('/rendimiento');
+    </
   }}
   className="w-full text-left p-3 text-[9px] font-black uppercase text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-xl transition-all flex justify-between items-center group"
 >
