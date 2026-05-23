@@ -372,6 +372,22 @@ if (
       fecha_dejo_fumar: new Date(nuevaFecha).toISOString(),
     },
   });
+    if (authError) {
+  alert(authError.message);
+  return;
+}
+
+const { error: profileError } = await supabase
+  .from('profiles')
+  .update({
+    acepta_marketing: aceptaMarketing
+  })
+  .eq('email', user.email);
+
+if (profileError) {
+  alert(profileError.message);
+  return;
+}
 
   if (authError) {
     alert(authError.message);
