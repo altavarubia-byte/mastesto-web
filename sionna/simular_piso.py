@@ -4,7 +4,7 @@ from pathlib import Path
 
 BASE = Path(__file__).resolve().parent
 CONFIG = BASE / "config" / "piso.json"
-RESULTADOS = BASE.parent / "public" / "resultados"
+RESULTADOS = (BASE.parent / "public" / "resultados").resolve()
 
 RESULTADOS.mkdir(parents=True, exist_ok=True)
 
