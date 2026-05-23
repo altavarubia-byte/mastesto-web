@@ -674,19 +674,45 @@ if (
                   Leaderboard <span style={{ color: colorAcento }} className="opacity-0 group-hover:opacity-100">→</span>
                 </button>
 
-               <button
-  onClick={() => router.push('/admin/exportar')}
-  className="w-full text-left p-3 text-[9px] font-black uppercase text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-xl transition-all flex justify-between items-center group"
->
-  Exportar BD
+               {esAdminReal && (
+  <>
+    <button
+      onClick={() => router.push('/admin/crear-blog')}
+      className="w-full text-left p-3 text-[9px] font-black uppercase text-orange-500 hover:text-white hover:bg-orange-600 rounded-xl transition-all flex justify-between items-center group"
+    >
+      Crear Blog
+      <span className="opacity-70">
+        ✍️
+      </span>
+    </button>
 
-  <span
-    style={{ color: colorAcento }}
-    className="opacity-0 group-hover:opacity-100"
-  >
-    📁
-  </span>
-</button>
+    {esAdminReal && (
+  <>
+    <button
+      onClick={() => router.push('/admin/crear-blog')}
+      className="w-full text-left p-3 text-[9px] font-black uppercase text-orange-500 hover:text-white hover:bg-orange-600 rounded-xl transition-all flex justify-between items-center group"
+    >
+      Crear Blog
+      <span className="opacity-70">
+        ✍️
+      </span>
+    </button>
+
+    <button
+      onClick={() => {
+        setMenuAbierto(false);
+        router.push('/admin/exportar');
+      }}
+      className="w-full text-left p-3 text-[9px] font-black uppercase text-cyan-500 hover:text-white hover:bg-cyan-700 rounded-xl transition-all flex justify-between items-center group"
+    >
+      Exportar BD
+
+      <span className="opacity-70">
+        📁
+      </span>
+    </button>
+  </>
+)}
                <button
   onClick={abrirMisDietas}
   className="w-full text-left p-3 text-[9px] font-black uppercase text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-xl transition-all flex justify-between items-center group"
