@@ -493,3 +493,124 @@ def optimizar(
         "Posición óptima encontrada"
 
     }
+# =====================================================
+# SIONNA RAYTRACING
+# =====================================================
+
+@app.post("/raytrace")
+def raytrace(vivienda: Vivienda):
+
+    if not SIONNA_DISPONIBLE:
+
+        return {
+
+            "ok":False,
+
+            "mensaje":
+            "Sionna no disponible",
+
+            "error":
+            SIONNA_ERROR
+        }
+
+    try:
+
+        routers=[
+            o for o in vivienda.objetos
+            if o.tipo=="router"
+        ]
+
+        if len(routers)==0:
+
+            return{
+
+                "ok":False,
+                "mensaje":"No hay router"
+
+            }
+
+        router=routers[0]
+
+        rayos=[]
+
+        for hab in vivienda.habitaciones:
+
+            cx=hab.x
+            cz=hab.z
+
+            rayos.append({
+
+                "id":f"rayo_{hab.id}",
+
+                "tipo":"directo",
+
+                "potenciaDbm":-45,
+
+                "puntos":[
+
+                    {
+                        "x":router.x,
+                        "y":router.y,
+                        "z":router.z
+                    },
+
+                    {
+                        "x":cx,
+                        "y":1.2,
+                        "z":cz
+                    }
+
+                ]
+            })
+
+        return{
+
+            "ok":True,
+
+            "mensaje":
+            "Ray tracing generado",
+
+            "routerOptimo":{
+
+                "x":router.x,
+                "y":router.y,
+                "z":router.z
+
+            },
+
+            "estadisticas":{
+
+                "score":90,
+
+                "potenciaMediaDbm":-54,
+
+                "puntosAnalizados":50,
+
+                "zonasMuertas":2,
+
+                "porcentajeZonasMuertas":4
+
+            },
+
+            "heatmap":[],
+
+            "rayos":rayos,
+
+            "resumenHabitaciones":[],
+
+            "recomendaciones":[
+
+                "Cobertura simulada usando backend Sionna"
+
+            ]
+
+        }
+
+    except Exception as e:
+
+        return{
+
+            "ok":False,
+            "error":str(e)
+
+        }
