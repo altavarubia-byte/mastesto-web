@@ -1321,6 +1321,7 @@ function ObjetoMovible({
         }}
       >
        {obj.tipo === "router" || obj.tipo === "receptor" ? (
+ {obj.tipo === "router" || obj.tipo === "receptor" ? (
   <ModelObjeto tipo={obj.tipo} />
 ) : (
   <>
@@ -1332,15 +1333,6 @@ function ObjetoMovible({
     />
   </>
 )}
-          <>
-            <boxGeometry />
-            <meshStandardMaterial
-              color={obj.color}
-              emissive="#000000"
-              emissiveIntensity={0}
-            />
-          </>
-        )}
       </mesh>
 
       {(obj.tipo === "router" || obj.tipo === "receptor") && (
