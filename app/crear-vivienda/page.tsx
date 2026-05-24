@@ -6,6 +6,7 @@ import { useRef, useState } from "react";
 import * as THREE from "three";
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
+const SIONNA_API_URL = (process.env.NEXT_PUBLIC_SIONNA_API_URL || "").replace(/\/$/, "");
 
 type Habitacion = {
   id: string;
@@ -310,12 +311,10 @@ export default function CrearViviendaPage() {
 
       const datos = crearDatosVivienda();
 
-    if (!API_URL) {
-  alert("Falta configurar NEXT_PUBLIC_API_URL en Vercel.");
-  return;
-}
-
-const url = `${API_URL}/raytrace`;
+    const url =
+  modoCalculo === "sionna"
+    ? `${SIONNA_API_URL}/raytrace`
+    : `${API_URL}/calcular`;
 
 const res = await fetch(url,{
  method:"POST",
