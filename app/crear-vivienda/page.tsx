@@ -1320,19 +1320,18 @@ function ObjetoMovible({
           }
         }}
       >
-        {[
-          "router",
-          "receptor",
-          "sofa",
-          "mesa",
-          "silla",
-          "tv",
-          "cama",
-          "armario",
-          "ventana",
-        ].includes(obj.tipo) ? (
-          <ModelObjeto tipo={obj.tipo} />
-        ) : (
+       {obj.tipo === "router" || obj.tipo === "receptor" ? (
+  <ModelObjeto tipo={obj.tipo} />
+) : (
+  <>
+    <boxGeometry />
+    <meshStandardMaterial
+      color={obj.color}
+      emissive="#000000"
+      emissiveIntensity={0}
+    />
+  </>
+)}
           <>
             <boxGeometry />
             <meshStandardMaterial
