@@ -313,7 +313,7 @@ export default function CrearViviendaPage() {
      const url =
  modoCalculo==="sionna"
  ? `${API_URL}/raytrace`
- : `${API_URL}/calcular`;
+: `${API_URL}/raytrace`;
 
 const res = await fetch(url,{
  method:"POST",
