@@ -567,6 +567,18 @@ def raytrace(vivienda: Vivienda):
 
     estado_sionna = intentar_sionna_real()
 
+    xml_generado = None
+sionna_xml_cargado = False
+sionna_xml_error = None
+
+if SIONNA_DISPONIBLE:
+    try:
+        xml_generado = crear_escena_sionna_desde_vivienda(vivienda)
+        scene = load_scene(xml_generado)
+        sionna_xml_cargado = True
+    except Exception as e:
+        sionna_xml_error = str(e)
+
     heatmap = generar_heatmap(vivienda, router)
     rayos = generar_rayos(vivienda, router)
     est = estadisticas_heatmap(heatmap)
