@@ -489,6 +489,70 @@ def intentar_sionna_real():
         }
 
 
+
+def crear_escena_sionna_desde_vivienda(vivienda: Vivienda):
+    temp_dir = Path("viviendas_temp")
+    temp_dir.mkdir(exist_ok=True)
+
+    xml_path = temp_dir / f"vivienda_{int(time.time())}.xml"
+
+    paredes = []
+
+    for h in vivienda.habitaciones:
+        grosor = 0.12
+
+        paredes.append((h.x, h.alto / 2, h.z - h.largo / 2, h.ancho, h.alto, grosor))
+        paredes.append((h.x, h.alto / 2, h.z + h.largo / 2, h.ancho, h.alto, grosor))
+        paredes.append((h.x - h.ancho / 2, h.alto / 2, h.z, grosor, h.alto, h.largo))
+        paredes.append((h.x + h.ancho / 2, h.alto / 2, h.z, grosor, h.alto, h.largo))
+
+    shapes = []
+
+    for i, (x, y, z, sx, sy, sz) in enumerate(paredes):
+        shapes.append(f"""
+    <shape type="cube" id="pared_{i}">
+        <transform name="to_world">
+            <scale x="{sx}" y="{sy}" z="{sz}"/>
+            <translate x="{x}" y="{y}" z="{z}"/>
+        </transform>
+        <ref id="mat_pared" name="bsdf"/>
+    </shape>
+""")
+
+    for obj in vivienda.objetos:
+        if obj.tipo == "router":
+            continue
+
+        shapes.append(f"""
+    <shape type="cube" id="{obj.id}">
+        <transform name="to_world">
+            <scale x="{obj.sx}" y="{obj.sy}" z="{obj.sz}"/>
+            <translate x="{obj.x}" y="{obj.y}" z="{obj.z}"/>
+        </transform>
+        <ref id="mat_objeto" name="bsdf"/>
+    </shape>
+""")
+
+    xml = f"""<?xml version="1.0"?>
+<scene version="3.0.0">
+    <default name="spp" value="16"/>
+
+    <bsdf type="diffuse" id="mat_pared">
+        <rgb name="reflectance" value="0.65,0.65,0.65"/>
+    </bsdf>
+
+    <bsdf type="diffuse" id="mat_objeto">
+        <rgb name="reflectance" value="0.35,0.35,0.35"/>
+    </bsdf>
+
+    {"".join(shapes)}
+</scene>
+"""
+
+    xml_path.write_text(xml, encoding="utf-8")
+
+    return str(xml_path)
+
 @app.post("/raytrace")
 def raytrace(vivienda: Vivienda):
     routers = [o for o in vivienda.objetos if o.tipo == "router"]
