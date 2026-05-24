@@ -13,20 +13,17 @@ import time
 # =========================================================
 
 
-SIONNA_DISPONIBLE=False
-SIONNA_ERROR=None
-
 try:
-    import tensorflow as tf
-    import sionna
-    from sionna.rt import load_scene, PathSolver, Transmitter, Receiver, PlanarArray
-
-    SIONNA_DISPONIBLE=True
-
+    if os.environ.get("USAR_SIONNA","false").lower()=="true":
+        import tensorflow as tf
+        import sionna
+        from sionna.rt import load_scene, PathSolver, Transmitter, Receiver, PlanarArray
+        SIONNA_DISPONIBLE=True
+    else:
+        SIONNA_DISPONIBLE=False
+        SIONNA_ERROR="Sionna desactivado"
 except Exception as e:
     SIONNA_ERROR=str(e)
-    print(e)
-
 
 # =========================================================
 # APP
