@@ -1,0 +1,32 @@
+============================================
+REPORTE DE VIVIENDA 3D - MASTESTO / TFG
+============================================
+
+Versión: mastesto-vivienda-3d-v3
+Unidades: metros
+Fecha: 2026-05-23T19:32:38.954Z
+
+Número de habitaciones: 1
+Número de objetos: 1
+
+--------------- HABITACIONES ---------------
+
+ID: habitacion-1
+Nombre: Salón
+Posición Web X/Z: (0, 0) m
+Ancho: 8 m
+Largo: 6 m
+Alto: 2.6 m
+
+------------------ OBJETOS -----------------
+
+ID: router-1
+Tipo: router
+Posición Web X/Y/Z: (0, 1.2, 0) m
+Escala Web X/Y/Z: (0.35, 0.35, 0.35) m
+Color: #f97316
+
+============================================
+Este archivo sirve como documentación inicial
+para justificar el modelo geométrico del TFG.
+============================================

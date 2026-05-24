@@ -1,0 +1,5 @@
+services:
+  - type: web
+    name: mastesto-api
+    env: docker
+    dockerfilePath: ./Dockerfile
