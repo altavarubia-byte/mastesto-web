@@ -1,5 +1,5 @@
 "use client";
-
+import ModelObjeto from "@/components/ModelObjeto";
 import { Canvas, useThree } from "@react-three/fiber";
 import { OrbitControls, Grid, Line } from "@react-three/drei";
 import { useRef, useState } from "react";
@@ -732,13 +732,35 @@ export default function CrearViviendaPage() {
           </aside>
 
           <section className="lg:col-span-6 bg-white border border-zinc-300 rounded-[2.5rem] overflow-hidden min-h-[680px]">
-            <Canvas
-              camera={{ position: [10, 8, 10], fov: 48 }}
-              style={{ background: "#ffffff" }}
-            >
-              <ambientLight intensity={1.8} />
-              <directionalLight position={[10, 12, 10]} intensity={2.2} />
+           <Canvas
+shadows
+camera={{
+position:[10,8,10],
+fov:48
+}}
+style={{
+background:"#ffffff"
+}}
+>
 
+
+              <ambientLight intensity={0.45}/>
+
+<directionalLight
+position={[10,15,8]}
+intensity={2}
+castShadow
+/>
+
+<directionalLight
+position={[-8,8,-6]}
+intensity={1}
+/>
+
+<pointLight
+position={[0,3,0]}
+intensity={0.8}
+/>
               <Grid
                 args={[60, 60]}
                 cellColor="#d4d4d4"
@@ -1241,77 +1263,79 @@ function ObjetoMovible({
   return (
     <group>
       <mesh
-        position={[obj.x, obj.y, obj.z]}
-        scale={[obj.sx, obj.sy, obj.sz]}
-        onClick={(e) => {
-          e.stopPropagation();
-          onSeleccionar();
-        }}
-        onPointerDown={(e: any) => {
-          e.stopPropagation();
-          onSeleccionar();
+  castShadow
+  receiveShadow
+  position={[obj.x, obj.y, obj.z]}
+  scale={[obj.sx, obj.sy, obj.sz]}
+  onClick={(e) => {
+    e.stopPropagation();
+    onSeleccionar();
+  }}
+  onPointerDown={(e: any) => {
+    e.stopPropagation();
+    onSeleccionar();
 
-          if (
-            obj.tipo === "router" ||
-            obj.tipo === "receptor" ||
-            obj.tipo === "rx" ||
-            obj.tipo === "receiver"
-          ) {
-            setArrastrando(true);
-            gl.domElement.style.cursor = "grabbing";
+    if (
+      obj.tipo === "router" ||
+      obj.tipo === "receptor" ||
+      obj.tipo === "rx" ||
+      obj.tipo === "receiver"
+    ) {
+      setArrastrando(true);
+      gl.domElement.style.cursor = "grabbing";
 
-            if (e.target?.setPointerCapture) {
-              e.target.setPointerCapture(e.pointerId);
-            }
-          }
-        }}
-        onPointerMove={(e: any) => {
-          e.stopPropagation();
-          moverEnSuelo(e);
-        }}
-        onPointerUp={(e: any) => {
-          e.stopPropagation();
-          setArrastrando(false);
-          gl.domElement.style.cursor = "default";
+      if (e.target?.setPointerCapture) {
+        e.target.setPointerCapture(e.pointerId);
+      }
+    }
+  }}
+  onPointerMove={(e: any) => {
+    e.stopPropagation();
+    moverEnSuelo(e);
+  }}
+  onPointerUp={(e: any) => {
+    e.stopPropagation();
+    setArrastrando(false);
+    gl.domElement.style.cursor = "default";
 
-          if (e.target?.releasePointerCapture) {
-            e.target.releasePointerCapture(e.pointerId);
-          }
-        }}
-        onPointerLeave={() => {
-          if (!arrastrando) {
-            gl.domElement.style.cursor = "default";
-          }
-        }}
-        onPointerOver={() => {
-          if (
-            obj.tipo === "router" ||
-            obj.tipo === "receptor" ||
-            obj.tipo === "rx" ||
-            obj.tipo === "receiver"
-          ) {
-            gl.domElement.style.cursor = "grab";
-          }
-        }}
-        onPointerOut={() => {
-          if (!arrastrando) {
-            gl.domElement.style.cursor = "default";
-          }
-        }}
-      >
-        <boxGeometry />
-        <meshStandardMaterial
-          color={obj.color}
-          emissive={
-            obj.tipo === "router"
-              ? "#7c2d12"
-              : obj.tipo === "receptor"
-                ? "#14532d"
-                : "#000000"
-          }
-          emissiveIntensity={obj.tipo === "router" || obj.tipo === "receptor" ? 0.45 : 0}
-        />
-      </mesh>
+    if (e.target?.releasePointerCapture) {
+      e.target.releasePointerCapture(e.pointerId);
+    }
+  }}
+  onPointerLeave={() => {
+    if (!arrastrando) {
+      gl.domElement.style.cursor = "default";
+    }
+  }}
+  onPointerOver={() => {
+    if (
+      obj.tipo === "router" ||
+      obj.tipo === "receptor" ||
+      obj.tipo === "rx" ||
+      obj.tipo === "receiver"
+    ) {
+      gl.domElement.style.cursor = "grab";
+    }
+  }}
+  onPointerOut={() => {
+    if (!arrastrando) {
+      gl.domElement.style.cursor = "default";
+    }
+  }}
+>
+  {obj.tipo === "router" || obj.tipo === "receptor" ? (
+    <ModelObjeto tipo={obj.tipo} />
+  ) : (
+    <>
+      <boxGeometry />
+      <meshStandardMaterial
+        color={obj.color}
+        emissive="#000000"
+        emissiveIntensity={0}
+      />
+    </>
+  )}
+</mesh>
 
       {(obj.tipo === "router" || obj.tipo === "receptor") && (
         <mesh
