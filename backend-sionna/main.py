@@ -11,22 +11,21 @@ import time
 # =========================================================
 # SIONNA
 # =========================================================
-SIONNA_DISPONIBLE = False
-SIONNA_ERROR = None
+
+
+SIONNA_DISPONIBLE=False
+SIONNA_ERROR=None
 
 try:
-    if os.environ.get("USAR_SIONNA", "false").lower() == "true":
-        import tensorflow as tf
-        import sionna
-        from sionna.rt import load_scene, PathSolver, Transmitter, Receiver, PlanarArray
+    import tensorflow as tf
+    import sionna
+    from sionna.rt import load_scene, PathSolver, Transmitter, Receiver, PlanarArray
 
-        SIONNA_DISPONIBLE = True
-    else:
-        SIONNA_DISPONIBLE = False
-        SIONNA_ERROR = "Sionna desactivado en Render para evitar segmentation fault."
+    SIONNA_DISPONIBLE=True
+
 except Exception as e:
-    SIONNA_ERROR = str(e)
-    print("Sionna no disponible:", e)
+    SIONNA_ERROR=str(e)
+    print(e)
 
 
 # =========================================================
