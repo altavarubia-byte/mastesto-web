@@ -5,7 +5,7 @@ import { OrbitControls, Grid, Line } from "@react-three/drei";
 import { useRef, useState } from "react";
 import * as THREE from "three";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL!;
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
 
 type Habitacion = {
   id: string;
@@ -310,10 +310,12 @@ export default function CrearViviendaPage() {
 
       const datos = crearDatosVivienda();
 
-     const url =
-  modoCalculo === "sionna"
-    ? `${API_URL}/raytrace`
-    : `${API_URL}/calcular`;
+    if (!API_URL) {
+  alert("Falta configurar NEXT_PUBLIC_API_URL en Vercel.");
+  return;
+}
+
+const url = `${API_URL}/raytrace`;
 
 const res = await fetch(url,{
  method:"POST",
