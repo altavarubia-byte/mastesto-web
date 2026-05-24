@@ -6,7 +6,12 @@ import math
 import os
 import random
 import time
+import json
+import uuid
+import subprocess
+
 from pathlib import Path
+from fastapi.responses import FileResponse
 
 SIONNA_DISPONIBLE = False
 SIONNA_ERROR = None
@@ -490,7 +495,110 @@ def intentar_sionna_real():
             "motivo": str(e),
         }
 
+# =====================================================
+# RENDER PREMIUM BLENDER
+# =====================================================
 
+@app.post("/generar-render")
+def generar_render(vivienda: Vivienda):
+
+    uid = str(uuid.uuid4())
+
+    carpeta = f"/tmp/{uid}"
+
+    os.makedirs(
+        carpeta,
+        exist_ok=True
+    )
+
+    json_path = f"{carpeta}/vivienda-mastesto.json"
+
+    with open(
+        json_path,
+        "w",
+        encoding="utf-8"
+    ) as f:
+
+        json.dump(
+            vivienda.model_dump(),
+            f,
+            ensure_ascii=False,
+            indent=2
+        )
+
+    try:
+
+        script_blender = "scripts/crear_blend_mastesto.py"
+
+        resultado = subprocess.run(
+
+            [
+                "blender",
+                "--background",
+
+                "--python",
+                script_blender,
+
+                "--",
+                json_path
+            ],
+
+            capture_output=True,
+            text=True
+        )
+
+        print("=========== STDOUT ===========")
+
+        print(
+            resultado.stdout
+        )
+
+        print("=========== STDERR ===========")
+
+        print(
+            resultado.stderr
+        )
+
+        render_path = (
+            f"{carpeta}/render.png"
+        )
+
+        if not os.path.exists(
+            render_path
+        ):
+
+            return {
+
+                "ok":False,
+
+                "mensaje":
+                "No se ha generado render",
+
+                "stdout":
+                resultado.stdout,
+
+                "stderr":
+                resultado.stderr
+            }
+
+        return FileResponse(
+
+            render_path,
+
+            media_type="image/png",
+
+            filename="render.png"
+        )
+
+    except Exception as e:
+
+        return {
+
+            "ok":False,
+
+            "mensaje":
+            str(e)
+        }
 @app.post("/raytrace")
 def raytrace(vivienda: Vivienda):
     routers = [o for o in vivienda.objetos if o.tipo == "router"]
