@@ -485,5 +485,17 @@ configurar_camara_y_luces()
 bpy.ops.wm.save_as_mainfile(filepath=str(BLEND_OUT))
 bpy.ops.export_scene.gltf(filepath=str(GLB_OUT), export_format="GLB")
 
+# render automático
+bpy.context.scene.render.filepath = str(BASE_DIR / "render.png")
+
+bpy.context.scene.render.engine = "CYCLES"
+
+bpy.context.scene.cycles.samples = 128
+
+bpy.context.scene.render.resolution_x = 1920
+bpy.context.scene.render.resolution_y = 1080
+
+bpy.ops.render.render(write_still=True)
+
 print(f"BLEND generado: {BLEND_OUT}")
 print(f"GLB generado: {GLB_OUT}")
