@@ -199,6 +199,8 @@ export default function CrearViviendaPage() {
     useState<ResultadoCobertura | null>(null);
 
   const [calculandoCobertura, setCalculandoCobertura] = useState(false);
+  const [generandoRender, setGenerandoRender] = useState(false);
+  const [imagenRender, setImagenRender] = useState("");
   const [mostrarMesh, setMostrarMesh] = useState(true);
   const [mostrarHeatmap, setMostrarHeatmap] = useState(true);
   const [mostrarRayos, setMostrarRayos] = useState(true);
@@ -424,6 +426,40 @@ export default function CrearViviendaPage() {
       setCalculandoCobertura(false);
     }
   };
+
+  const generarRenderPremium = async () => {
+  try {
+    setGenerandoRender(true);
+    setImagenRender("");
+
+    const datos = crearDatosVivienda();
+
+    const res = await fetch(`${SIONNA_API_URL}/generar-render`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(datos),
+    });
+
+    if (!res.ok) {
+      const error = await res.text();
+      console.error(error);
+      alert("No se pudo generar el render premium.");
+      return;
+    }
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+
+    setImagenRender(url);
+  } catch (error) {
+    console.error(error);
+    alert("Error conectando con Blender render.");
+  } finally {
+    setGenerandoRender(false);
+  }
+};
 
   const aplicarRouterOptimo = () => {
     if (!resultadoCobertura) return;
@@ -703,6 +739,14 @@ export default function CrearViviendaPage() {
               {calculandoCobertura ? "Calculando..." : "Calcular cobertura"}
             </button>
 
+            <button
+  onClick={generarRenderPremium}
+  disabled={generandoRender}
+  className="mt-3 w-full py-4 rounded-xl bg-purple-600 text-white text-[10px] font-black uppercase hover:bg-purple-500 transition-all disabled:opacity-40"
+>
+  {generandoRender ? "Generando render..." : "✨ Generar vivienda premium"}
+</button>
+
             {resultadoCobertura && (
               <button
                 onClick={aplicarRouterOptimo}
@@ -820,6 +864,21 @@ export default function CrearViviendaPage() {
                 maxDistance={40}
               />
             </Canvas>
+            {imagenRender && (
+  <div className="absolute top-4 right-4 w-[420px] bg-black/95 border border-purple-900 rounded-2xl p-3 z-50">
+
+    <p className="text-[10px] uppercase text-purple-400 font-black mb-3">
+      ✨ Render premium Blender
+    </p>
+
+    <img
+      src={imagenRender}
+      alt="Render premium"
+      className="w-full rounded-xl border border-zinc-800"
+    />
+
+  </div>
+)}
           </section>
 
           <aside className="lg:col-span-3 bg-zinc-950 border border-zinc-900 rounded-[2rem] p-5 h-fit">
