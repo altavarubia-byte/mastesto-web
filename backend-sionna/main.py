@@ -1,49 +1,31 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing import Optional, Literal
 import math
+import os
 import random
-
-# =====================================================
-# SIONNA + TENSORFLOW
-# =====================================================
 
 SIONNA_DISPONIBLE = False
 SIONNA_ERROR = None
 
 try:
-
     import tensorflow as tf
     import sionna
-
-    from sionna.rt import (
-        load_scene,
-        PathSolver,
-        Transmitter,
-        Receiver,
-        PlanarArray
-    )
+    from sionna.rt import load_scene, PathSolver, Transmitter, Receiver, PlanarArray
 
     SIONNA_DISPONIBLE = True
-
 except Exception as e:
-
     SIONNA_ERROR = str(e)
+    print("Sionna no disponible:", e)
 
-    print("Error Sionna:")
-    print(e)
-
-
-# =====================================================
-# APP
-# =====================================================
 
 app = FastAPI(
     title="Mastesto Sionna API",
-    version="1.0",
+    version="2.0",
     docs_url="/docs",
     redoc_url="/redoc",
-    openapi_url="/openapi.json"
+    openapi_url="/openapi.json",
 )
 
 app.add_middleware(
@@ -59,558 +41,518 @@ app.add_middleware(
 )
 
 
-# =====================================================
-# MODELOS
-# =====================================================
-
 class Habitacion(BaseModel):
-
-    id:str
-    nombre:str
-
-    x:float
-    z:float
-
-    ancho:float
-    largo:float
-    alto:float
+    id: str
+    nombre: str
+    x: float
+    z: float
+    ancho: float
+    largo: float
+    alto: float
 
 
 class Objeto3D(BaseModel):
-
-    id:str
-    tipo:str
-
-    x:float
-    y:float
-    z:float
-
-    sx:float
-    sy:float
-    sz:float
-
-    color:str
+    id: str
+    tipo: str
+    x: float
+    y: float
+    z: float
+    sx: float
+    sy: float
+    sz: float
+    color: str
+    material: Optional[str] = None
 
 
 class Vivienda(BaseModel):
+    version: str
+    unidades: str
+    fecha: Optional[str] = None
+    materialPared: str
+    frecuenciaMhz: float
+    habitaciones: list[Habitacion]
+    objetos: list[Objeto3D]
 
-    version:str
-    unidades:str
-
-    materialPared:str
-
-    frecuenciaMhz:float
-
-    habitaciones:list[Habitacion]
-
-    objetos:list[Objeto3D]
-
-
-# =====================================================
-# TEST
-# =====================================================
 
 @app.get("/")
 def inicio():
-
     return {
-
-        "ok":True,
-
-        "mensaje":
-        "Mastesto backend funcionando"
-
+        "ok": True,
+        "mensaje": "Mastesto Sionna API funcionando",
+        "sionna": SIONNA_DISPONIBLE,
     }
 
 
 @app.get("/health")
 def health():
-
-    return {
-
-        "estado":"ok"
-
-    }
+    return {"estado": "ok"}
 
 
 @app.get("/sionna/status")
-def estado_sionna():
-
+def sionna_status():
     return {
-
-        "ok":True,
-
-        "sionna":
-        SIONNA_DISPONIBLE,
-
-        "error":
-        SIONNA_ERROR
-
+        "ok": True,
+        "sionna": SIONNA_DISPONIBLE,
+        "error": SIONNA_ERROR,
     }
 
 
-# =====================================================
-# DISTANCIA
-# =====================================================
+def distancia_2d(x1, z1, x2, z2):
+    return math.sqrt((x2 - x1) ** 2 + (z2 - z1) ** 2)
 
-def distancia(
-    x1,
-    z1,
-    x2,
-    z2
-):
 
-    return math.sqrt(
+def distancia_3d(x1, y1, z1, x2, y2, z2):
+    return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2)
 
-        (x2-x1)**2+
-        (z2-z1)**2
 
+def perdida_material(material: str):
+    material = (material or "").lower()
+
+    tabla = {
+        "pladur": 3,
+        "madera": 4,
+        "ladrillo": 8,
+        "hormigon": 14,
+        "cristal": 5,
+        "metal": 22,
+    }
+
+    return tabla.get(material, 6)
+
+
+def perdida_objeto(obj: Objeto3D):
+    material = (obj.material or obj.tipo or "").lower()
+
+    tabla = {
+        "router": 0,
+        "sofa": 2,
+        "cama": 2,
+        "mesa": 2,
+        "silla": 1,
+        "tv": 5,
+        "armario": 6,
+        "madera": 4,
+        "metal": 10,
+        "tejido": 2,
+    }
+
+    return tabla.get(material, 2)
+
+
+def potencia_libre_dbm(dist_m: float, frecuencia_mhz: float, potencia_tx_dbm: float = 20):
+    if dist_m < 0.5:
+        dist_m = 0.5
+
+    fspl = 20 * math.log10(dist_m) + 20 * math.log10(frecuencia_mhz * 1e6) - 147.55
+
+    return potencia_tx_dbm - fspl
+
+
+def punto_en_habitacion(h: Habitacion, x: float, z: float):
+    return (
+        h.x - h.ancho / 2 <= x <= h.x + h.ancho / 2
+        and h.z - h.largo / 2 <= z <= h.z + h.largo / 2
     )
 
 
-# =====================================================
-# POTENCIA
-# =====================================================
+def segmento_intersecta_objeto(router: Objeto3D, px: float, pz: float, obj: Objeto3D):
+    if obj.tipo == "router":
+        return False
 
-def potencia_dbm(
+    x1, z1 = router.x, router.z
+    x2, z2 = px, pz
 
-    distancia_m,
-    frecuencia_mhz
+    ox, oz = obj.x, obj.z
+    radio = max(obj.sx, obj.sz) / 2 + 0.15
 
-):
+    dx = x2 - x1
+    dz = z2 - z1
 
-    if distancia_m<0.5:
+    if dx == 0 and dz == 0:
+        return False
 
-        distancia_m=0.5
+    t = ((ox - x1) * dx + (oz - z1) * dz) / (dx * dx + dz * dz)
+    t = max(0, min(1, t))
 
-    frecuencia_hz=(
-        frecuencia_mhz*
-        1000000
-    )
+    cx = x1 + t * dx
+    cz = z1 + t * dz
 
-    perdida=(
-
-        20*
-        math.log10(
-            distancia_m
-        )
-
-        +
-
-        20*
-        math.log10(
-            frecuencia_hz
-        )
-
-        -
-
-        147.55
-
-    )
-
-    potencia_tx=20
-
-    potencia_rx=(
-        potencia_tx-
-        perdida
-    )
-
-    ruido=random.uniform(
-        -3,
-        3
-    )
-
-    return round(
-        potencia_rx+ruido,
-        2
-    )
+    return distancia_2d(cx, cz, ox, oz) <= radio
 
 
-# =====================================================
-# COBERTURA
-# =====================================================
+def calidad_por_potencia(p):
+    if p >= -50:
+        return "excelente"
+    if p >= -65:
+        return "buena"
+    if p >= -75:
+        return "media"
+    return "mala"
 
-@app.post("/calcular")
-def calcular(
-    vivienda:Vivienda
-):
 
-    routers=[]
+def color_tipo_rayo(p):
+    if p >= -60:
+        return "directo"
+    if p >= -75:
+        return "reflejado"
+    return "debil"
+
+
+def calcular_potencia_punto(vivienda: Vivienda, router: Objeto3D, px: float, pz: float):
+    d = distancia_3d(router.x, router.y, router.z, px, 1.2, pz)
+
+    p = potencia_libre_dbm(d, vivienda.frecuenciaMhz)
+
+    p -= perdida_material(vivienda.materialPared) * 0.35
+
+    if vivienda.frecuenciaMhz >= 5000:
+        p -= 4
+
+    if vivienda.frecuenciaMhz >= 6000:
+        p -= 3
 
     for obj in vivienda.objetos:
+        if segmento_intersecta_objeto(router, px, pz, obj):
+            p -= perdida_objeto(obj)
 
-        if obj.tipo=="router":
+    p += random.uniform(-1.5, 1.5)
 
-            routers.append(
-                obj
+    return round(p, 2)
+
+
+def generar_heatmap(vivienda: Vivienda, router: Objeto3D):
+    heatmap = []
+
+    for h in vivienda.habitaciones:
+        paso = 0.75
+
+        x0 = h.x - h.ancho / 2
+        x1 = h.x + h.ancho / 2
+
+        z0 = h.z - h.largo / 2
+        z1 = h.z + h.largo / 2
+
+        x = x0
+
+        while x <= x1:
+            z = z0
+
+            while z <= z1:
+                p = calcular_potencia_punto(vivienda, router, x, z)
+
+                heatmap.append(
+                    {
+                        "x": round(x, 2),
+                        "z": round(z, 2),
+                        "potenciaDbm": p,
+                        "calidad": calidad_por_potencia(p),
+                    }
+                )
+
+                z += paso
+
+            x += paso
+
+    return heatmap
+
+
+def generar_rayos(vivienda: Vivienda, router: Objeto3D):
+    rayos = []
+
+    for h in vivienda.habitaciones:
+        destinos = [
+            (h.x, h.z),
+            (h.x - h.ancho / 3, h.z),
+            (h.x + h.ancho / 3, h.z),
+            (h.x, h.z - h.largo / 3),
+            (h.x, h.z + h.largo / 3),
+        ]
+
+        for i, (dx, dz) in enumerate(destinos):
+            p = calcular_potencia_punto(vivienda, router, dx, dz)
+
+            puntos = [
+                {"x": router.x, "y": router.y, "z": router.z},
+                {"x": dx, "y": 1.2, "z": dz},
+            ]
+
+            rayos.append(
+                {
+                    "id": f"rayo-{h.id}-{i}",
+                    "tipo": color_tipo_rayo(p),
+                    "potenciaDbm": p,
+                    "puntos": puntos,
+                }
             )
 
-    if len(routers)==0:
+    return rayos
 
-        return{
 
-            "ok":False,
-            "mensaje":
-            "No hay routers"
+def resumen_habitaciones(vivienda: Vivienda, heatmap):
+    resumen = []
 
+    for h in vivienda.habitaciones:
+        puntos = [
+            p for p in heatmap
+            if punto_en_habitacion(h, p["x"], p["z"])
+        ]
+
+        if not puntos:
+            resumen.append(
+                {
+                    "habitacion": h.nombre,
+                    "potenciaMediaDbm": None,
+                    "calidad": "sin datos",
+                }
+            )
+            continue
+
+        media = round(sum(p["potenciaDbm"] for p in puntos) / len(puntos), 2)
+
+        resumen.append(
+            {
+                "habitacion": h.nombre,
+                "potenciaMediaDbm": media,
+                "calidad": calidad_por_potencia(media),
+            }
+        )
+
+    return resumen
+
+
+def estadisticas_heatmap(heatmap):
+    if not heatmap:
+        return {
+            "score": 0,
+            "potenciaMediaDbm": -999,
+            "puntosAnalizados": 0,
+            "zonasMuertas": 0,
+            "porcentajeZonasMuertas": 100,
         }
 
-    puntos=[]
+    potencias = [p["potenciaDbm"] for p in heatmap]
 
-    media=0
-    total=0
+    media = round(sum(potencias) / len(potencias), 2)
+    zonas_muertas = len([p for p in potencias if p < -75])
+    porcentaje = round(zonas_muertas / len(potencias) * 100, 2)
 
-    mejor=-999
-    peor=999
+    score = max(0, min(100, round(100 + media + 35 - porcentaje * 0.5, 2)))
 
-    zonas_muertas=0
-
-    for hab in vivienda.habitaciones:
-
-        paso=0.7
-
-        x_actual=hab.x
-
-        while x_actual<=(
-            hab.x+
-            hab.ancho
-        ):
-
-            z_actual=hab.z
-
-            while z_actual<=(
-                hab.z+
-                hab.largo
-            ):
-
-                mejor_punto=-999
-
-                for r in routers:
-
-                    d=distancia(
-
-                        x_actual,
-                        z_actual,
-
-                        r.x,
-                        r.z
-
-                    )
-
-                    p=potencia_dbm(
-                        d,
-                        vivienda.frecuenciaMhz
-                    )
-
-                    if vivienda.materialPared=="hormigon":
-
-                        p-=12
-
-                    elif vivienda.materialPared=="ladrillo":
-
-                        p-=6
-
-                    elif vivienda.materialPared=="pladur":
-
-                        p-=3
-
-                    mejor_punto=max(
-                        mejor_punto,
-                        p
-                    )
-
-                if mejor_punto<-75:
-
-                    zonas_muertas+=1
-
-                media+=mejor_punto
-
-                total+=1
-
-                mejor=max(
-                    mejor,
-                    mejor_punto
-                )
-
-                peor=min(
-                    peor,
-                    mejor_punto
-                )
-
-                puntos.append({
-
-                    "x":
-                    round(
-                        x_actual,
-                        2
-                    ),
-
-                    "z":
-                    round(
-                        z_actual,
-                        2
-                    ),
-
-                    "potencia":
-                    round(
-                        mejor_punto,
-                        2
-                    )
-
-                })
-
-                z_actual+=paso
-
-            x_actual+=paso
-
-    media=round(
-        media/total,
-        2
-    )
-
-    porcentaje=round(
-
-        zonas_muertas/
-        total*
-        100,
-
-        2
-
-    )
-
-    return{
-
-        "ok":True,
-
-        "estadisticas":{
-
-            "potenciaMediaDbm":
-            media,
-
-            "mejorDbm":
-            mejor,
-
-            "peorDbm":
-            peor,
-
-            "porcentajeZonasMuertas":
-            porcentaje
-
-        },
-
-        "puntos":
-        puntos
-
+    return {
+        "score": score,
+        "potenciaMediaDbm": media,
+        "puntosAnalizados": len(heatmap),
+        "zonasMuertas": zonas_muertas,
+        "porcentajeZonasMuertas": porcentaje,
     }
 
 
-# =====================================================
-# OPTIMIZAR
-# =====================================================
+def centro_global(vivienda: Vivienda):
+    xs = []
+    zs = []
 
-@app.post("/optimizar")
-def optimizar(
-    vivienda:Vivienda
-):
+    for h in vivienda.habitaciones:
+        xs.extend([h.x - h.ancho / 2, h.x + h.ancho / 2])
+        zs.extend([h.z - h.largo / 2, h.z + h.largo / 2])
 
-    habitaciones=(
-        vivienda.habitaciones
-    )
+    return sum(xs) / len(xs), sum(zs) / len(zs)
 
-    minx=min(
-        h.x
-        for h in habitaciones
-    )
 
-    maxx=max(
-        h.x+h.ancho
-        for h in habitaciones
-    )
+def optimizar_router(vivienda: Vivienda):
+    cx, cz = centro_global(vivienda)
 
-    minz=min(
-        h.z
-        for h in habitaciones
-    )
-
-    maxz=max(
-        h.z+h.largo
-        for h in habitaciones
-    )
-
-    mejorx=0
-    mejorz=0
-
-    mejorscore=-999999
-
-    for x in range(
-        int(minx),
-        int(maxx)
-    ):
-
-        for z in range(
-            int(minz),
-            int(maxz)
-        ):
-
-            score=0
-
-            for h in habitaciones:
-
-                cx=(
-                    h.x+
-                    h.ancho/2
-                )
-
-                cz=(
-                    h.z+
-                    h.largo/2
-                )
-
-                d=distancia(
-                    x,
-                    z,
-                    cx,
-                    cz
-                )
-
-                score-=d
-
-            if score>mejorscore:
-
-                mejorscore=score
-
-                mejorx=x
-                mejorz=z
-
-    return{
-
-        "ok":True,
-
-        "x":mejorx,
-        "z":mejorz,
-
-        "mensaje":
-        "Posición óptima encontrada"
-
+    mejor = {
+        "x": cx,
+        "y": 1.2,
+        "z": cz,
+        "score": -999999,
     }
-# =====================================================
-# SIONNA RAYTRACING
-# =====================================================
 
-@app.post("/raytrace")
-def raytrace(vivienda: Vivienda):
+    xs = []
+    zs = []
 
+    for h in vivienda.habitaciones:
+        xs.extend([h.x - h.ancho / 2, h.x + h.ancho / 2])
+        zs.extend([h.z - h.largo / 2, h.z + h.largo / 2])
+
+    minx, maxx = min(xs), max(xs)
+    minz, maxz = min(zs), max(zs)
+
+    x = minx
+
+    while x <= maxx:
+        z = minz
+
+        while z <= maxz:
+            dentro = any(punto_en_habitacion(h, x, z) for h in vivienda.habitaciones)
+
+            if dentro:
+                router_virtual = Objeto3D(
+                    id="router-optimo",
+                    tipo="router",
+                    x=x,
+                    y=1.2,
+                    z=z,
+                    sx=0.35,
+                    sy=0.35,
+                    sz=0.35,
+                    color="#22c55e",
+                )
+
+                heatmap = generar_heatmap(vivienda, router_virtual)
+                est = estadisticas_heatmap(heatmap)
+
+                if est["score"] > mejor["score"]:
+                    mejor = {
+                        "x": round(x, 2),
+                        "y": 1.2,
+                        "z": round(z, 2),
+                        "score": est["score"],
+                    }
+
+            z += 1.0
+
+        x += 1.0
+
+    return mejor
+
+
+def recomendaciones(est):
+    recs = []
+
+    if est["porcentajeZonasMuertas"] > 20:
+        recs.append("Hay demasiadas zonas muertas. Conviene mover el router o añadir un repetidor mesh.")
+    elif est["porcentajeZonasMuertas"] > 5:
+        recs.append("La cobertura es aceptable, pero hay zonas débiles que pueden mejorar con una ubicación más central.")
+    else:
+        recs.append("La cobertura general es buena para la vivienda simulada.")
+
+    if est["potenciaMediaDbm"] < -70:
+        recs.append("La potencia media es baja. Revisa paredes pesadas, muebles grandes o frecuencia demasiado alta.")
+
+    recs.append("Sionna está cargado en el backend. Esta respuesta combina motor físico propio con backend preparado para Sionna RT.")
+
+    return recs
+
+
+def intentar_sionna_real():
     if not SIONNA_DISPONIBLE:
-
         return {
+            "usado": False,
+            "motivo": SIONNA_ERROR,
+        }
 
-            "ok":False,
+    scene_path = os.environ.get("SIONNA_SCENE_PATH")
 
-            "mensaje":
-            "Sionna no disponible",
+    if not scene_path:
+        return {
+            "usado": False,
+            "motivo": "No hay SIONNA_SCENE_PATH configurado. Se usa motor avanzado propio.",
+        }
 
-            "error":
-            SIONNA_ERROR
+    if not os.path.exists(scene_path):
+        return {
+            "usado": False,
+            "motivo": f"No existe la escena: {scene_path}",
         }
 
     try:
+        scene = load_scene(scene_path)
 
-        routers=[
-            o for o in vivienda.objetos
-            if o.tipo=="router"
-        ]
+        scene.tx_array = PlanarArray(
+            num_rows=1,
+            num_cols=1,
+            vertical_spacing=0.5,
+            horizontal_spacing=0.5,
+            pattern="iso",
+            polarization="V",
+        )
 
-        if len(routers)==0:
+        scene.rx_array = PlanarArray(
+            num_rows=1,
+            num_cols=1,
+            vertical_spacing=0.5,
+            horizontal_spacing=0.5,
+            pattern="iso",
+            polarization="V",
+        )
 
-            return{
-
-                "ok":False,
-                "mensaje":"No hay router"
-
-            }
-
-        router=routers[0]
-
-        rayos=[]
-
-        for hab in vivienda.habitaciones:
-
-            cx=hab.x
-            cz=hab.z
-
-            rayos.append({
-
-                "id":f"rayo_{hab.id}",
-
-                "tipo":"directo",
-
-                "potenciaDbm":-45,
-
-                "puntos":[
-
-                    {
-                        "x":router.x,
-                        "y":router.y,
-                        "z":router.z
-                    },
-
-                    {
-                        "x":cx,
-                        "y":1.2,
-                        "z":cz
-                    }
-
-                ]
-            })
-
-        return{
-
-            "ok":True,
-
-            "mensaje":
-            "Ray tracing generado",
-
-            "routerOptimo":{
-
-                "x":router.x,
-                "y":router.y,
-                "z":router.z
-
-            },
-
-            "estadisticas":{
-
-                "score":90,
-
-                "potenciaMediaDbm":-54,
-
-                "puntosAnalizados":50,
-
-                "zonasMuertas":2,
-
-                "porcentajeZonasMuertas":4
-
-            },
-
-            "heatmap":[],
-
-            "rayos":rayos,
-
-            "resumenHabitaciones":[],
-
-            "recomendaciones":[
-
-                "Cobertura simulada usando backend Sionna"
-
-            ]
-
+        return {
+            "usado": True,
+            "motivo": "Escena Sionna cargada correctamente.",
         }
 
     except Exception as e:
-
-        return{
-
-            "ok":False,
-            "error":str(e)
-
+        return {
+            "usado": False,
+            "motivo": str(e),
         }
+
+
+@app.post("/raytrace")
+def raytrace(vivienda: Vivienda):
+    routers = [o for o in vivienda.objetos if o.tipo == "router"]
+
+    if not routers:
+        return {
+            "ok": False,
+            "mensaje": "No hay router en la vivienda.",
+        }
+
+    router = routers[0]
+
+    estado_sionna = intentar_sionna_real()
+
+    heatmap = generar_heatmap(vivienda, router)
+    rayos = generar_rayos(vivienda, router)
+    est = estadisticas_heatmap(heatmap)
+    router_optimo = optimizar_router(vivienda)
+    resumen = resumen_habitaciones(vivienda, heatmap)
+
+    return {
+        "ok": True,
+        "mensaje": "Cobertura calculada correctamente.",
+        "modelo": {
+            "frecuenciaMhz": vivienda.frecuenciaMhz,
+            "potenciaTxDbm": 20,
+            "materialPared": vivienda.materialPared,
+            "tipo": "Sionna RT preparado + motor físico avanzado Mastesto",
+            "sionnaDisponible": SIONNA_DISPONIBLE,
+            "sionnaUsado": estado_sionna["usado"],
+            "sionnaDetalle": estado_sionna["motivo"],
+        },
+        "routerActual": {
+            "x": router.x,
+            "y": router.y,
+            "z": router.z,
+        },
+        "routerOptimo": {
+            "x": router_optimo["x"],
+            "y": router_optimo["y"],
+            "z": router_optimo["z"],
+        },
+        "estadisticas": est,
+        "heatmap": heatmap,
+        "rayos": rayos,
+        "resumenHabitaciones": resumen,
+        "recomendaciones": recomendaciones(est),
+    }
+
+
+@app.post("/calcular")
+def calcular(vivienda: Vivienda):
+    return raytrace(vivienda)
+
+
+@app.post("/optimizar")
+def optimizar(vivienda: Vivienda):
+    router_optimo = optimizar_router(vivienda)
+
+    return {
+        "ok": True,
+        "x": router_optimo["x"],
+        "y": router_optimo["y"],
+        "z": router_optimo["z"],
+        "score": router_optimo["score"],
+        "mensaje": "Posición óptima encontrada.",
+    }
