@@ -5,6 +5,8 @@ import { OrbitControls, Grid, Line } from "@react-three/drei";
 import { useRef, useState } from "react";
 import * as THREE from "three";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL!;
+
 type Habitacion = {
   id: string;
   nombre: string;
@@ -310,8 +312,8 @@ export default function CrearViviendaPage() {
 
      const url =
  modoCalculo==="sionna"
- ? "http://localhost:8000/raytrace"
- : "/api/cobertura";
+ ? `${API_URL}/raytrace`
+ : `${API_URL}/calcular`;
 
 const res = await fetch(url,{
  method:"POST",
