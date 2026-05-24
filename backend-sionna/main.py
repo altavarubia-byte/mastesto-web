@@ -596,6 +596,9 @@ if SIONNA_DISPONIBLE:
             "sionnaDisponible": SIONNA_DISPONIBLE,
             "sionnaUsado": estado_sionna["usado"],
             "sionnaDetalle": estado_sionna["motivo"],
+            "sionnaXmlGenerado": xml_generado,
+            "sionnaXmlCargado": sionna_xml_cargado,
+            "sionnaXmlError": sionna_xml_error,
         },
         "routerActual": {
             "x": router.x,
