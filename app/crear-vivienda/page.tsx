@@ -311,9 +311,9 @@ export default function CrearViviendaPage() {
       const datos = crearDatosVivienda();
 
      const url =
- modoCalculo==="sionna"
- ? `${API_URL}/raytrace`
-: `${API_URL}/raytrace`;
+  modoCalculo === "sionna"
+    ? `${API_URL}/raytrace`
+    : `${API_URL}/calcular`;
 
 const res = await fetch(url,{
  method:"POST",
