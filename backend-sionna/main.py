@@ -15,11 +15,15 @@ SIONNA_DISPONIBLE = False
 SIONNA_ERROR = None
 
 try:
-    import tensorflow as tf  # noqa: F401
-    import sionna  # noqa: F401
-    from sionna.rt import load_scene, PathSolver, Transmitter, Receiver, PlanarArray  # noqa: F401
+    if os.environ.get("USAR_SIONNA", "false").lower() == "true":
+        import tensorflow as tf
+        import sionna
+        from sionna.rt import load_scene, PathSolver, Transmitter, Receiver, PlanarArray
 
-    SIONNA_DISPONIBLE = True
+        SIONNA_DISPONIBLE = True
+    else:
+        SIONNA_DISPONIBLE = False
+        SIONNA_ERROR = "Sionna desactivado en Render para evitar segmentation fault."
 except Exception as e:
     SIONNA_ERROR = str(e)
     print("Sionna no disponible:", e)
