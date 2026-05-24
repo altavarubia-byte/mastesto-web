@@ -323,15 +323,19 @@ const res = await fetch(url,{
  body:JSON.stringify(datos)
 });
 
-      const resultado = await res.json();
+     const resultado = await res.json();
 
-      console.log("Resultado cobertura:", resultado);
+console.log("URL usada:", url);
+console.log("Status HTTP:", res.status);
+console.log("Resultado cobertura:", resultado);
 
-      if (!res.ok || !resultado.ok) {
-        alert("Error calculando cobertura.");
-        return;
-      }
-
+if (!res.ok || !resultado.ok) {
+  alert(
+    "Error calculando cobertura: " +
+      (resultado?.mensaje || resultado?.error || res.status)
+  );
+  return;
+}
       setResultadoCobertura(resultado);
       alert("Cobertura calculada correctamente.");
     } catch (error) {
