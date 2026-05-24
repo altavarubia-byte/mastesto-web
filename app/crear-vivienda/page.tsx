@@ -6,7 +6,10 @@ import { useRef, useState } from "react";
 import * as THREE from "three";
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
-const SIONNA_API_URL = (process.env.NEXT_PUBLIC_SIONNA_API_URL || "").replace(/\/$/, "");
+const SIONNA_API_URL = (process.env.NEXT_PUBLIC_SIONNA_API_URL || "").replace(
+  /\/$/,
+  "",
+);
 
 type Habitacion = {
   id: string;
@@ -16,6 +19,9 @@ type Habitacion = {
   ancho: number;
   largo: number;
   alto: number;
+  materialPared?: string;
+  materialSuelo?: string;
+  materialTecho?: string;
 };
 
 type Objeto3D = {
@@ -55,52 +61,72 @@ type ResultadoCobertura = {
   modelo?: {
     frecuenciaMhz: number;
     potenciaTxDbm: number;
-    materialPared?: any;
+    materialPared?: string;
     materialesObjeto?: any[];
     tipo: string;
+    materialSuelo?: string;
+    materialTecho?: string;
+    sionnaDisponible?: boolean;
+    sionnaUsado?: boolean;
+    sionnaDetalle?: string;
+    sionnaXmlCargado?: boolean;
+    sionnaXmlError?: string | null;
+    receptoresDetectados?: number;
+    rayosTotales?: number;
+    rayosDirectos?: number;
+    rayosReflejados?: number;
+    rayosOrigenSionna?: number;
   };
 
   heatmapConMesh?: PuntoHeatmap[];
 
-estadisticasMesh?: {
-  potenciaMediaDbm: number;
-  puntosAnalizados: number;
-  zonasMuertas: number;
-  porcentajeZonasMuertas: number;
-  mejoraMediaDb: number;
-};
+  estadisticasMesh?: {
+    potenciaMediaDbm: number;
+    puntosAnalizados: number;
+    zonasMuertas: number;
+    porcentajeZonasMuertas: number;
+    mejoraMediaDb: number;
+  };
 
-coberturaConMesh?: {
-  heatmap: PuntoHeatmap[];
-  score: number;
-};
+  coberturaConMesh?: {
+    heatmap: PuntoHeatmap[];
+    score: number;
+  };
 
-resumenHabitacionesConMesh?: {
-  habitacion: string;
-  potenciaMediaDbm: number | null;
-  calidad: string;
-}[];
+  resumenHabitacionesConMesh?: {
+    habitacion: string;
+    potenciaMediaDbm: number | null;
+    calidad: string;
+  }[];
 
   repetidoresOptimos?: {
-  id: string;
-  tipo: string;
-  x: number;
-  y: number;
-  z: number;
-}[];
+    id: string;
+    tipo: string;
+    x: number;
+    y: number;
+    z: number;
+  }[];
+
+  receptoresOptimos?: {
+    habitacion: string;
+    x: number;
+    y: number;
+    z: number;
+    potenciaDbm: number;
+  }[];
 
   optimosPorHabitacion?: {
-  habitacion: string;
-  habitacionId: string;
-  x: number;
-  y: number;
-  z: number;
-  score: number;
-  potenciaMediaDbm: number;
-  zonasMuertas: number;
-  calidad: string;
-  recomendacion: string;
-}[];
+    habitacion: string;
+    habitacionId: string;
+    x: number;
+    y: number;
+    z: number;
+    score: number;
+    potenciaMediaDbm: number;
+    zonasMuertas: number;
+    calidad: string;
+    recomendacion: string;
+  }[];
   routerActual?: {
     x: number;
     y: number;
@@ -138,11 +164,16 @@ export default function CrearViviendaPage() {
       ancho: 8,
       largo: 6,
       alto: 2.6,
+      materialPared: "ladrillo",
+      materialSuelo: "hormigon",
+      materialTecho: "pladur",
     },
   ]);
 
   const [modoCalculo, setModoCalculo] = useState<"rapido" | "sionna">("rapido");
   const [materialPared, setMaterialPared] = useState("ladrillo");
+  const [materialSuelo, setMaterialSuelo] = useState("hormigon");
+  const [materialTecho, setMaterialTecho] = useState("pladur");
   const [frecuenciaMhz, setFrecuenciaMhz] = useState(5000);
 
   const [habitacionSeleccionada, setHabitacionSeleccionada] =
@@ -174,10 +205,50 @@ export default function CrearViviendaPage() {
   const [mostrarRouterOptimo, setMostrarRouterOptimo] = useState(true);
 
   const habitacionActual = habitaciones.find(
-    (h) => h.id === habitacionSeleccionada
+    (h) => h.id === habitacionSeleccionada,
   );
 
   const objetoActual = objetos.find((o) => o.id === objetoSeleccionado);
+
+  const esReceptor = (tipo: string) =>
+    tipo === "receptor" || tipo === "rx" || tipo === "receiver";
+
+  const esMovibleEnPlano = (tipo: string) => tipo === "router" || esReceptor(tipo);
+
+  const aplicarTipoObjeto = (tipo: string) => {
+    const configs: Record<string, Partial<Objeto3D>> = {
+      router: { sx: 0.35, sy: 0.35, sz: 0.35, color: "#f97316", material: undefined },
+      receptor: { sx: 0.25, sy: 0.25, sz: 0.25, color: "#22c55e", material: "rx", y: 1.2 },
+      sofa: { sx: 1.8, sy: 0.6, sz: 0.8, color: "#7c2d12", material: "tejido", y: 0.4 },
+      mesa: { sx: 1.2, sy: 0.25, sz: 0.8, color: "#92400e", material: "madera", y: 0.4 },
+      silla: { sx: 0.5, sy: 0.8, sz: 0.5, color: "#57534e", material: "madera", y: 0.4 },
+      tv: { sx: 1.3, sy: 0.08, sz: 0.8, color: "#020617", material: "metal", y: 1.4 },
+      cama: { sx: 2, sy: 0.45, sz: 1.4, color: "#1e3a8a", material: "tejido", y: 0.4 },
+      armario: { sx: 1.2, sy: 2, sz: 0.5, color: "#44403c", material: "madera", y: 1 },
+      ventana: { sx: 1.8, sy: 1.1, sz: 0.08, color: "#7dd3fc", material: "cristal", y: 1.5 },
+    };
+
+    const config = configs[tipo] || {};
+
+    setObjetos((prev) =>
+      prev.map((o) =>
+        o.id === objetoSeleccionado
+          ? {
+              ...o,
+              tipo,
+              sx: config.sx ?? o.sx,
+              sy: config.sy ?? o.sy,
+              sz: config.sz ?? o.sz,
+              y: config.y ?? o.y,
+              color: config.color ?? o.color,
+              material: config.material,
+            }
+          : o,
+      ),
+    );
+
+    setResultadoCobertura(null);
+  };
 
   const crearHabitacion = () => {
     const nueva: Habitacion = {
@@ -188,6 +259,9 @@ export default function CrearViviendaPage() {
       ancho: 4,
       largo: 4,
       alto: 2.6,
+      materialPared,
+      materialSuelo,
+      materialTecho,
     };
 
     setHabitaciones((prev) => [...prev, nueva]);
@@ -196,12 +270,12 @@ export default function CrearViviendaPage() {
 
   const actualizarHabitacion = (
     campo: keyof Habitacion,
-    valor: number | string
+    valor: number | string,
   ) => {
     setHabitaciones((prev) =>
       prev.map((h) =>
-        h.id === habitacionSeleccionada ? { ...h, [campo]: valor } : h
-      )
+        h.id === habitacionSeleccionada ? { ...h, [campo]: valor } : h,
+      ),
     );
 
     setResultadoCobertura(null);
@@ -214,7 +288,7 @@ export default function CrearViviendaPage() {
     }
 
     const habitacionesRestantes = habitaciones.filter(
-      (h) => h.id !== habitacionSeleccionada
+      (h) => h.id !== habitacionSeleccionada,
     );
 
     setHabitaciones(habitacionesRestantes);
@@ -231,6 +305,8 @@ export default function CrearViviendaPage() {
       cama: { sx: 2, sy: 0.45, sz: 1.4, color: "#1e3a8a", material: "tejido" },
       router: { sx: 0.35, sy: 0.35, sz: 0.35, color: "#f97316" },
       armario: { sx: 1.2, sy: 2, sz: 0.5, color: "#44403c", material: "madera" },
+      receptor: { sx: 0.25, sy: 0.25, sz: 0.25, color: "#22c55e", material: "rx" },
+      ventana: { sx: 1.8, sy: 1.1, sz: 0.08, color: "#7dd3fc", material: "cristal" },
     };
 
     const h = habitacionActual;
@@ -240,7 +316,7 @@ export default function CrearViviendaPage() {
       id: `${tipo}-${Date.now()}`,
       tipo,
       x: h ? h.x : 0,
-      y: tipo === "tv" ? 1.4 : tipo === "router" ? 1.2 : 0.4,
+      y: tipo === "tv" ? 1.4 : tipo === "router" || tipo === "receptor" ? 1.2 : tipo === "ventana" ? 1.5 : 0.4,
       z: h ? h.z : 0,
       sx: config.sx || 1,
       sy: config.sy || 1,
@@ -257,8 +333,8 @@ export default function CrearViviendaPage() {
   const actualizarObjeto = (campo: keyof Objeto3D, valor: number | string) => {
     setObjetos((prev) =>
       prev.map((o) =>
-        o.id === objetoSeleccionado ? { ...o, [campo]: valor } : o
-      )
+        o.id === objetoSeleccionado ? { ...o, [campo]: valor } : o,
+      ),
     );
 
     setResultadoCobertura(null);
@@ -276,6 +352,8 @@ export default function CrearViviendaPage() {
       unidades: "metros",
       fecha: new Date().toISOString(),
       materialPared,
+      materialSuelo,
+      materialTecho,
       frecuenciaMhz,
       habitaciones,
       objetos,
@@ -311,32 +389,32 @@ export default function CrearViviendaPage() {
 
       const datos = crearDatosVivienda();
 
-    const url =
-  modoCalculo === "sionna"
-    ? `${SIONNA_API_URL}/raytrace`
-    : `${API_URL}/calcular`;
+      const url =
+        modoCalculo === "sionna"
+          ? `${SIONNA_API_URL}/raytrace`
+          : `${API_URL}/calcular`;
 
-const res = await fetch(url,{
- method:"POST",
- headers:{
-   "Content-Type":"application/json"
- },
- body:JSON.stringify(datos)
-});
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(datos),
+      });
 
-     const resultado = await res.json();
+      const resultado = await res.json();
 
-console.log("URL usada:", url);
-console.log("Status HTTP:", res.status);
-console.log("Resultado cobertura:", resultado);
+      console.log("URL usada:", url);
+      console.log("Status HTTP:", res.status);
+      console.log("Resultado cobertura:", resultado);
 
-if (!res.ok || !resultado.ok) {
-  alert(
-    "Error calculando cobertura: " +
-      (resultado?.mensaje || resultado?.error || res.status)
-  );
-  return;
-}
+      if (!res.ok || !resultado.ok) {
+        alert(
+          "Error calculando cobertura: " +
+            (resultado?.mensaje || resultado?.error || res.status),
+        );
+        return;
+      }
       setResultadoCobertura(resultado);
       alert("Cobertura calculada correctamente.");
     } catch (error) {
@@ -359,8 +437,8 @@ if (!res.ok || !resultado.ok) {
               y: resultadoCobertura.routerOptimo.y,
               z: resultadoCobertura.routerOptimo.z,
             }
-          : obj
-      )
+          : obj,
+      ),
     );
 
     setResultadoCobertura(null);
@@ -465,6 +543,24 @@ if (!res.ok || !resultado.ok) {
                   onChange={(v) => actualizarHabitacion("alto", v)}
                 />
 
+                <MaterialSelect
+                  label="Paredes de esta habitación"
+                  value={habitacionActual.materialPared || materialPared}
+                  onChange={(v) => actualizarHabitacion("materialPared", v)}
+                />
+
+                <MaterialSelect
+                  label="Suelo de esta habitación"
+                  value={habitacionActual.materialSuelo || materialSuelo}
+                  onChange={(v) => actualizarHabitacion("materialSuelo", v)}
+                />
+
+                <MaterialSelect
+                  label="Techo de esta habitación"
+                  value={habitacionActual.materialTecho || materialTecho}
+                  onChange={(v) => actualizarHabitacion("materialTecho", v)}
+                />
+
                 <button
                   onClick={eliminarHabitacion}
                   className="w-full py-3 rounded-xl bg-red-700 text-white text-[10px] font-black uppercase hover:bg-red-600 transition-all"
@@ -503,6 +599,47 @@ if (!res.ok || !resultado.ok) {
 
             <div className="mb-6 border-t border-zinc-900 pt-5">
               <h2 className="text-xs font-black uppercase tracking-widest text-orange-500 mb-4">
+                Material de suelo
+              </h2>
+
+              <select
+                value={materialSuelo}
+                onChange={(e) => {
+                  setMaterialSuelo(e.target.value);
+                  setResultadoCobertura(null);
+                }}
+                className="w-full bg-black border border-zinc-800 rounded-xl p-3 text-xs text-white outline-none"
+              >
+                <option value="hormigon">Hormigón</option>
+                <option value="madera">Madera / parquet</option>
+                <option value="ladrillo">Ladrillo / cerámico</option>
+                <option value="pladur">Pladur / yeso</option>
+                <option value="cristal">Cristal</option>
+              </select>
+            </div>
+
+            <div className="mb-6 border-t border-zinc-900 pt-5">
+              <h2 className="text-xs font-black uppercase tracking-widest text-orange-500 mb-4">
+                Material de techo
+              </h2>
+
+              <select
+                value={materialTecho}
+                onChange={(e) => {
+                  setMaterialTecho(e.target.value);
+                  setResultadoCobertura(null);
+                }}
+                className="w-full bg-black border border-zinc-800 rounded-xl p-3 text-xs text-white outline-none"
+              >
+                <option value="pladur">Pladur / falso techo</option>
+                <option value="yeso">Yeso</option>
+                <option value="hormigon">Hormigón</option>
+                <option value="madera">Madera</option>
+                <option value="cristal">Cristal</option>
+              </select>
+            </div>
+            <div className="mb-6 border-t border-zinc-900 pt-5">
+              <h2 className="text-xs font-black uppercase tracking-widest text-orange-500 mb-4">
                 Frecuencia WiFi
               </h2>
 
@@ -536,7 +673,9 @@ if (!res.ok || !resultado.ok) {
               <Boton texto="TV" onClick={() => crearObjeto("tv")} />
               <Boton texto="Cama" onClick={() => crearObjeto("cama")} />
               <Boton texto="Router" onClick={() => crearObjeto("router")} />
+              <Boton texto="Receptor" onClick={() => crearObjeto("receptor")} />
               <Boton texto="Armario" onClick={() => crearObjeto("armario")} />
+              <Boton texto="Ventana" onClick={() => crearObjeto("ventana")} />
             </div>
 
             <button
@@ -546,24 +685,16 @@ if (!res.ok || !resultado.ok) {
               Exportar JSON
             </button>
             <select
- value={modoCalculo}
- onChange={(e)=>
-   setModoCalculo(
-     e.target.value as "rapido"|"sionna"
-   )
- }
- className="mt-5 w-full bg-black border border-zinc-800 rounded-xl p-3 text-xs text-white outline-none"
->
+              value={modoCalculo}
+              onChange={(e) =>
+                setModoCalculo(e.target.value as "rapido" | "sionna")
+              }
+              className="mt-5 w-full bg-black border border-zinc-800 rounded-xl p-3 text-xs text-white outline-none"
+            >
+              <option value="rapido">Modelo rápido actual</option>
 
-<option value="rapido">
-Modelo rápido actual
-</option>
-
-<option value="sionna">
-Verificar con Sionna
-</option>
-
-</select>
+              <option value="sionna">Verificar con Sionna</option>
+            </select>
             <button
               onClick={calcularCobertura}
               disabled={calculandoCobertura}
@@ -589,6 +720,12 @@ Verificar con Sionna
                 <p className="text-[10px] text-zinc-400 leading-relaxed">
                   {resultadoCobertura.modelo?.tipo ??
                     "Modelo de cobertura aproximado"}
+                </p>
+                <p className="text-[9px] text-zinc-500 uppercase leading-relaxed mt-2">
+                  Sionna usado: {resultadoCobertura.modelo?.sionnaUsado ? "Sí" : "No"} · XML: {resultadoCobertura.modelo?.sionnaXmlCargado ? "Cargado" : "No cargado"}
+                </p>
+                <p className="text-[9px] text-zinc-500 uppercase leading-relaxed">
+                  Rayos: {resultadoCobertura.modelo?.rayosTotales ?? resultadoCobertura.rayos?.length ?? 0} · Directos: {resultadoCobertura.modelo?.rayosDirectos ?? 0} · Reflejados: {resultadoCobertura.modelo?.rayosReflejados ?? 0} · RX: {resultadoCobertura.modelo?.receptoresDetectados ?? 0}
                 </p>
               </div>
             ) : null}
@@ -637,8 +774,8 @@ Verificar con Sionna
                               x,
                               z,
                             }
-                          : o
-                      )
+                          : o,
+                      ),
                     );
 
                     setResultadoCobertura(null);
@@ -679,6 +816,27 @@ Verificar con Sionna
               </p>
             ) : (
               <div className="space-y-4">
+                <div>
+                  <p className="text-[8px] uppercase text-zinc-500 font-black mb-2">
+                    Tipo de objeto
+                  </p>
+                  <select
+                    value={objetoActual.tipo}
+                    onChange={(e) => aplicarTipoObjeto(e.target.value)}
+                    className="w-full bg-black border border-zinc-800 rounded-xl p-3 text-xs text-white outline-none"
+                  >
+                    <option value="router">Router / TX</option>
+                    <option value="receptor">Receptor / RX</option>
+                    <option value="sofa">Sofá</option>
+                    <option value="mesa">Mesa</option>
+                    <option value="silla">Silla</option>
+                    <option value="tv">TV / metal</option>
+                    <option value="cama">Cama</option>
+                    <option value="armario">Armario</option>
+                    <option value="ventana">Ventana / cristal</option>
+                  </select>
+                </div>
+
                 <p className="text-sm font-black uppercase">
                   {objetoActual.tipo}
                 </p>
@@ -739,6 +897,12 @@ Verificar con Sionna
                   />
                 </div>
 
+                <MaterialSelect
+                  label="Material del objeto"
+                  value={objetoActual.material || objetoActual.tipo}
+                  onChange={(v) => actualizarObjeto("material", v)}
+                />
+
                 <button
                   onClick={eliminarSeleccionado}
                   className="w-full py-3 rounded-xl bg-red-600 text-white text-[10px] font-black uppercase hover:bg-red-500 transition-all"
@@ -749,166 +913,189 @@ Verificar con Sionna
             )}
 
             {resultadoCobertura && (
-  <div className="mt-6 border-t border-zinc-900 pt-5 space-y-4">
-    <h2 className="text-xs font-black uppercase tracking-widest text-orange-500">
-      Resultado WiFi
-    </h2>
+              <div className="mt-6 border-t border-zinc-900 pt-5 space-y-4">
+                <h2 className="text-xs font-black uppercase tracking-widest text-orange-500">
+                  Resultado WiFi
+                </h2>
 
-    <div className="grid grid-cols-2 gap-3">
-      <button
-        onClick={() => setMostrarHeatmap((v) => !v)}
-        className="py-3 rounded-xl bg-black border border-zinc-800 text-[9px] font-black uppercase text-zinc-300 hover:border-orange-500"
-      >
-        Heatmap {mostrarHeatmap ? "ON" : "OFF"}
-      </button>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setMostrarHeatmap((v) => !v)}
+                    className="py-3 rounded-xl bg-black border border-zinc-800 text-[9px] font-black uppercase text-zinc-300 hover:border-orange-500"
+                  >
+                    Heatmap {mostrarHeatmap ? "ON" : "OFF"}
+                  </button>
 
-      <button
-        onClick={() => setMostrarRayos((v) => !v)}
-        className="py-3 rounded-xl bg-black border border-zinc-800 text-[9px] font-black uppercase text-zinc-300 hover:border-orange-500"
-      >
-        Rayos {mostrarRayos ? "ON" : "OFF"}
-      </button>
+                  <button
+                    onClick={() => setMostrarRayos((v) => !v)}
+                    className="py-3 rounded-xl bg-black border border-zinc-800 text-[9px] font-black uppercase text-zinc-300 hover:border-orange-500"
+                  >
+                    Rayos {mostrarRayos ? "ON" : "OFF"}
+                  </button>
 
-      <button
-        onClick={() => setMostrarRouterOptimo((v) => !v)}
-        className="col-span-2 py-3 rounded-xl bg-black border border-zinc-800 text-[9px] font-black uppercase text-zinc-300 hover:border-orange-500"
-      >
-        Router óptimo {mostrarRouterOptimo ? "ON" : "OFF"}
-      </button>
-    </div>
+                  <button
+                    onClick={() => setMostrarRouterOptimo((v) => !v)}
+                    className="col-span-2 py-3 rounded-xl bg-black border border-zinc-800 text-[9px] font-black uppercase text-zinc-300 hover:border-orange-500"
+                  >
+                    Router óptimo {mostrarRouterOptimo ? "ON" : "OFF"}
+                  </button>
+                </div>
 
-    <div className="bg-black border border-zinc-900 rounded-xl p-4 space-y-2">
-      <p className="text-[9px] uppercase text-zinc-500 font-black">
-        Potencia media
-      </p>
-      <p className="text-2xl font-black text-orange-500">
-        {resultadoCobertura.estadisticas.potenciaMediaDbm} dBm
-      </p>
-    </div>
+                <div className="bg-black border border-zinc-900 rounded-xl p-4 space-y-2">
+                  <p className="text-[9px] uppercase text-zinc-500 font-black">
+                    Potencia media
+                  </p>
+                  <p className="text-2xl font-black text-orange-500">
+                    {resultadoCobertura.estadisticas.potenciaMediaDbm} dBm
+                  </p>
+                </div>
 
-    <div className="bg-black border border-zinc-900 rounded-xl p-4 space-y-2">
-      <p className="text-[9px] uppercase text-zinc-500 font-black">
-        Zonas muertas
-      </p>
-      <p className="text-xl font-black text-white">
-        {resultadoCobertura.estadisticas.porcentajeZonasMuertas}%
-      </p>
-    </div>
+                <div className="bg-black border border-zinc-900 rounded-xl p-4 space-y-2">
+                  <p className="text-[9px] uppercase text-zinc-500 font-black">
+                    Zonas muertas
+                  </p>
+                  <p className="text-xl font-black text-white">
+                    {resultadoCobertura.estadisticas.porcentajeZonasMuertas}%
+                  </p>
+                </div>
 
-    {resultadoCobertura.estadisticasMesh && (
-  <div className="bg-black border border-sky-900 rounded-xl p-4 space-y-2">
-    <p className="text-[9px] uppercase text-zinc-500 font-black">
-      Cobertura con Mesh
-    </p>
+                {resultadoCobertura.estadisticasMesh && (
+                  <div className="bg-black border border-sky-900 rounded-xl p-4 space-y-2">
+                    <p className="text-[9px] uppercase text-zinc-500 font-black">
+                      Cobertura con Mesh
+                    </p>
 
-    <p className="text-xl font-black text-sky-400">
-      {resultadoCobertura.estadisticasMesh.potenciaMediaDbm} dBm
-    </p>
+                    <p className="text-xl font-black text-sky-400">
+                      {resultadoCobertura.estadisticasMesh.potenciaMediaDbm} dBm
+                    </p>
 
-    <p className="text-[9px] text-zinc-500 uppercase leading-relaxed">
-      Mejora media: {resultadoCobertura.estadisticasMesh.mejoraMediaDb} dB ·
-      Zonas muertas:{" "}
-      {resultadoCobertura.estadisticasMesh.porcentajeZonasMuertas}%
-    </p>
-  </div>
-)}
+                    <p className="text-[9px] text-zinc-500 uppercase leading-relaxed">
+                      Mejora media: {resultadoCobertura.estadisticasMesh.mejoraMediaDb} dB ·
+                      Zonas muertas: {" "}
+                      {resultadoCobertura.estadisticasMesh.porcentajeZonasMuertas}%
+                    </p>
+                  </div>
+                )}
 
-    <div className="bg-black border border-zinc-900 rounded-xl p-4 space-y-2">
-      <p className="text-[9px] uppercase text-zinc-500 font-black">
-        Router recomendado
-      </p>
-      <p className="text-xs text-zinc-300 leading-relaxed">
-        X: {resultadoCobertura.routerOptimo.x.toFixed(2)} · Z:{" "}
-        {resultadoCobertura.routerOptimo.z.toFixed(2)} · Altura:{" "}
-        {resultadoCobertura.routerOptimo.y.toFixed(2)} m
-      </p>
-    </div>
+                <div className="bg-black border border-zinc-900 rounded-xl p-4 space-y-2">
+                  <p className="text-[9px] uppercase text-zinc-500 font-black">
+                    Router recomendado
+                  </p>
+                  <p className="text-xs text-zinc-300 leading-relaxed">
+                    X: {resultadoCobertura.routerOptimo.x.toFixed(2)} · Z: {" "}
+                    {resultadoCobertura.routerOptimo.z.toFixed(2)} · Altura: {" "}
+                    {resultadoCobertura.routerOptimo.y.toFixed(2)} m
+                  </p>
+                </div>
 
-    {resultadoCobertura.optimosPorHabitacion && (
-      <div className="space-y-2">
-        <p className="text-[9px] uppercase text-zinc-500 font-black">
-          Mejor posición por habitación
-        </p>
+                {resultadoCobertura.optimosPorHabitacion && (
+                  <div className="space-y-2">
+                    <p className="text-[9px] uppercase text-zinc-500 font-black">
+                      Mejor posición por habitación
+                    </p>
 
-        {resultadoCobertura.optimosPorHabitacion.map((o) => (
-          <div
-            key={o.habitacionId}
-            className="bg-black border border-zinc-900 rounded-xl p-3"
-          >
-            <p className="text-[10px] font-black uppercase text-white">
-              {o.habitacion}
-            </p>
+                    {resultadoCobertura.optimosPorHabitacion.map((o) => (
+                      <div
+                        key={o.habitacionId}
+                        className="bg-black border border-zinc-900 rounded-xl p-3"
+                      >
+                        <p className="text-[10px] font-black uppercase text-white">
+                          {o.habitacion}
+                        </p>
 
-            <p className="text-[9px] text-zinc-500 uppercase leading-relaxed">
-              X: {o.x.toFixed(2)} · Z: {o.z.toFixed(2)} · Media:{" "}
-              {o.potenciaMediaDbm} dBm · Zonas muertas: {o.zonasMuertas}
-            </p>
-          </div>
-        ))}
-      </div>
-    )}
+                        <p className="text-[9px] text-zinc-500 uppercase leading-relaxed">
+                          X: {o.x.toFixed(2)} · Z: {o.z.toFixed(2)} · Media: {" "}
+                          {o.potenciaMediaDbm} dBm · Zonas muertas: {o.zonasMuertas}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
-    <div className="space-y-2">
-      <p className="text-[9px] uppercase text-zinc-500 font-black">
-        Habitaciones
-      </p>
+                <div className="space-y-2">
+                  <p className="text-[9px] uppercase text-zinc-500 font-black">
+                    Habitaciones
+                  </p>
 
-      {resultadoCobertura.resumenHabitaciones.map((h) => (
-        <div
-          key={h.habitacion}
-          className="bg-black border border-zinc-900 rounded-xl p-3"
-        >
-          <p className="text-[10px] font-black uppercase text-white">
-            {h.habitacion}
-          </p>
-          <p className="text-[9px] text-zinc-500 uppercase">
-            {h.potenciaMediaDbm ?? "Sin datos"} dBm · {h.calidad}
-          </p>
-        </div>
-      ))}
-    </div>
+                  {resultadoCobertura.resumenHabitaciones.map((h) => (
+                    <div
+                      key={h.habitacion}
+                      className="bg-black border border-zinc-900 rounded-xl p-3"
+                    >
+                      <p className="text-[10px] font-black uppercase text-white">
+                        {h.habitacion}
+                      </p>
+                      <p className="text-[9px] text-zinc-500 uppercase">
+                        {h.potenciaMediaDbm ?? "Sin datos"} dBm · {h.calidad}
+                      </p>
+                    </div>
+                  ))}
+                </div>
 
-    {resultadoCobertura.repetidoresOptimos &&
-  resultadoCobertura.repetidoresOptimos.length > 0 && (
-    <div className="space-y-2">
-      <p className="text-[9px] uppercase text-zinc-500 font-black">
-        Repetidores / Mesh recomendados
-      </p>
+                {resultadoCobertura.repetidoresOptimos &&
+                  resultadoCobertura.repetidoresOptimos.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-[9px] uppercase text-zinc-500 font-black">
+                        Repetidores / Mesh recomendados
+                      </p>
 
-      {resultadoCobertura.repetidoresOptimos.map((rep) => (
-        <div
-          key={rep.id}
-          className="bg-black border border-sky-900 rounded-xl p-3"
-        >
-          <p className="text-[10px] font-black uppercase text-sky-400">
-            {rep.tipo}
-          </p>
+                      {resultadoCobertura.repetidoresOptimos.map((rep) => (
+                        <div
+                          key={rep.id}
+                          className="bg-black border border-sky-900 rounded-xl p-3"
+                        >
+                          <p className="text-[10px] font-black uppercase text-sky-400">
+                            {rep.tipo}
+                          </p>
 
-          <p className="text-[9px] text-zinc-500 uppercase leading-relaxed">
-            X: {rep.x.toFixed(2)} · Z: {rep.z.toFixed(2)} · Altura:{" "}
-            {rep.y.toFixed(2)} m
-          </p>
-        </div>
-      ))}
-    </div>
-)}
+                          <p className="text-[9px] text-zinc-500 uppercase leading-relaxed">
+                            X: {rep.x.toFixed(2)} · Z: {rep.z.toFixed(2)} · Altura: {" "}
+                            {rep.y.toFixed(2)} m
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
-    <div className="space-y-2">
-      <p className="text-[9px] uppercase text-zinc-500 font-black">
-        Recomendaciones
-      </p>
+                {resultadoCobertura.receptoresOptimos &&
+                  resultadoCobertura.receptoresOptimos.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-[9px] uppercase text-zinc-500 font-black">
+                        Receptor óptimo por habitación
+                      </p>
 
-      {resultadoCobertura.recomendaciones.map((r, i) => (
-        <p
-          key={i}
-          className="text-[10px] text-zinc-400 leading-relaxed bg-black border border-zinc-900 rounded-xl p-3"
-        >
-          {r}
-        </p>
-      ))}
-    </div>
-  </div>
-)}
+                      {resultadoCobertura.receptoresOptimos.map((rx) => (
+                        <div
+                          key={rx.habitacion}
+                          className="bg-black border border-green-900 rounded-xl p-3"
+                        >
+                          <p className="text-[10px] font-black uppercase text-green-400">
+                            {rx.habitacion}
+                          </p>
+                          <p className="text-[9px] text-zinc-500 uppercase leading-relaxed">
+                            X: {rx.x.toFixed(2)} · Z: {rx.z.toFixed(2)} · Potencia: {rx.potenciaDbm} dBm
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                <div className="space-y-2">
+                  <p className="text-[9px] uppercase text-zinc-500 font-black">
+                    Recomendaciones
+                  </p>
+
+                  {resultadoCobertura.recomendaciones.map((r, i) => (
+                    <p
+                      key={i}
+                      className="text-[10px] text-zinc-400 leading-relaxed bg-black border border-zinc-900 rounded-xl p-3"
+                    >
+                      {r}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="mt-6 border-t border-zinc-900 pt-5">
               <p className="text-[9px] text-zinc-500 uppercase font-bold leading-relaxed">
@@ -1004,9 +1191,6 @@ function GrupoHabitacion({
   );
 }
 
-
-
-
 function ObjetoMovible({
   obj,
   seleccionado,
@@ -1029,7 +1213,10 @@ function ObjetoMovible({
 
   const moverEnSuelo = (event: any) => {
     if (!arrastrando) return;
-    if (obj.tipo !== "router") return;
+    if (
+      !(obj.tipo === "router" || obj.tipo === "receptor" || obj.tipo === "rx" || obj.tipo === "receiver")
+    )
+      return;
 
     const rect = gl.domElement.getBoundingClientRect();
 
@@ -1040,14 +1227,14 @@ function ObjetoMovible({
 
     const hayInterseccion = raycaster.current.ray.intersectPlane(
       planoSuelo.current,
-      puntoInterseccion.current
+      puntoInterseccion.current,
     );
 
     if (!hayInterseccion) return;
 
     onMover(
       Number(puntoInterseccion.current.x.toFixed(2)),
-      Number(puntoInterseccion.current.z.toFixed(2))
+      Number(puntoInterseccion.current.z.toFixed(2)),
     );
   };
 
@@ -1064,7 +1251,12 @@ function ObjetoMovible({
           e.stopPropagation();
           onSeleccionar();
 
-          if (obj.tipo === "router") {
+          if (
+            obj.tipo === "router" ||
+            obj.tipo === "receptor" ||
+            obj.tipo === "rx" ||
+            obj.tipo === "receiver"
+          ) {
             setArrastrando(true);
             gl.domElement.style.cursor = "grabbing";
 
@@ -1092,7 +1284,12 @@ function ObjetoMovible({
           }
         }}
         onPointerOver={() => {
-          if (obj.tipo === "router") {
+          if (
+            obj.tipo === "router" ||
+            obj.tipo === "receptor" ||
+            obj.tipo === "rx" ||
+            obj.tipo === "receiver"
+          ) {
             gl.domElement.style.cursor = "grab";
           }
         }}
@@ -1105,19 +1302,33 @@ function ObjetoMovible({
         <boxGeometry />
         <meshStandardMaterial
           color={obj.color}
-          emissive={obj.tipo === "router" ? "#7c2d12" : "#000000"}
-          emissiveIntensity={obj.tipo === "router" ? 0.45 : 0}
+          emissive={
+            obj.tipo === "router"
+              ? "#7c2d12"
+              : obj.tipo === "receptor"
+                ? "#14532d"
+                : "#000000"
+          }
+          emissiveIntensity={obj.tipo === "router" || obj.tipo === "receptor" ? 0.45 : 0}
         />
       </mesh>
 
-      {obj.tipo === "router" && (
+      {(obj.tipo === "router" || obj.tipo === "receptor") && (
         <mesh
           position={[obj.x, 0.06, obj.z]}
           rotation={[-Math.PI / 2, 0, 0]}
         >
           <ringGeometry args={[0.45, 0.7, 32]} />
           <meshBasicMaterial
-            color={seleccionado ? "#f97316" : "#fb923c"}
+            color={
+              obj.tipo === "receptor"
+                ? seleccionado
+                  ? "#22c55e"
+                  : "#86efac"
+                : seleccionado
+                  ? "#f97316"
+                  : "#fb923c"
+            }
             transparent
             opacity={seleccionado ? 0.55 : 0.25}
           />
@@ -1144,24 +1355,22 @@ function CapaCobertura({
 
   return (
     <group>
-
-
       {(resultado.heatmapConMesh ?? resultado.coberturaConMesh?.heatmap ?? []).map(
-  (p, index) => (
-    <mesh
-      key={`heatmap-mesh-${index}`}
-      position={[p.x, 0.085, p.z]}
-      rotation={[-Math.PI / 2, 0, 0]}
-    >
-      <circleGeometry args={[0.32, 32]} />
-      <meshBasicMaterial
-        color={colorHeatmapMesh(p.potenciaDbm)}
-        transparent
-        opacity={0.65}
-      />
-    </mesh>
-  )
-)}
+        (p, index) => (
+          <mesh
+            key={`heatmap-mesh-${index}`}
+            position={[p.x, 0.085, p.z]}
+            rotation={[-Math.PI / 2, 0, 0]}
+          >
+            <circleGeometry args={[0.32, 32]} />
+            <meshBasicMaterial
+              color={colorHeatmapMesh(p.potenciaDbm)}
+              transparent
+              opacity={0.65}
+            />
+          </mesh>
+        ),
+      )}
       {mostrarHeatmap &&
         heatmapBase.map((p, i) => (
           <mesh
@@ -1193,7 +1402,7 @@ function CapaCobertura({
       {mostrarRayos &&
         resultado.rayos?.map((rayo) => {
           const puntos = rayo.puntos.map(
-            (p) => [p.x, p.y, p.z] as [number, number, number]
+            (p) => [p.x, p.y, p.z] as [number, number, number],
           );
 
           if (puntos.length < 2) return null;
@@ -1234,6 +1443,27 @@ function CapaCobertura({
           </mesh>
         </group>
       )}
+
+      {resultado.receptoresOptimos?.map((rx) => (
+        <group key={`rx-opt-${rx.habitacion}`} position={[rx.x, rx.y, rx.z]}>
+          <mesh>
+            <sphereGeometry args={[0.2, 24, 24]} />
+            <meshStandardMaterial
+              color="#22c55e"
+              emissive="#14532d"
+              emissiveIntensity={0.8}
+            />
+          </mesh>
+
+          <mesh
+            position={[0, -rx.y + 0.07, 0]}
+            rotation={[-Math.PI / 2, 0, 0]}
+          >
+            <ringGeometry args={[0.22, 0.36, 24]} />
+            <meshBasicMaterial color="#22c55e" transparent opacity={0.6} />
+          </mesh>
+        </group>
+      ))}
 
       {resultado.repetidoresOptimos?.map((rep) => (
         <group key={rep.id} position={[rep.x, rep.y, rep.z]}>
@@ -1278,6 +1508,39 @@ function colorRayo(tipo: RayoCobertura["tipo"]) {
   if (tipo === "directo") return "#22c55e";
   if (tipo === "reflejado") return "#f97316";
   return "#ef4444";
+}
+
+function MaterialSelect({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div>
+      <p className="text-[8px] uppercase text-zinc-500 font-black mb-2">
+        {label}
+      </p>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full bg-black border border-zinc-800 rounded-xl p-3 text-xs text-white outline-none"
+      >
+        <option value="hormigon">Hormigón</option>
+        <option value="ladrillo">Ladrillo</option>
+        <option value="pladur">Pladur / yeso</option>
+        <option value="yeso">Yeso</option>
+        <option value="madera">Madera</option>
+        <option value="metal">Metal</option>
+        <option value="cristal">Cristal / vidrio</option>
+        <option value="tejido">Tejido</option>
+        <option value="rx">Receptor RX</option>
+      </select>
+    </div>
+  );
 }
 
 function Boton({ texto, onClick }: { texto: string; onClick: () => void }) {
