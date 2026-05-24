@@ -1320,7 +1320,7 @@ function ObjetoMovible({
           }
         }}
       >
-       {obj.tipo === "router" || obj.tipo === "receptor" ? (
+       
  {obj.tipo === "router" || obj.tipo === "receptor" ? (
   <ModelObjeto tipo={obj.tipo} />
 ) : (
