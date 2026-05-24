@@ -353,11 +353,24 @@ def crear_paredes_y_suelos(data):
         grosor = 0.12
 
         mat_pared = material_por_nombre(h.get("materialPared") or mat_global_pared)
-        mat_suelo = material_por_nombre(h.get("materialSuelo") or mat_global_suelo)
-        mat_techo = material_por_nombre(h.get("materialTecho") or mat_global_techo)
+mat_suelo = material_por_nombre(h.get("materialSuelo") or mat_global_suelo)
+mat_techo = material_por_nombre(h.get("materialTecho") or mat_global_techo)
 
-        cubo(h["id"] + "_suelo", (x, 0, z), (ancho, 0.04, largo), mat_suelo)
-        cubo(h["id"] + "_techo", (x, alto, z), (ancho, 0.035, largo), mat_techo)
+material_techo_final = MAT_TECHO_TRANSPARENTE
+
+cubo(
+    h["id"] + "_suelo",
+    (x, 0, z),
+    (ancho, 0.04, largo),
+    mat_suelo
+)
+
+cubo(
+    h["id"] + "_techo",
+    (x, alto, z),
+    (ancho, 0.02, largo),
+    material_techo_final
+)
 
         cubo(
             h["id"] + "_pared_norte",
@@ -431,6 +444,14 @@ def configurar_camara_y_luces():
 # =========================================================
 limpiar_escena()
 
+
+MAT_TECHO_TRANSPARENTE = crear_material(
+    "Techo transparente",
+    (0.8,0.9,1.0),
+    0.1,
+    0,
+    0.15
+)
 MAT_HORMIGON = crear_material("Hormigón", (0.55, 0.55, 0.52), 0.8)
 MAT_LADRILLO = crear_material("Ladrillo", (0.63, 0.25, 0.16), 0.7)
 MAT_PLADUR = crear_material("Pladur / yeso", (0.86, 0.86, 0.82), 0.6)
