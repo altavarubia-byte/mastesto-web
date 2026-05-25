@@ -1361,33 +1361,55 @@ export default function CrearViviendaPage() {
   };
 
   return (
-    <main className="min-h-screen bg-black text-white p-6 md:p-10">
-      <section className="max-w-7xl mx-auto">
-        <header className="mb-8">
-          <p className="text-[10px] uppercase tracking-[0.5em] text-orange-500 font-black italic mb-3">
-            TFG Teleco · Editor 3D · WiFi Planning
-          </p>
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#0f172a_0,#020617_36%,#000_100%)] text-slate-100 p-3 md:p-5 font-mono">
+      <section className="max-w-[1800px] mx-auto">
+        <header className="mb-4 border border-cyan-900/60 bg-slate-950/90 rounded-2xl p-5 shadow-[0_0_45px_rgba(8,145,178,0.12)]">
+          <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.45em] text-cyan-300 font-black mb-3">
+                RF DIGITAL TWIN · SIONNA RT · CIR · MIMO · FEKO-READY
+              </p>
 
-          <h1 className="text-4xl md:text-6xl font-black uppercase italic tracking-tighter">
-            Creador de vivienda 3D
-          </h1>
+              <h1 className="text-3xl md:text-5xl font-black uppercase tracking-[-0.08em] text-white">
+                Simulador técnico de propagación indoor
+              </h1>
 
-          <p className="text-zinc-500 mt-4 max-w-3xl text-sm leading-relaxed">
-            Editor tipo juego para crear varias habitaciones, colocar objetos,
-            calcular cobertura WiFi, visualizar rayos, estimar zonas muertas y
-            recomendar la posición óptima del router.
-          </p>
+              <p className="text-slate-400 mt-3 max-w-4xl text-xs md:text-sm leading-relaxed">
+                Consola de ingeniería para modelar viviendas 3D, ejecutar ray tracing con Sionna,
+                visualizar cobertura, rayos, CIR, Doppler, delay spread, MIMO y exportar informes RF.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 min-w-[360px]">
+              <div className="rounded-xl border border-cyan-900/50 bg-black/50 p-3">
+                <p className="text-[8px] uppercase text-slate-500 font-black">Motor</p>
+                <p className="text-xs font-black text-cyan-300">{modoCalculo === "sionna" || resultadoCobertura?.modelo?.sionnaUsado ? "Sionna RT" : "Rápido"}</p>
+              </div>
+              <div className="rounded-xl border border-cyan-900/50 bg-black/50 p-3">
+                <p className="text-[8px] uppercase text-slate-500 font-black">Frecuencia</p>
+                <p className="text-xs font-black text-white">{(frecuenciaMhz / 1000).toFixed(1)} GHz</p>
+              </div>
+              <div className="rounded-xl border border-cyan-900/50 bg-black/50 p-3">
+                <p className="text-[8px] uppercase text-slate-500 font-black">Escena</p>
+                <p className="text-xs font-black text-white">{habitaciones.length} salas · {objetos.length} obj.</p>
+              </div>
+              <div className="rounded-xl border border-cyan-900/50 bg-black/50 p-3">
+                <p className="text-[8px] uppercase text-slate-500 font-black">Estado</p>
+                <p className={`text-xs font-black ${simulando ? "text-emerald-300" : "text-slate-300"}`}>{simulando ? "Live" : "Standby"}</p>
+              </div>
+            </div>
+          </div>
         </header>
 
-        <div className="grid lg:grid-cols-12 gap-6">
-          <aside className="lg:col-span-3 bg-zinc-950 border border-zinc-900 rounded-[2rem] p-5 h-fit">
-            <h2 className="text-xs font-black uppercase tracking-widest text-orange-500 mb-5">
+        <div className="grid lg:grid-cols-12 gap-4">
+          <aside className="lg:col-span-3 bg-slate-950/95 border border-cyan-900/50 rounded-2xl p-4 h-fit shadow-[0_0_35px_rgba(8,145,178,0.08)]">
+            <h2 className="text-xs font-black uppercase tracking-widest text-cyan-300 mb-5">
               Habitaciones
             </h2>
 
             <button
               onClick={crearHabitacion}
-              className="w-full py-4 rounded-xl bg-orange-600 text-black text-[10px] font-black uppercase hover:bg-white transition-all mb-4"
+              className="w-full py-4 rounded-xl bg-cyan-400 text-slate-950 text-[10px] font-black uppercase hover:bg-white transition-all mb-4"
             >
               Añadir habitación
             </button>
@@ -1395,7 +1417,7 @@ export default function CrearViviendaPage() {
             <select
               value={habitacionSeleccionada}
               onChange={(e) => setHabitacionSeleccionada(e.target.value)}
-              className="w-full bg-black border border-zinc-800 rounded-xl p-3 text-xs text-white outline-none mb-5"
+              className="w-full bg-black/70 border border-slate-700 rounded-xl p-3 text-xs text-white outline-none mb-5"
             >
               {habitaciones.map((h) => (
                 <option key={h.id} value={h.id}>
@@ -1411,7 +1433,7 @@ export default function CrearViviendaPage() {
                   onChange={(e) =>
                     actualizarHabitacion("nombre", e.target.value)
                   }
-                  className="w-full bg-black border border-zinc-800 rounded-xl p-3 text-xs text-white outline-none"
+                  className="w-full bg-black/70 border border-slate-700 rounded-xl p-3 text-xs text-white outline-none"
                 />
 
                 <Control
@@ -1486,8 +1508,8 @@ export default function CrearViviendaPage() {
               </div>
             ) : null}
 
-            <div className="mb-6 border-t border-zinc-900 pt-5">
-              <h2 className="text-xs font-black uppercase tracking-widest text-orange-500 mb-4">
+            <div className="mb-6 border-t border-slate-800 pt-5">
+              <h2 className="text-xs font-black uppercase tracking-widest text-cyan-300 mb-4">
                 Material de paredes
               </h2>
 
@@ -1497,7 +1519,7 @@ export default function CrearViviendaPage() {
                   setMaterialPared(e.target.value);
                   setResultadoCobertura(null);
                 }}
-                className="w-full bg-black border border-zinc-800 rounded-xl p-3 text-xs text-white outline-none"
+                className="w-full bg-black/70 border border-slate-700 rounded-xl p-3 text-xs text-white outline-none"
               >
                 <option value="pladur">Pladur / yeso</option>
                 <option value="madera">Madera</option>
@@ -1507,14 +1529,14 @@ export default function CrearViviendaPage() {
                 <option value="metal">Metal</option>
               </select>
 
-              <p className="mt-3 text-[9px] text-zinc-500 uppercase leading-relaxed">
+              <p className="mt-3 text-[9px] text-slate-500 uppercase leading-relaxed">
                 Este material afecta a la atenuación, permitividad y reflexión
                 de los rayos.
               </p>
             </div>
 
-            <div className="mb-6 border-t border-zinc-900 pt-5">
-              <h2 className="text-xs font-black uppercase tracking-widest text-orange-500 mb-4">
+            <div className="mb-6 border-t border-slate-800 pt-5">
+              <h2 className="text-xs font-black uppercase tracking-widest text-cyan-300 mb-4">
                 Material de suelo
               </h2>
 
@@ -1524,7 +1546,7 @@ export default function CrearViviendaPage() {
                   setMaterialSuelo(e.target.value);
                   setResultadoCobertura(null);
                 }}
-                className="w-full bg-black border border-zinc-800 rounded-xl p-3 text-xs text-white outline-none"
+                className="w-full bg-black/70 border border-slate-700 rounded-xl p-3 text-xs text-white outline-none"
               >
                 <option value="hormigon">Hormigón</option>
                 <option value="madera">Madera / parquet</option>
@@ -1534,8 +1556,8 @@ export default function CrearViviendaPage() {
               </select>
             </div>
 
-            <div className="mb-6 border-t border-zinc-900 pt-5">
-              <h2 className="text-xs font-black uppercase tracking-widest text-orange-500 mb-4">
+            <div className="mb-6 border-t border-slate-800 pt-5">
+              <h2 className="text-xs font-black uppercase tracking-widest text-cyan-300 mb-4">
                 Material de techo
               </h2>
 
@@ -1545,7 +1567,7 @@ export default function CrearViviendaPage() {
                   setMaterialTecho(e.target.value);
                   setResultadoCobertura(null);
                 }}
-                className="w-full bg-black border border-zinc-800 rounded-xl p-3 text-xs text-white outline-none"
+                className="w-full bg-black/70 border border-slate-700 rounded-xl p-3 text-xs text-white outline-none"
               >
                 <option value="pladur">Pladur / falso techo</option>
                 <option value="yeso">Yeso</option>
@@ -1554,8 +1576,8 @@ export default function CrearViviendaPage() {
                 <option value="cristal">Cristal</option>
               </select>
             </div>
-            <div className="mb-6 border-t border-zinc-900 pt-5">
-              <h2 className="text-xs font-black uppercase tracking-widest text-orange-500 mb-4">
+            <div className="mb-6 border-t border-slate-800 pt-5">
+              <h2 className="text-xs font-black uppercase tracking-widest text-cyan-300 mb-4">
                 Frecuencia WiFi
               </h2>
 
@@ -1565,20 +1587,20 @@ export default function CrearViviendaPage() {
                   setFrecuenciaMhz(Number(e.target.value));
                   setResultadoCobertura(null);
                 }}
-                className="w-full bg-black border border-zinc-800 rounded-xl p-3 text-xs text-white outline-none"
+                className="w-full bg-black/70 border border-slate-700 rounded-xl p-3 text-xs text-white outline-none"
               >
                 <option value={2400}>2.4 GHz</option>
                 <option value={5000}>5 GHz</option>
                 <option value={6000}>6 GHz WiFi 6E / WiFi 7</option>
               </select>
 
-              <p className="mt-3 text-[9px] text-zinc-500 uppercase leading-relaxed">
+              <p className="mt-3 text-[9px] text-slate-500 uppercase leading-relaxed">
                 2.4 GHz mayor cobertura · 5 GHz equilibrio · 6 GHz más velocidad
                 y menor alcance.
               </p>
             </div>
 
-            <h2 className="text-xs font-black uppercase tracking-widest text-orange-500 mb-5">
+            <h2 className="text-xs font-black uppercase tracking-widest text-cyan-300 mb-5">
               Añadir objetos
             </h2>
 
@@ -1597,7 +1619,7 @@ export default function CrearViviendaPage() {
 
             <button
               onClick={exportarJSON}
-              className="mt-5 w-full py-4 rounded-xl bg-orange-600 text-black text-[10px] font-black uppercase hover:bg-white transition-all"
+              className="mt-5 w-full py-4 rounded-xl bg-cyan-400 text-slate-950 text-[10px] font-black uppercase hover:bg-white transition-all"
             >
               Exportar JSON
             </button>
@@ -1606,7 +1628,7 @@ export default function CrearViviendaPage() {
               onChange={(e) =>
                 setModoCalculo(e.target.value as "rapido" | "sionna")
               }
-              className="mt-5 w-full bg-black border border-zinc-800 rounded-xl p-3 text-xs text-white outline-none"
+              className="mt-5 w-full bg-black/70 border border-slate-700 rounded-xl p-3 text-xs text-white outline-none"
             >
               <option value="rapido">Modelo rápido actual</option>
 
@@ -1654,32 +1676,32 @@ export default function CrearViviendaPage() {
             )}
 
             {resultadoCobertura ? (
-              <div className="mt-5 bg-black border border-zinc-900 rounded-xl p-4">
-                <p className="text-[9px] uppercase text-zinc-500 font-black mb-2">
+              <div className="mt-5 bg-black/70 border border-slate-800 rounded-xl p-4">
+                <p className="text-[9px] uppercase text-slate-500 font-black mb-2">
                   Modelo
                 </p>
-                <p className="text-[10px] text-zinc-400 leading-relaxed">
+                <p className="text-[10px] text-slate-400 leading-relaxed">
                   {resultadoCobertura.modelo?.tipo ??
                     "Modelo de cobertura aproximado"}
                 </p>
-                <p className="text-[9px] text-zinc-500 uppercase leading-relaxed mt-2">
+                <p className="text-[9px] text-slate-500 uppercase leading-relaxed mt-2">
                   Sionna usado: {resultadoCobertura.modelo?.sionnaUsado ? "Sí" : "No"} · XML: {resultadoCobertura.modelo?.sionnaXmlCargado ? "Cargado" : "No cargado"}
                 </p>
-                <p className="text-[9px] text-zinc-500 uppercase leading-relaxed">
+                <p className="text-[9px] text-slate-500 uppercase leading-relaxed">
                   Rayos: {resultadoCobertura.modelo?.rayosTotales ?? resultadoCobertura.rayos?.length ?? 0} · Directos: {resultadoCobertura.modelo?.rayosDirectos ?? 0} · Reflejados: {resultadoCobertura.modelo?.rayosReflejados ?? 0} · RX: {resultadoCobertura.modelo?.receptoresDetectados ?? 0}
                 </p>
               </div>
             ) : null}
 
             {resultadoCobertura?.modeloFisico ? (
-              <div className="mt-5 bg-black border border-emerald-900 rounded-xl p-4">
+              <div className="mt-5 bg-black/70 border border-emerald-900 rounded-xl p-4">
                 <p className="text-[9px] uppercase text-emerald-400 font-black mb-2">
                   Modelo físico
                 </p>
-                <p className="text-[9px] text-zinc-400 leading-relaxed">
+                <p className="text-[9px] text-slate-400 leading-relaxed">
                   {resultadoCobertura.modeloFisico.principio}
                 </p>
-                <p className="text-[9px] text-zinc-500 uppercase leading-relaxed mt-2">
+                <p className="text-[9px] text-slate-500 uppercase leading-relaxed mt-2">
                   Fórmulas: {resultadoCobertura.modeloFisico.calculadoPorFormula?.length ?? 0} ·
                   Empírico declarado: {resultadoCobertura.modeloFisico.empiricoDeclarado?.length ?? 0}
                 </p>
@@ -1687,11 +1709,16 @@ export default function CrearViviendaPage() {
             ) : null}
           </aside>
 
-          <section className="relative lg:col-span-6 bg-white border border-zinc-300 rounded-[2.5rem] overflow-hidden min-h-[680px]">
+          <section className="relative lg:col-span-6 bg-slate-950 border border-cyan-900/60 rounded-2xl overflow-hidden min-h-[720px] shadow-[0_0_60px_rgba(8,145,178,0.12)]">
+            <div className="absolute top-3 left-3 z-40 flex gap-2 text-[9px] uppercase font-black tracking-widest">
+              <span className="px-3 py-2 rounded-lg bg-black/75 border border-cyan-900/60 text-cyan-300">3D Scene</span>
+              <span className="px-3 py-2 rounded-lg bg-black/75 border border-emerald-900/60 text-emerald-300">{resultadoCobertura?.modelo?.sionnaUsado ? "Sionna ON" : "Sionna OFF"}</span>
+              <span className="px-3 py-2 rounded-lg bg-black/75 border border-slate-800 text-slate-300">Heatmap: {modoHeatmap}</span>
+            </div>
             <Canvas
               shadows
               camera={{ position: [10, 8, 10], fov: 48 }}
-              style={{ background: "#ffffff" }}
+              style={{ background: "#06111f" }}
             >
               <ambientLight intensity={0.45} />
 
@@ -1707,8 +1734,8 @@ export default function CrearViviendaPage() {
 
               <Grid
                 args={[60, 60]}
-                cellColor="#d4d4d4"
-                sectionColor="#737373"
+                cellColor="#123247"
+                sectionColor="#0891b2"
                 cellSize={1}
                 cellThickness={1}
                 sectionSize={5}
@@ -1798,7 +1825,7 @@ export default function CrearViviendaPage() {
               />
             </Canvas>
             {imagenRender && (
-  <div className="absolute top-4 right-4 w-[420px] bg-black/95 border border-purple-900 rounded-2xl p-3 z-50">
+  <div className="absolute top-4 right-4 w-[420px] bg-slate-950/95 border border-purple-900 rounded-2xl p-3 z-50">
 
     <p className="text-[10px] uppercase text-purple-400 font-black mb-3">
       ✨ Render premium Blender
@@ -1807,14 +1834,14 @@ export default function CrearViviendaPage() {
     <img
       src={imagenRender}
       alt="Render premium"
-      className="w-full rounded-xl border border-zinc-800"
+      className="w-full rounded-xl border border-slate-700"
     />
 
   </div>
 )}
 
             {modeloGlb && (
-  <div className="absolute bottom-4 right-4 w-[520px] h-[360px] bg-black/95 border border-cyan-900 rounded-2xl p-3 z-50">
+  <div className="absolute bottom-4 right-4 w-[520px] h-[360px] bg-slate-950/95 border border-cyan-900 rounded-2xl p-3 z-50">
     <p className="text-[10px] uppercase text-cyan-400 font-black mb-3">
       🧊 Modelo 3D Blender
     </p>
@@ -1833,25 +1860,25 @@ export default function CrearViviendaPage() {
 )}
           </section>
 
-          <aside className="lg:col-span-3 bg-zinc-950 border border-zinc-900 rounded-[2rem] p-5 h-fit">
-            <h2 className="text-xs font-black uppercase tracking-widest text-orange-500 mb-5">
+          <aside className="lg:col-span-3 bg-slate-950/95 border border-cyan-900/50 rounded-2xl p-4 h-fit shadow-[0_0_35px_rgba(8,145,178,0.08)]">
+            <h2 className="text-xs font-black uppercase tracking-widest text-cyan-300 mb-5">
               Editor de objeto
             </h2>
 
             {!objetoActual ? (
-              <p className="text-zinc-500 text-xs uppercase">
+              <p className="text-slate-500 text-xs uppercase">
                 Selecciona un objeto del plano.
               </p>
             ) : (
               <div className="space-y-4">
                 <div>
-                  <p className="text-[8px] uppercase text-zinc-500 font-black mb-2">
+                  <p className="text-[8px] uppercase text-slate-500 font-black mb-2">
                     Tipo de objeto
                   </p>
                   <select
                     value={objetoActual.tipo}
                     onChange={(e) => aplicarTipoObjeto(e.target.value)}
-                    className="w-full bg-black border border-zinc-800 rounded-xl p-3 text-xs text-white outline-none"
+                    className="w-full bg-black/70 border border-slate-700 rounded-xl p-3 text-xs text-white outline-none"
                   >
                     <option value="router">Router / TX</option>
                     <option value="receptor">Receptor / RX</option>
@@ -1897,7 +1924,7 @@ export default function CrearViviendaPage() {
                   onChange={(v) => actualizarObjeto("y", v)}
                 />
 
-                <div className="border-t border-zinc-900 pt-4 space-y-4">
+                <div className="border-t border-slate-800 pt-4 space-y-4">
                   <Control
                     label="Escala X"
                     value={objetoActual.sx}
@@ -1942,118 +1969,118 @@ export default function CrearViviendaPage() {
             )}
 
             {resultadoCobertura && (
-              <div className="mt-6 border-t border-zinc-900 pt-5 space-y-4">
-                <h2 className="text-xs font-black uppercase tracking-widest text-orange-500">
+              <div className="mt-6 border-t border-slate-800 pt-5 space-y-4">
+                <h2 className="text-xs font-black uppercase tracking-widest text-cyan-300">
                   Resultado WiFi
                 </h2>
 
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => setMostrarHeatmap((v) => !v)}
-                    className="py-3 rounded-xl bg-black border border-zinc-800 text-[9px] font-black uppercase text-zinc-300 hover:border-orange-500"
+                    className="py-3 rounded-xl bg-black/70 border border-slate-700 text-[9px] font-black uppercase text-slate-300 hover:border-cyan-400"
                   >
                     Heatmap {mostrarHeatmap ? "ON" : "OFF"}
                   </button>
 
                   <button
                     onClick={() => setMostrarRayos((v) => !v)}
-                    className="py-3 rounded-xl bg-black border border-zinc-800 text-[9px] font-black uppercase text-zinc-300 hover:border-orange-500"
+                    className="py-3 rounded-xl bg-black/70 border border-slate-700 text-[9px] font-black uppercase text-slate-300 hover:border-cyan-400"
                   >
                     Rayos {mostrarRayos ? "ON" : "OFF"}
                   </button>
 
                   <button
                     onClick={() => setMostrarRouterOptimo((v) => !v)}
-                    className="col-span-2 py-3 rounded-xl bg-black border border-zinc-800 text-[9px] font-black uppercase text-zinc-300 hover:border-orange-500"
+                    className="col-span-2 py-3 rounded-xl bg-black/70 border border-slate-700 text-[9px] font-black uppercase text-slate-300 hover:border-cyan-400"
                   >
                     Router óptimo {mostrarRouterOptimo ? "ON" : "OFF"}
                   </button>
 
                   <button
                     onClick={() => setMostrarMesh((v) => !v)}
-                    className="col-span-2 py-3 rounded-xl bg-black border border-zinc-800 text-[9px] font-black uppercase text-zinc-300 hover:border-sky-500"
+                    className="col-span-2 py-3 rounded-xl bg-black/70 border border-slate-700 text-[9px] font-black uppercase text-slate-300 hover:border-sky-500"
                   >
                     Heatmap mesh {mostrarMesh ? "ON" : "OFF"}
                   </button>
                 </div>
 
-                <div className="bg-black border border-zinc-900 rounded-xl p-4 mt-4 space-y-2">
-                  <p className="text-[9px] uppercase text-zinc-500 font-black">
+                <div className="bg-black/70 border border-slate-800 rounded-xl p-4 mt-4 space-y-2">
+                  <p className="text-[9px] uppercase text-slate-500 font-black">
                     Modo heatmap dinámico
                   </p>
                   <select
                     value={modoHeatmap}
                     onChange={(e) => setModoHeatmap(e.target.value as "potencia" | "delay" | "doppler")}
-                    className="w-full bg-black border border-zinc-800 rounded-xl p-2 text-white text-xs outline-none"
+                    className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none"
                   >
                     <option value="potencia">Potencia recibida dBm</option>
                     <option value="delay">Delay spread RMS ns</option>
                     <option value="doppler">Doppler dominante Hz</option>
                   </select>
-                  <p className="text-[9px] text-zinc-500 uppercase leading-relaxed">
+                  <p className="text-[9px] text-slate-500 uppercase leading-relaxed">
                     Potencia usa malla base. Delay/Doppler usan heatmapCanal calculado en main.py desde rayos/CIR.
                   </p>
                 </div>
 
                 {resultadoCobertura.mimoArrays && (
-                  <div className="bg-black border border-cyan-900 rounded-xl p-4 mt-4 space-y-2">
+                  <div className="bg-black/70 border border-cyan-900 rounded-xl p-4 mt-4 space-y-2">
                     <p className="text-[9px] uppercase text-cyan-400 font-black">
                       MIMO / Arrays Sionna
                     </p>
-                    <p className="text-[10px] text-zinc-300 uppercase leading-relaxed">
+                    <p className="text-[10px] text-slate-300 uppercase leading-relaxed">
                       TX: {resultadoCobertura.mimoArrays.txRows}x{resultadoCobertura.mimoArrays.txCols} · RX: {resultadoCobertura.mimoArrays.rxRows}x{resultadoCobertura.mimoArrays.rxCols}
                     </p>
-                    <p className="text-[9px] text-zinc-500 uppercase leading-relaxed">
+                    <p className="text-[9px] text-slate-500 uppercase leading-relaxed">
                       Canales teóricos: {resultadoCobertura.mimoArrays.canalesMimoTeoricos} · Spacing: {resultadoCobertura.mimoArrays.arraySpacingLambda}λ
                     </p>
                   </div>
                 )}
 
                 {resultadoCobertura.mimoMetricas && (
-                  <div className="bg-black border border-emerald-900 rounded-xl p-4 mt-4 space-y-3">
+                  <div className="bg-black/70 border border-emerald-900 rounded-xl p-4 mt-4 space-y-3">
                     <p className="text-[9px] uppercase text-emerald-400 font-black">
                       Parámetros MIMO calculados
                     </p>
 
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-3">
-                        <p className="text-[8px] uppercase text-zinc-500 font-black">SNR</p>
+                      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                        <p className="text-[8px] uppercase text-slate-500 font-black">SNR</p>
                         <p className="text-sm font-black text-white">
                           {resultadoCobertura.mimoMetricas.snrDb.toFixed(2)} dB
                         </p>
                       </div>
 
-                      <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-3">
-                        <p className="text-[8px] uppercase text-zinc-500 font-black">Ganancia array ideal</p>
+                      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                        <p className="text-[8px] uppercase text-slate-500 font-black">Ganancia array ideal</p>
                         <p className="text-sm font-black text-emerald-400">
                           +{resultadoCobertura.mimoMetricas.arrayGainBeamformingDbIdeal.toFixed(2)} dB
                         </p>
                       </div>
 
-                      <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-3">
-                        <p className="text-[8px] uppercase text-zinc-500 font-black">Rank máximo teórico</p>
+                      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                        <p className="text-[8px] uppercase text-slate-500 font-black">Rank máximo teórico</p>
                         <p className="text-sm font-black text-cyan-400">
                           {resultadoCobertura.mimoMetricas.rankMaxTeorico}
                         </p>
                       </div>
 
-                      <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-3">
-                        <p className="text-[8px] uppercase text-zinc-500 font-black">Streams máximos</p>
+                      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                        <p className="text-[8px] uppercase text-slate-500 font-black">Streams máximos</p>
                         <p className="text-sm font-black text-cyan-400">
                           {resultadoCobertura.mimoMetricas.streamsMaxTeoricos}
                         </p>
                       </div>
                     </div>
 
-                    <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-3 space-y-1">
-                      <p className="text-[8px] uppercase text-zinc-500 font-black">Capacidad Shannon</p>
-                      <p className="text-[10px] text-zinc-300 uppercase leading-relaxed">
+                    <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-1">
+                      <p className="text-[8px] uppercase text-slate-500 font-black">Capacidad Shannon</p>
+                      <p className="text-[10px] text-slate-300 uppercase leading-relaxed">
                         SISO: {resultadoCobertura.mimoMetricas.capacidadSisoMbps.toFixed(2)} Mbps
                       </p>
-                      <p className="text-[10px] text-zinc-300 uppercase leading-relaxed">
+                      <p className="text-[10px] text-slate-300 uppercase leading-relaxed">
                         Beamforming ideal: {resultadoCobertura.mimoMetricas.capacidadBeamformingIdealMbps.toFixed(2)} Mbps
                       </p>
-                      <p className="text-[10px] text-zinc-300 uppercase leading-relaxed">
+                      <p className="text-[10px] text-slate-300 uppercase leading-relaxed">
                         Multiplexing ideal: {resultadoCobertura.mimoMetricas.capacidadMultiplexingIdealMbps.toFixed(2)} Mbps
                       </p>
                       <p className="text-[9px] text-green-400 uppercase leading-relaxed">
@@ -2061,14 +2088,14 @@ export default function CrearViviendaPage() {
                       </p>
                     </div>
 
-                    <p className="text-[9px] text-zinc-500 uppercase leading-relaxed">
+                    <p className="text-[9px] text-slate-500 uppercase leading-relaxed">
                       {resultadoCobertura.mimoMetricas.modelo?.nota ?? "La capacidad MIMO real completa requiere matriz H por elemento."}
                     </p>
                   </div>
                 )}
 
-                <div className="bg-black border border-zinc-900 rounded-xl p-4 mt-4">
-  <p className="text-[9px] uppercase text-zinc-500 font-black mb-2">
+                <div className="bg-black/70 border border-slate-800 rounded-xl p-4 mt-4">
+  <p className="text-[9px] uppercase text-slate-500 font-black mb-2">
     Límite rayos Sionna
   </p>
 
@@ -2078,16 +2105,16 @@ export default function CrearViviendaPage() {
     max={100}
     value={maxRayos}
     onChange={(e) => setMaxRayos(Number(e.target.value))}
-    className="w-full accent-orange-600"
+    className="w-full accent-cyan-400"
   />
 
-  <p className="text-orange-500 text-sm font-black mt-2">
+  <p className="text-cyan-300 text-sm font-black mt-2">
     {maxRayos} rayos visibles
   </p>
 </div>
 
-                <div className="bg-black border border-purple-900 rounded-xl p-4 mt-4 space-y-3">
-                  <p className="text-[9px] uppercase text-zinc-500 font-black mb-2">
+                <div className="bg-black/70 border border-purple-900 rounded-xl p-4 mt-4 space-y-3">
+                  <p className="text-[9px] uppercase text-slate-500 font-black mb-2">
                     Simulación dinámica Sionna
                   </p>
 
@@ -2104,7 +2131,7 @@ export default function CrearViviendaPage() {
                       className={`py-3 rounded-xl border text-[9px] font-black uppercase transition-all ${
                         moverReceptor
                           ? "bg-cyan-500 text-black border-cyan-400"
-                          : "bg-black text-zinc-400 border-zinc-800"
+                          : "bg-black text-slate-400 border-slate-700"
                       }`}
                     >
                       RX {moverReceptor ? "móvil" : "fijo"}
@@ -2115,25 +2142,25 @@ export default function CrearViviendaPage() {
                       className={`py-3 rounded-xl border text-[9px] font-black uppercase transition-all ${
                         moverPersonas
                           ? "bg-yellow-400 text-black border-yellow-300"
-                          : "bg-black text-zinc-400 border-zinc-800"
+                          : "bg-black text-slate-400 border-slate-700"
                       }`}
                     >
                       Personas {moverPersonas ? "móviles" : "fijas"}
                     </button>
                   </div>
 
-                  <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-3">
-                    <p className="text-[8px] uppercase text-zinc-500 font-black">
+                  <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                    <p className="text-[8px] uppercase text-slate-500 font-black">
                       Estado dinámico
                     </p>
-                    <p className="text-[9px] text-zinc-400 uppercase leading-relaxed mt-1">
+                    <p className="text-[9px] text-slate-400 uppercase leading-relaxed mt-1">
                       {moverReceptor ? "RX móvil" : "RX fijo"} · {moverPersonas ? "personas móviles" : "personas fijas"}
                     </p>
                   </div>
 
-                  <div className="space-y-2 border-t border-zinc-900 pt-3">
-                    <p className="text-[10px] text-zinc-400">Modo MIMO</p>
-                    <select value={mimoMode} onChange={(e)=>setMimoMode(e.target.value as any)} className="w-full bg-black border border-zinc-800 rounded-xl p-2 text-white text-xs outline-none">
+                  <div className="space-y-2 border-t border-slate-800 pt-3">
+                    <p className="text-[10px] text-slate-400">Modo MIMO</p>
+                    <select value={mimoMode} onChange={(e)=>setMimoMode(e.target.value as any)} className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none">
                       <option value="siso">SISO / referencia</option>
                       <option value="beamforming">Beamforming</option>
                       <option value="multiplexing">Spatial multiplexing</option>
@@ -2143,8 +2170,8 @@ export default function CrearViviendaPage() {
 
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <p className="text-[9px] text-zinc-400 mb-1">Antena TX</p>
-                      <select value={antennaTypeTx} onChange={(e)=>setAntennaTypeTx(e.target.value)} className="w-full bg-black border border-zinc-800 rounded-xl p-2 text-white text-xs outline-none">
+                      <p className="text-[9px] text-slate-400 mb-1">Antena TX</p>
+                      <select value={antennaTypeTx} onChange={(e)=>setAntennaTypeTx(e.target.value)} className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none">
                         <option value="omni">Omni / isotrópica</option>
                         <option value="dipolo">Dipolo λ/2</option>
                         <option value="monopolo">Monopolo λ/4</option>
@@ -2158,8 +2185,8 @@ export default function CrearViviendaPage() {
                       </select>
                     </div>
                     <div>
-                      <p className="text-[9px] text-zinc-400 mb-1">Antena RX</p>
-                      <select value={antennaTypeRx} onChange={(e)=>setAntennaTypeRx(e.target.value)} className="w-full bg-black border border-zinc-800 rounded-xl p-2 text-white text-xs outline-none">
+                      <p className="text-[9px] text-slate-400 mb-1">Antena RX</p>
+                      <select value={antennaTypeRx} onChange={(e)=>setAntennaTypeRx(e.target.value)} className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none">
                         <option value="omni">Omni / isotrópica</option>
                         <option value="dipolo">Dipolo λ/2</option>
                         <option value="monopolo">Monopolo λ/4</option>
@@ -2173,8 +2200,8 @@ export default function CrearViviendaPage() {
                       </select>
                     </div>
                     <div>
-                      <p className="text-[9px] text-zinc-400 mb-1">Pol. TX</p>
-                      <select value={polarizationTx} onChange={(e)=>setPolarizationTx(e.target.value)} className="w-full bg-black border border-zinc-800 rounded-xl p-2 text-white text-xs outline-none">
+                      <p className="text-[9px] text-slate-400 mb-1">Pol. TX</p>
+                      <select value={polarizationTx} onChange={(e)=>setPolarizationTx(e.target.value)} className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none">
                         <option value="V">Vertical</option>
                         <option value="H">Horizontal</option>
                         <option value="RHCP">RHCP FEKO</option>
@@ -2182,8 +2209,8 @@ export default function CrearViviendaPage() {
                       </select>
                     </div>
                     <div>
-                      <p className="text-[9px] text-zinc-400 mb-1">Pol. RX</p>
-                      <select value={polarizationRx} onChange={(e)=>setPolarizationRx(e.target.value)} className="w-full bg-black border border-zinc-800 rounded-xl p-2 text-white text-xs outline-none">
+                      <p className="text-[9px] text-slate-400 mb-1">Pol. RX</p>
+                      <select value={polarizationRx} onChange={(e)=>setPolarizationRx(e.target.value)} className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none">
                         <option value="V">Vertical</option>
                         <option value="H">Horizontal</option>
                         <option value="RHCP">RHCP FEKO</option>
@@ -2191,36 +2218,36 @@ export default function CrearViviendaPage() {
                       </select>
                     </div>
                     <div className="col-span-2">
-                      <p className="text-[9px] text-zinc-400 mb-1">Figura ruido RX (dB)</p>
-                      <input type="number" min={0} step={0.5} value={noiseFigureDb} onChange={(e)=>setNoiseFigureDb(Math.max(0, Number(e.target.value)))} className="w-full bg-black border border-zinc-800 rounded-xl p-2 text-white text-xs outline-none" />
+                      <p className="text-[9px] text-slate-400 mb-1">Figura ruido RX (dB)</p>
+                      <input type="number" min={0} step={0.5} value={noiseFigureDb} onChange={(e)=>setNoiseFigureDb(Math.max(0, Number(e.target.value)))} className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none" />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <p className="text-[9px] text-zinc-400 mb-1">TX filas</p>
-                      <input type="number" min={1} max={8} value={txRows} onChange={(e)=>setTxRows(Math.max(1, Number(e.target.value)))} className="w-full bg-black border border-zinc-800 rounded-xl p-2 text-white text-xs outline-none" />
+                      <p className="text-[9px] text-slate-400 mb-1">TX filas</p>
+                      <input type="number" min={1} max={8} value={txRows} onChange={(e)=>setTxRows(Math.max(1, Number(e.target.value)))} className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none" />
                     </div>
                     <div>
-                      <p className="text-[9px] text-zinc-400 mb-1">TX columnas</p>
-                      <input type="number" min={1} max={8} value={txCols} onChange={(e)=>setTxCols(Math.max(1, Number(e.target.value)))} className="w-full bg-black border border-zinc-800 rounded-xl p-2 text-white text-xs outline-none" />
+                      <p className="text-[9px] text-slate-400 mb-1">TX columnas</p>
+                      <input type="number" min={1} max={8} value={txCols} onChange={(e)=>setTxCols(Math.max(1, Number(e.target.value)))} className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none" />
                     </div>
                     <div>
-                      <p className="text-[9px] text-zinc-400 mb-1">RX filas</p>
-                      <input type="number" min={1} max={8} value={rxRows} onChange={(e)=>setRxRows(Math.max(1, Number(e.target.value)))} className="w-full bg-black border border-zinc-800 rounded-xl p-2 text-white text-xs outline-none" />
+                      <p className="text-[9px] text-slate-400 mb-1">RX filas</p>
+                      <input type="number" min={1} max={8} value={rxRows} onChange={(e)=>setRxRows(Math.max(1, Number(e.target.value)))} className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none" />
                     </div>
                     <div>
-                      <p className="text-[9px] text-zinc-400 mb-1">RX columnas</p>
-                      <input type="number" min={1} max={8} value={rxCols} onChange={(e)=>setRxCols(Math.max(1, Number(e.target.value)))} className="w-full bg-black border border-zinc-800 rounded-xl p-2 text-white text-xs outline-none" />
+                      <p className="text-[9px] text-slate-400 mb-1">RX columnas</p>
+                      <input type="number" min={1} max={8} value={rxCols} onChange={(e)=>setRxCols(Math.max(1, Number(e.target.value)))} className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none" />
                     </div>
                     <div className="col-span-2">
-                      <p className="text-[9px] text-zinc-400 mb-1">Separación array (λ)</p>
-                      <input type="number" min={0.05} step={0.05} value={arraySpacingLambda} onChange={(e)=>setArraySpacingLambda(Math.max(0.05, Number(e.target.value)))} className="w-full bg-black border border-zinc-800 rounded-xl p-2 text-white text-xs outline-none" />
+                      <p className="text-[9px] text-slate-400 mb-1">Separación array (λ)</p>
+                      <input type="number" min={0.05} step={0.05} value={arraySpacingLambda} onChange={(e)=>setArraySpacingLambda(Math.max(0.05, Number(e.target.value)))} className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none" />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <p className="text-[10px] text-zinc-400">
+                    <p className="text-[10px] text-slate-400">
                       Velocidad receptor
                     </p>
 
@@ -2229,13 +2256,13 @@ export default function CrearViviendaPage() {
                       value={velocidadRx}
                       step={0.1}
                       onChange={(e) => setVelocidadRx(Number(e.target.value))}
-                      className="w-full bg-black border border-zinc-800 rounded-xl p-2 text-white text-xs outline-none"
+                      className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none"
                     />
 
                     <select
                       value={unidadVelocidad}
                       onChange={(e) => setUnidadVelocidad(e.target.value as "ms" | "kmh")}
-                      className="w-full bg-black border border-zinc-800 rounded-xl p-2 text-white text-xs outline-none"
+                      className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none"
                     >
                       <option value="ms">m/s</option>
                       <option value="kmh">km/h</option>
@@ -2243,7 +2270,7 @@ export default function CrearViviendaPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <p className="text-[10px] text-zinc-400">
+                    <p className="text-[10px] text-slate-400">
                       Recalcular Sionna cada:
                     </p>
 
@@ -2253,16 +2280,16 @@ export default function CrearViviendaPage() {
                       step={0.1}
                       min={0.1}
                       onChange={(e) => setIntervaloSionna(Math.max(0.1, Number(e.target.value)))}
-                      className="w-full bg-black border border-zinc-800 rounded-xl p-2 text-white text-xs outline-none"
+                      className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none"
                     />
 
-                    <p className="text-[9px] text-zinc-500 uppercase">
+                    <p className="text-[9px] text-slate-500 uppercase">
                       {Math.max(0.1, intervaloSionna).toFixed(1)} s entre cálculos
                     </p>
                   </div>
 
                   <div className="space-y-2">
-                    <p className="text-[10px] text-zinc-400">
+                    <p className="text-[10px] text-slate-400">
                       Dirección movimiento: {anguloMovimiento}°
                     </p>
 
@@ -2278,8 +2305,8 @@ export default function CrearViviendaPage() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-3">
-                      <p className="text-[8px] uppercase text-zinc-500 font-black">
+                    <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                      <p className="text-[8px] uppercase text-slate-500 font-black">
                         Velocidad usada
                       </p>
                       <p className="text-xs font-black text-purple-400">
@@ -2287,8 +2314,8 @@ export default function CrearViviendaPage() {
                       </p>
                     </div>
 
-                    <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-3">
-                      <p className="text-[8px] uppercase text-zinc-500 font-black">
+                    <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                      <p className="text-[8px] uppercase text-slate-500 font-black">
                         Doppler backend
                       </p>
                       <p className="text-xs font-black text-cyan-400">
@@ -2297,22 +2324,22 @@ export default function CrearViviendaPage() {
                     </div>
                   </div>
 
-                  <p className="text-[9px] text-zinc-500 uppercase leading-relaxed mt-2">
+                  <p className="text-[9px] text-slate-500 uppercase leading-relaxed mt-2">
                     Al iniciar, puedes elegir si se mueve el receptor, las personas o ambos. El frontend solo mueve geometría y visualiza; el Doppler viene calculado desde main.py por camino.
                   </p>
                 </div>
 
-                <div className="bg-black border border-zinc-900 rounded-xl p-4 space-y-2">
-                  <p className="text-[9px] uppercase text-zinc-500 font-black">
+                <div className="bg-black/70 border border-slate-800 rounded-xl p-4 space-y-2">
+                  <p className="text-[9px] uppercase text-slate-500 font-black">
                     Potencia media
                   </p>
-                  <p className="text-2xl font-black text-orange-500">
+                  <p className="text-2xl font-black text-cyan-300">
                     {resultadoCobertura.estadisticas.potenciaMediaDbm} dBm
                   </p>
                 </div>
 
-                <div className="bg-black border border-zinc-900 rounded-xl p-4 space-y-2">
-                  <p className="text-[9px] uppercase text-zinc-500 font-black">
+                <div className="bg-black/70 border border-slate-800 rounded-xl p-4 space-y-2">
+                  <p className="text-[9px] uppercase text-slate-500 font-black">
                     Zonas muertas
                   </p>
                   <p className="text-xl font-black text-white">
@@ -2321,8 +2348,8 @@ export default function CrearViviendaPage() {
                 </div>
 
                 {resultadoCobertura.estadisticasMesh && (
-                  <div className="bg-black border border-sky-900 rounded-xl p-4 space-y-2">
-                    <p className="text-[9px] uppercase text-zinc-500 font-black">
+                  <div className="bg-black/70 border border-sky-900 rounded-xl p-4 space-y-2">
+                    <p className="text-[9px] uppercase text-slate-500 font-black">
                       Cobertura con Mesh
                     </p>
 
@@ -2330,7 +2357,7 @@ export default function CrearViviendaPage() {
                       {resultadoCobertura.estadisticasMesh.potenciaMediaDbm} dBm
                     </p>
 
-                    <p className="text-[9px] text-zinc-500 uppercase leading-relaxed">
+                    <p className="text-[9px] text-slate-500 uppercase leading-relaxed">
                       Mejora media: {resultadoCobertura.estadisticasMesh.mejoraMediaDb} dB ·
                       Zonas muertas: {" "}
                       {resultadoCobertura.estadisticasMesh.porcentajeZonasMuertas}%
@@ -2338,11 +2365,11 @@ export default function CrearViviendaPage() {
                   </div>
                 )}
 
-                <div className="bg-black border border-zinc-900 rounded-xl p-4 space-y-2">
-                  <p className="text-[9px] uppercase text-zinc-500 font-black">
+                <div className="bg-black/70 border border-slate-800 rounded-xl p-4 space-y-2">
+                  <p className="text-[9px] uppercase text-slate-500 font-black">
                     Router recomendado
                   </p>
-                  <p className="text-xs text-zinc-300 leading-relaxed">
+                  <p className="text-xs text-slate-300 leading-relaxed">
                     X: {resultadoCobertura.routerOptimo.x.toFixed(2)} · Z: {" "}
                     {resultadoCobertura.routerOptimo.z.toFixed(2)} · Altura: {" "}
                     {resultadoCobertura.routerOptimo.y.toFixed(2)} m
@@ -2351,20 +2378,20 @@ export default function CrearViviendaPage() {
 
                 {resultadoCobertura.optimosPorHabitacion && (
                   <div className="space-y-2">
-                    <p className="text-[9px] uppercase text-zinc-500 font-black">
+                    <p className="text-[9px] uppercase text-slate-500 font-black">
                       Mejor posición por habitación
                     </p>
 
                     {resultadoCobertura.optimosPorHabitacion.map((o) => (
                       <div
                         key={o.habitacionId}
-                        className="bg-black border border-zinc-900 rounded-xl p-3"
+                        className="bg-black/70 border border-slate-800 rounded-xl p-3"
                       >
                         <p className="text-[10px] font-black uppercase text-white">
                           {o.habitacion}
                         </p>
 
-                        <p className="text-[9px] text-zinc-500 uppercase leading-relaxed">
+                        <p className="text-[9px] text-slate-500 uppercase leading-relaxed">
                           X: {o.x.toFixed(2)} · Z: {o.z.toFixed(2)} · Media: {" "}
                           {o.potenciaMediaDbm} dBm · Zonas muertas: {o.zonasMuertas}
                         </p>
@@ -2374,19 +2401,19 @@ export default function CrearViviendaPage() {
                 )}
 
                 <div className="space-y-2">
-                  <p className="text-[9px] uppercase text-zinc-500 font-black">
+                  <p className="text-[9px] uppercase text-slate-500 font-black">
                     Habitaciones
                   </p>
 
                   {resultadoCobertura.resumenHabitaciones.map((h) => (
                     <div
                       key={h.habitacion}
-                      className="bg-black border border-zinc-900 rounded-xl p-3"
+                      className="bg-black/70 border border-slate-800 rounded-xl p-3"
                     >
                       <p className="text-[10px] font-black uppercase text-white">
                         {h.habitacion}
                       </p>
-                      <p className="text-[9px] text-zinc-500 uppercase">
+                      <p className="text-[9px] text-slate-500 uppercase">
                         {h.potenciaMediaDbm ?? "Sin datos"} dBm · {h.calidad}
                       </p>
                     </div>
@@ -2396,20 +2423,20 @@ export default function CrearViviendaPage() {
                 {resultadoCobertura.repetidoresOptimos &&
                   resultadoCobertura.repetidoresOptimos.length > 0 && (
                     <div className="space-y-2">
-                      <p className="text-[9px] uppercase text-zinc-500 font-black">
+                      <p className="text-[9px] uppercase text-slate-500 font-black">
                         Repetidores / Mesh recomendados
                       </p>
 
                       {resultadoCobertura.repetidoresOptimos.map((rep) => (
                         <div
                           key={rep.id}
-                          className="bg-black border border-sky-900 rounded-xl p-3"
+                          className="bg-black/70 border border-sky-900 rounded-xl p-3"
                         >
                           <p className="text-[10px] font-black uppercase text-sky-400">
                             {rep.tipo}
                           </p>
 
-                          <p className="text-[9px] text-zinc-500 uppercase leading-relaxed">
+                          <p className="text-[9px] text-slate-500 uppercase leading-relaxed">
                             X: {rep.x.toFixed(2)} · Z: {rep.z.toFixed(2)} · Altura: {" "}
                             {rep.y.toFixed(2)} m
                           </p>
@@ -2421,19 +2448,19 @@ export default function CrearViviendaPage() {
                 {resultadoCobertura.receptoresOptimos &&
                   resultadoCobertura.receptoresOptimos.length > 0 && (
                     <div className="space-y-2">
-                      <p className="text-[9px] uppercase text-zinc-500 font-black">
+                      <p className="text-[9px] uppercase text-slate-500 font-black">
                         Receptor óptimo por habitación
                       </p>
 
                       {resultadoCobertura.receptoresOptimos.map((rx) => (
                         <div
                           key={rx.habitacion}
-                          className="bg-black border border-green-900 rounded-xl p-3"
+                          className="bg-black/70 border border-green-900 rounded-xl p-3"
                         >
                           <p className="text-[10px] font-black uppercase text-green-400">
                             {rx.habitacion}
                           </p>
-                          <p className="text-[9px] text-zinc-500 uppercase leading-relaxed">
+                          <p className="text-[9px] text-slate-500 uppercase leading-relaxed">
                             X: {rx.x.toFixed(2)} · Z: {rx.z.toFixed(2)} · Potencia: {rx.potenciaDbm} dBm
                           </p>
                         </div>
@@ -2442,13 +2469,13 @@ export default function CrearViviendaPage() {
                   )}
 
                 {cir.length > 0 && (
-                  <div className="bg-black border border-orange-900 rounded-xl p-4 space-y-3">
+                  <div className="bg-black/70 border border-orange-900 rounded-xl p-4 space-y-3">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-[9px] uppercase text-orange-500 font-black">
+                        <p className="text-[9px] uppercase text-cyan-300 font-black">
                           CIR / Power Delay Profile
                         </p>
-                        <p className="text-[9px] text-zinc-500 uppercase leading-relaxed mt-1">
+                        <p className="text-[9px] text-slate-500 uppercase leading-relaxed mt-1">
                           Potencia recibida por cada retardo multipath.
                         </p>
                       </div>
@@ -2498,8 +2525,8 @@ export default function CrearViviendaPage() {
 
                     {cirResumen && (
                       <div className="grid grid-cols-2 gap-2">
-                        <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-3">
-                          <p className="text-[8px] uppercase text-zinc-500 font-black">
+                        <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                          <p className="text-[8px] uppercase text-slate-500 font-black">
                             Delay spread RMS
                           </p>
                           <p className="text-sm font-black text-orange-400">
@@ -2511,8 +2538,8 @@ export default function CrearViviendaPage() {
                           </p>
                         </div>
 
-                        <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-3">
-                          <p className="text-[8px] uppercase text-zinc-500 font-black">
+                        <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                          <p className="text-[8px] uppercase text-slate-500 font-black">
                             Potencia total
                           </p>
                           <p className="text-sm font-black text-white">
@@ -2531,12 +2558,12 @@ export default function CrearViviendaPage() {
                       {cir.slice(0, 12).map((tap, index) => (
                         <div
                           key={tap.id ?? index}
-                          className="bg-zinc-950 border border-zinc-900 rounded-xl p-3"
+                          className="bg-slate-950 border border-slate-800 rounded-xl p-3"
                         >
                           <p className="text-[10px] font-black uppercase text-white">
                             Tap {index + 1} · {tap.tipo ?? "multipath"}
                           </p>
-                          <p className="text-[9px] text-zinc-500 uppercase">
+                          <p className="text-[9px] text-slate-500 uppercase">
                             {tap.delayNs.toFixed(2)} ns · {tap.potenciaDbm.toFixed(2)} dBm
                             {typeof tap.dopplerHz === "number"
                               ? ` · Doppler ${tap.dopplerHz.toFixed(2)} Hz`
@@ -2549,13 +2576,13 @@ export default function CrearViviendaPage() {
                 )}
 
                 <div className="space-y-2">
-                  <p className="text-[9px] uppercase text-zinc-500 font-black">
+                  <p className="text-[9px] uppercase text-slate-500 font-black">
                     Recomendaciones
                   </p>
 {resultadoCobertura.recomendaciones.map((r, i) => (
   <p
     key={i}
-    className="text-[10px] text-zinc-400 leading-relaxed bg-black border border-zinc-900 rounded-xl p-3"
+    className="text-[10px] text-slate-400 leading-relaxed bg-black/70 border border-slate-800 rounded-xl p-3"
   >
     {r}
   </p>
@@ -2567,17 +2594,17 @@ export default function CrearViviendaPage() {
 {resultadoCobertura.rayos &&
 resultadoCobertura.rayos.length > 0 && (
 
-<div className="space-y-3 border-t border-zinc-900 pt-5">
+<div className="space-y-3 border-t border-slate-800 pt-5">
 
-<p className="text-[9px] uppercase text-zinc-500 font-black">
+<p className="text-[9px] uppercase text-slate-500 font-black">
 Análisis rayos Sionna
 </p>
 
 <div className="grid grid-cols-2 gap-3">
 
-<div className="bg-black border border-zinc-900 rounded-xl p-3">
+<div className="bg-black/70 border border-slate-800 rounded-xl p-3">
 
-<p className="text-[8px] uppercase text-zinc-500 font-black">
+<p className="text-[8px] uppercase text-slate-500 font-black">
 Total rayos
 </p>
 
@@ -2587,9 +2614,9 @@ Total rayos
 
 </div>
 
-<div className="bg-black border border-zinc-900 rounded-xl p-3">
+<div className="bg-black/70 border border-slate-800 rounded-xl p-3">
 
-<p className="text-[8px] uppercase text-zinc-500 font-black">
+<p className="text-[8px] uppercase text-slate-500 font-black">
 Mejor potencia
 </p>
 
@@ -2627,14 +2654,14 @@ maxRayos
 
 <div
 key={rayo.id}
-className="bg-black border border-zinc-900 rounded-xl p-3"
+className="bg-black/70 border border-slate-800 rounded-xl p-3"
 >
 
 <p className="text-[10px] font-black uppercase text-white">
 Rayo {index+1}
 </p>
 
-<p className="text-[9px] text-zinc-500 uppercase">
+<p className="text-[9px] text-slate-500 uppercase">
 
 {rayo.afectadoPorPersona || rayo.tipo==="afectado_persona" || rayo.tipoVisual==="afectado_persona"
 ? "AFECTADO POR PERSONA"
@@ -2673,8 +2700,8 @@ Rebotes:
 </div>
 )}
 
-            <div className="mt-6 border-t border-zinc-900 pt-5">
-              <p className="text-[9px] text-zinc-500 uppercase font-bold leading-relaxed">
+            <div className="mt-6 border-t border-slate-800 pt-5">
+              <p className="text-[9px] text-slate-500 uppercase font-bold leading-relaxed">
                 Controles: rueda para zoom, click derecho o dos dedos para mover
                 cámara, click izquierdo para rotar. Selecciona habitaciones u
                 objetos y edítalos desde los paneles.
@@ -3390,13 +3417,13 @@ function MaterialSelect({
 }) {
   return (
     <div>
-      <p className="text-[8px] uppercase text-zinc-500 font-black mb-2">
+      <p className="text-[8px] uppercase text-slate-500 font-black mb-2">
         {label}
       </p>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full bg-black border border-zinc-800 rounded-xl p-3 text-xs text-white outline-none"
+        className="w-full bg-black/70 border border-slate-700 rounded-xl p-3 text-xs text-white outline-none"
       >
         <option value="hormigon">Hormigón</option>
         <option value="ladrillo">Ladrillo</option>
@@ -3429,7 +3456,7 @@ function Boton({ texto, onClick }: { texto: string; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="py-3 rounded-xl bg-black border border-zinc-800 text-[9px] font-black uppercase text-zinc-300 hover:text-white hover:border-orange-500 transition-all"
+      className="py-3 rounded-xl bg-black/70 border border-slate-700 text-[9px] font-black uppercase text-slate-300 hover:text-white hover:border-cyan-400 transition-all"
     >
       {texto}
     </button>
@@ -3454,11 +3481,11 @@ function Control({
   return (
     <div>
       <div className="flex justify-between mb-1">
-        <label className="text-[8px] uppercase text-zinc-500 font-black">
+        <label className="text-[8px] uppercase text-slate-500 font-black">
           {label}
         </label>
 
-        <span className="text-[8px] text-orange-500 font-mono">
+        <span className="text-[8px] text-cyan-300 font-mono">
           {value.toFixed(1)}
         </span>
       </div>
@@ -3470,7 +3497,7 @@ function Control({
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full accent-orange-600"
+        className="w-full accent-cyan-400"
       />
     </div>
   );
