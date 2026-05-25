@@ -461,14 +461,17 @@ export default function CrearViviendaPage() {
     return bruto
       .map((c: any, index: number) => {
         const delayNs = Number(
-          c.delayNs ??
-            c.retardoNs ??
-            c.tauNs ??
-            c.tau_ns ??
-            c.delay_ns ??
-            (typeof c.tauS === "number" ? c.tauS * 1e9 : 0) ??
-            (typeof c.tau_s === "number" ? c.tau_s * 1e9 : 0),
-        );
+  c.delayNs ??
+    c.retardoNs ??
+    c.tauNs ??
+    c.tau_ns ??
+    c.delay_ns ??
+    (typeof c.tauS === "number"
+      ? c.tauS * 1e9
+      : typeof c.tau_s === "number"
+        ? c.tau_s * 1e9
+        : 0),
+);
 
         const potenciaDbm = Number(
           c.potenciaDbm ??
