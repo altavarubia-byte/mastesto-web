@@ -2,7 +2,7 @@
 import ModelObjeto from "@/components/ModelObjeto";
 import { Canvas, useThree, useFrame } from "@react-three/fiber";
 import { OrbitControls, Grid, Line } from "@react-three/drei";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import jsPDF from "jspdf";
 
@@ -434,6 +434,67 @@ export default function CrearViviendaPage() {
       setCalculandoCobertura(false);
     }
   };
+
+  useEffect(() => {
+
+  if (!simulando) return;
+
+  const intervalo = setInterval(() => {
+
+    setObjetos((prev)=>
+      prev.map((obj)=>{
+
+        if(
+          obj.tipo==="receptor" ||
+          obj.tipo==="rx" ||
+          obj.tipo==="receiver"
+        ){
+
+          let nuevaX =
+            obj.x +
+            (0.25*velocidadSim);
+
+          if(nuevaX>10){
+            nuevaX=-10;
+          }
+
+          return{
+
+            ...obj,
+
+            x:Number(
+              nuevaX.toFixed(2)
+            )
+
+          };
+
+        }
+
+        return obj;
+
+      })
+    );
+
+    setTimeout(()=>{
+
+      calcularCobertura();
+
+    },500);
+
+  },3000);
+
+  return ()=>{
+
+    clearInterval(
+      intervalo
+    );
+
+  };
+
+},[
+simulando,
+velocidadSim
+]);
 
   const generarRenderPremium = async () => {
   try {
