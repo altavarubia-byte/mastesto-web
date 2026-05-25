@@ -64,11 +64,13 @@ type PuntoHeatmap = {
 
 type RayoCobertura = {
   id: string;
-  tipo: "directo" | "reflejado" | "debil";
+  tipo: "directo" | "reflejado" | "debil" | "afectado_persona" | string;
   potenciaDbm: number;
   los?: boolean;
   nlos?: boolean;
   numRebotes?: number;
+  afectadoPorPersona?: boolean;
+  personasInteractuadas?: string[];
   puntos: {
     x: number;
     y: number;
@@ -2047,7 +2049,9 @@ Rayo {index+1}
 
 <p className="text-[9px] text-zinc-500 uppercase">
 
-{rayo.tipo}
+{rayo.afectadoPorPersona || rayo.tipo==="afectado_persona"
+? "AFECTADO POR PERSONA"
+: rayo.tipo}
 
 ·
 
@@ -2616,6 +2620,10 @@ function colorHeatmapMesh(potenciaDbm: number) {
 
 function colorRayo(rayo:any){
 
+  if(rayo.afectadoPorPersona || rayo.tipo==="afectado_persona"){
+    return "#ef4444";
+  }
+
   if(rayo.tipo==="directo"){
     return "#22c55e";
   }
@@ -2625,15 +2633,19 @@ function colorRayo(rayo:any){
   }
 
   if(rayo.nlos){
-    return "#ef4444";
+    return "#a855f7";
   }
 
-  return "#a855f7";
+  return "#38bdf8";
 }
 
 
 
 function grosorRayo(rayo:any){
+
+  if(rayo.afectadoPorPersona || rayo.tipo==="afectado_persona"){
+    return 5;
+  }
 
   const p = rayo.potenciaDbm ?? -90;
 
