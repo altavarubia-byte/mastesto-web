@@ -198,6 +198,8 @@ export default function CrearViviendaPage() {
   const [resultadoCobertura, setResultadoCobertura] =
     useState<ResultadoCobertura | null>(null);
 
+  const [maxRayos, setMaxRayos] = useState(15);
+
   const [calculandoCobertura, setCalculandoCobertura] = useState(false);
   const [generandoRender, setGenerandoRender] = useState(false);
   const [imagenRender, setImagenRender] = useState("");
@@ -1481,32 +1483,48 @@ function CapaCobertura({
         ))}
 
       {mostrarRayos &&
-  resultado.rayos?.map((rayo) => {
+  resultado.rayos
+    ?.sort(
+      (a,b)=>
+        b.potenciaDbm-a.potenciaDbm
+    )
 
-    const puntos = rayo.puntos.map(
-      (p)=>[
-        p.x,
-        p.y,
-        p.z
-      ] as [number,number,number]
-    );
+    .slice(
+      0,
+      maxRayos
+    )
 
-    if(puntos.length<2) return null;
+    .map((rayo)=>{
 
-    return(
-      <Line
-        key={rayo.id}
-        points={puntos}
+      const puntos=rayo.puntos.map(
+        (p)=>[
+          p.x,
+          p.y,
+          p.z
+        ] as [number,number,number]
+      );
 
-        color={
-          colorRayo(rayo)
-        }
+      if(puntos.length<2){
+        return null;
+      }
 
-        lineWidth={
-          grosorRayo(rayo)
-        }
-      />
-    );
+      return(
+
+        <Line
+          key={rayo.id}
+          points={puntos}
+
+          color={
+            colorRayo(rayo)
+          }
+
+          lineWidth={
+            grosorRayo(rayo)
+          }
+
+        />
+
+      );
 
 })}
 
