@@ -60,6 +60,11 @@ type PuntoHeatmap = {
   z: number;
   potenciaDbm: number;
   calidad: "excelente" | "buena" | "media" | "mala";
+  delaySpreadRmsNs?: number;
+  retardoMedioNs?: number;
+  dopplerHz?: number;
+  numComponentes?: number;
+  modelo?: string;
 };
 
 type RayoCobertura = {
@@ -71,6 +76,9 @@ type RayoCobertura = {
   numRebotes?: number;
   afectadoPorPersona?: boolean;
   personasInteractuadas?: string[];
+  dopplerPersonaHz?: number;
+  perdidaPersonaDb?: number;
+  modeloInteraccionPersona?: string;
   puntos: {
     x: number;
     y: number;
@@ -189,6 +197,19 @@ type ResultadoCobertura = {
     porcentajeZonasMuertas: number;
   };
   heatmap: PuntoHeatmap[];
+  heatmapCanal?: PuntoHeatmap[];
+  mimoArrays?: {
+    txRows: number;
+    txCols: number;
+    rxRows: number;
+    rxCols: number;
+    txElementos: number;
+    rxElementos: number;
+    canalesMimoTeoricos: number;
+    arraySpacingLambda: number;
+    arraysConfiguradosEnSionna: boolean;
+    nota?: string;
+  };
   rayos: RayoCobertura[];
   resumenHabitaciones: {
     habitacion: string;
@@ -198,6 +219,15 @@ type ResultadoCobertura = {
   recomendaciones: string[];
   cir?: MuestraCIR[];
   cirResumen?: CirResumen;
+  modeloFisico?: {
+    principio?: string;
+    calculadoPorFormula?: string[];
+    calculadoPorSionnaSiDisponible?: string[];
+    empiricoDeclarado?: string[];
+    sinAleatoriedadArtificial?: boolean;
+    sionnaUsado?: boolean;
+    advertencia?: string;
+  };
 };
 
 export default function CrearViviendaPage() {
@@ -268,6 +298,12 @@ export default function CrearViviendaPage() {
   const [mostrarHeatmap, setMostrarHeatmap] = useState(true);
   const [mostrarRayos, setMostrarRayos] = useState(true);
   const [mostrarRouterOptimo, setMostrarRouterOptimo] = useState(true);
+  const [modoHeatmap, setModoHeatmap] = useState<"potencia" | "delay" | "doppler">("potencia");
+  const [txRows, setTxRows] = useState(1);
+  const [txCols, setTxCols] = useState(1);
+  const [rxRows, setRxRows] = useState(1);
+  const [rxCols, setRxCols] = useState(1);
+  const [arraySpacingLambda, setArraySpacingLambda] = useState(0.5);
 
   const habitacionActual = habitaciones.find(
     (h) => h.id === habitacionSeleccionada,
@@ -437,30 +473,40 @@ export default function CrearViviendaPage() {
         numTaps: 128,
         incluirDoppler: true,
         velocidadRxMps,
+        direccionRxDeg: anguloMovimiento,
         velocidadAireMps: 0,
         sigmaTurbulenciaMps: 0,
+        txRows,
+        txCols,
+        rxRows,
+        rxCols,
+        arraySpacingLambda,
+        incluirHeatmapCanal: true,
       },
       habitaciones,
       objetos,
     };
   };
 
-  const calcularDopplerHz = () => {
-    const c = 299792458;
-    const frecuenciaHz = frecuenciaMhz * 1e6;
-    const lambda = c / frecuenciaHz;
-    const thetaRad = (anguloMovimiento * Math.PI) / 180;
-    return (velocidadRxMps / lambda) * Math.cos(thetaRad);
-  };
+  const actualizarDopplerDesdeBackend = (taps: MuestraCIR[]) => {
+    const dopplers = taps
+      .map((tap) => tap.dopplerHz)
+      .filter((v): v is number => typeof v === "number" && Number.isFinite(v));
 
-  const aplicarDopplerACIR = (taps: MuestraCIR[]) => {
-    const fd = calcularDopplerHz();
-    setDopplerActual(fd);
+    if (dopplers.length === 0) {
+      setDopplerActual(0);
+      return taps;
+    }
 
-    return taps.map((tap) => ({
-      ...tap,
-      dopplerHz: Number(fd.toFixed(3)),
-    }));
+    const dominante = dopplers.reduce((max, v) =>
+      Math.abs(v) > Math.abs(max) ? v : max,
+    dopplers[0]);
+
+    setDopplerActual(dominante);
+
+    // El frontend NO inventa Doppler ni modifica taps.
+    // Cada dopplerHz debe venir calculado por main.py para cada camino.
+    return taps;
   };
 
   const normalizarCIR = (resultado: any): MuestraCIR[] => {
@@ -594,7 +640,7 @@ export default function CrearViviendaPage() {
       }
       setResultadoCobertura(resultado);
 
-      const cirNormalizado = aplicarDopplerACIR(normalizarCIR(resultado));
+      const cirNormalizado = actualizarDopplerDesdeBackend(normalizarCIR(resultado));
       setCir(cirNormalizado);
       setCirResumen(extraerResumenCIR(resultado));
 
@@ -613,7 +659,7 @@ export default function CrearViviendaPage() {
           console.log("Resultado CIR:", resultadoCir);
 
           if (resCir.ok && resultadoCir?.ok) {
-            const cirEndpoint = aplicarDopplerACIR(normalizarCIR(resultadoCir));
+            const cirEndpoint = actualizarDopplerDesdeBackend(normalizarCIR(resultadoCir));
             setCir(cirEndpoint);
             setCirResumen(extraerResumenCIR(resultadoCir));
           }
@@ -665,7 +711,7 @@ export default function CrearViviendaPage() {
 
       setResultadoCobertura(resultado);
 
-      const cirNormalizado = aplicarDopplerACIR(normalizarCIR(resultado));
+      const cirNormalizado = actualizarDopplerDesdeBackend(normalizarCIR(resultado));
       setCir(cirNormalizado);
       setCirResumen(extraerResumenCIR(resultado));
     } catch (e) {
@@ -1297,6 +1343,21 @@ export default function CrearViviendaPage() {
                 </p>
               </div>
             ) : null}
+
+            {resultadoCobertura?.modeloFisico ? (
+              <div className="mt-5 bg-black border border-emerald-900 rounded-xl p-4">
+                <p className="text-[9px] uppercase text-emerald-400 font-black mb-2">
+                  Modelo físico
+                </p>
+                <p className="text-[9px] text-zinc-400 leading-relaxed">
+                  {resultadoCobertura.modeloFisico.principio}
+                </p>
+                <p className="text-[9px] text-zinc-500 uppercase leading-relaxed mt-2">
+                  Fórmulas: {resultadoCobertura.modeloFisico.calculadoPorFormula?.length ?? 0} ·
+                  Empírico declarado: {resultadoCobertura.modeloFisico.empiricoDeclarado?.length ?? 0}
+                </p>
+              </div>
+            ) : null}
           </aside>
 
           <section className="relative lg:col-span-6 bg-white border border-zinc-300 rounded-[2.5rem] overflow-hidden min-h-[680px]">
@@ -1374,6 +1435,7 @@ export default function CrearViviendaPage() {
   mostrarRayos={mostrarRayos}
   mostrarRouterOptimo={mostrarRouterOptimo}
   maxRayos={maxRayos}
+  modoHeatmap={modoHeatmap}
 />
               )}
 
@@ -1568,6 +1630,38 @@ export default function CrearViviendaPage() {
                   </button>
                 </div>
 
+                <div className="bg-black border border-zinc-900 rounded-xl p-4 mt-4 space-y-2">
+                  <p className="text-[9px] uppercase text-zinc-500 font-black">
+                    Modo heatmap dinámico
+                  </p>
+                  <select
+                    value={modoHeatmap}
+                    onChange={(e) => setModoHeatmap(e.target.value as "potencia" | "delay" | "doppler")}
+                    className="w-full bg-black border border-zinc-800 rounded-xl p-2 text-white text-xs outline-none"
+                  >
+                    <option value="potencia">Potencia recibida dBm</option>
+                    <option value="delay">Delay spread RMS ns</option>
+                    <option value="doppler">Doppler dominante Hz</option>
+                  </select>
+                  <p className="text-[9px] text-zinc-500 uppercase leading-relaxed">
+                    Potencia usa malla base. Delay/Doppler usan heatmapCanal calculado en main.py desde rayos/CIR.
+                  </p>
+                </div>
+
+                {resultadoCobertura.mimoArrays && (
+                  <div className="bg-black border border-cyan-900 rounded-xl p-4 mt-4 space-y-2">
+                    <p className="text-[9px] uppercase text-cyan-400 font-black">
+                      MIMO / Arrays Sionna
+                    </p>
+                    <p className="text-[10px] text-zinc-300 uppercase leading-relaxed">
+                      TX: {resultadoCobertura.mimoArrays.txRows}x{resultadoCobertura.mimoArrays.txCols} · RX: {resultadoCobertura.mimoArrays.rxRows}x{resultadoCobertura.mimoArrays.rxCols}
+                    </p>
+                    <p className="text-[9px] text-zinc-500 uppercase leading-relaxed">
+                      Canales teóricos: {resultadoCobertura.mimoArrays.canalesMimoTeoricos} · Spacing: {resultadoCobertura.mimoArrays.arraySpacingLambda}λ
+                    </p>
+                  </div>
+                )}
+
                 <div className="bg-black border border-zinc-900 rounded-xl p-4 mt-4">
   <p className="text-[9px] uppercase text-zinc-500 font-black mb-2">
     Límite rayos Sionna
@@ -1630,6 +1724,29 @@ export default function CrearViviendaPage() {
                     <p className="text-[9px] text-zinc-400 uppercase leading-relaxed mt-1">
                       {moverReceptor ? "RX móvil" : "RX fijo"} · {moverPersonas ? "personas móviles" : "personas fijas"}
                     </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <p className="text-[9px] text-zinc-400 mb-1">TX filas</p>
+                      <input type="number" min={1} max={8} value={txRows} onChange={(e)=>setTxRows(Math.max(1, Number(e.target.value)))} className="w-full bg-black border border-zinc-800 rounded-xl p-2 text-white text-xs outline-none" />
+                    </div>
+                    <div>
+                      <p className="text-[9px] text-zinc-400 mb-1">TX columnas</p>
+                      <input type="number" min={1} max={8} value={txCols} onChange={(e)=>setTxCols(Math.max(1, Number(e.target.value)))} className="w-full bg-black border border-zinc-800 rounded-xl p-2 text-white text-xs outline-none" />
+                    </div>
+                    <div>
+                      <p className="text-[9px] text-zinc-400 mb-1">RX filas</p>
+                      <input type="number" min={1} max={8} value={rxRows} onChange={(e)=>setRxRows(Math.max(1, Number(e.target.value)))} className="w-full bg-black border border-zinc-800 rounded-xl p-2 text-white text-xs outline-none" />
+                    </div>
+                    <div>
+                      <p className="text-[9px] text-zinc-400 mb-1">RX columnas</p>
+                      <input type="number" min={1} max={8} value={rxCols} onChange={(e)=>setRxCols(Math.max(1, Number(e.target.value)))} className="w-full bg-black border border-zinc-800 rounded-xl p-2 text-white text-xs outline-none" />
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-[9px] text-zinc-400 mb-1">Separación array (λ)</p>
+                      <input type="number" min={0.05} step={0.05} value={arraySpacingLambda} onChange={(e)=>setArraySpacingLambda(Math.max(0.05, Number(e.target.value)))} className="w-full bg-black border border-zinc-800 rounded-xl p-2 text-white text-xs outline-none" />
+                    </div>
                   </div>
 
                   <div className="space-y-2">
@@ -1702,7 +1819,7 @@ export default function CrearViviendaPage() {
 
                     <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-3">
                       <p className="text-[8px] uppercase text-zinc-500 font-black">
-                        Doppler estimado
+                        Doppler backend
                       </p>
                       <p className="text-xs font-black text-cyan-400">
                         {dopplerActual.toFixed(2)} Hz
@@ -1711,7 +1828,7 @@ export default function CrearViviendaPage() {
                   </div>
 
                   <p className="text-[9px] text-zinc-500 uppercase leading-relaxed mt-2">
-                    Al iniciar, puedes elegir si se mueve el receptor, las personas o ambos. Sionna / raytrace se recalcula cada 0.1 s por defecto, sin ventanas emergentes.
+                    Al iniciar, puedes elegir si se mueve el receptor, las personas o ambos. El frontend solo mueve geometría y visualiza; el Doppler viene calculado desde main.py por camino.
                   </p>
                 </div>
 
@@ -2062,6 +2179,14 @@ Rayo {index+1}
 Rebotes:
 
 {rayo.numRebotes ?? 0}
+
+{typeof rayo.perdidaPersonaDb === "number" && rayo.perdidaPersonaDb > 0
+? ` · Pérdida persona ${rayo.perdidaPersonaDb.toFixed(2)} dB`
+: ""}
+
+{typeof rayo.dopplerPersonaHz === "number" && Math.abs(rayo.dopplerPersonaHz) > 0
+? ` · Doppler persona ${rayo.dopplerPersonaHz.toFixed(2)} Hz`
+: ""}
 
 </p>
 
@@ -2452,14 +2577,18 @@ function CapaCobertura({
   mostrarRayos,
   mostrarRouterOptimo,
   maxRayos,
+  modoHeatmap,
 }: {
   resultado: ResultadoCobertura;
   mostrarHeatmap: boolean;
   mostrarRayos: boolean;
   mostrarRouterOptimo: boolean;
   maxRayos: number;
+  modoHeatmap: "potencia" | "delay" | "doppler";
 }) {
   const heatmapBase = resultado.heatmap ?? [];
+  const heatmapCanal = resultado.heatmapCanal ?? [];
+  const heatmapActivo = modoHeatmap === "potencia" ? heatmapBase : (heatmapCanal.length > 0 ? heatmapCanal : heatmapBase);
   const heatmapMesh =
     resultado.heatmapConMesh ?? resultado.coberturaConMesh?.heatmap ?? [];
 
@@ -2482,17 +2611,17 @@ function CapaCobertura({
         ),
       )}
       {mostrarHeatmap &&
-        heatmapBase.map((p, i) => (
+        heatmapActivo.map((p, i) => (
           <mesh
-            key={`heatmap-${i}`}
+            key={`heatmap-${modoHeatmap}-${i}`}
             position={[p.x, 0.05, p.z]}
             rotation={[-Math.PI / 2, 0, 0]}
           >
-            <circleGeometry args={[0.22, 24]} />
+            <circleGeometry args={[modoHeatmap === "potencia" ? 0.22 : 0.3, 24]} />
             <meshBasicMaterial
-              color={colorHeatmap(p.potenciaDbm)}
+              color={colorHeatmapModo(p, modoHeatmap)}
               transparent
-              opacity={0.55}
+              opacity={modoHeatmap === "potencia" ? 0.55 : 0.75}
             />
           </mesh>
         ))}
@@ -2601,6 +2730,26 @@ function CapaCobertura({
       ))}
     </group>
   );
+}
+
+function colorHeatmapModo(p: PuntoHeatmap, modo: "potencia" | "delay" | "doppler") {
+  if (modo === "delay") {
+    const d = Math.abs(p.delaySpreadRmsNs ?? 0);
+    if (d < 5) return "#22c55e";
+    if (d < 20) return "#eab308";
+    if (d < 50) return "#f97316";
+    return "#ef4444";
+  }
+
+  if (modo === "doppler") {
+    const f = Math.abs(p.dopplerHz ?? 0);
+    if (f < 5) return "#94a3b8";
+    if (f < 25) return "#38bdf8";
+    if (f < 80) return "#a855f7";
+    return "#ef4444";
+  }
+
+  return colorHeatmap(p.potenciaDbm);
 }
 
 function colorHeatmap(potenciaDbm: number) {
