@@ -1,21 +1,20 @@
 "use client";
 
-import dynamic from "next/dynamic";
+import { Clone, useGLTF } from "@react-three/drei";
 
-const Modelo3D = dynamic(
-  () => import("./ModelObjetoCliente"),
-  {
-    ssr:false,
-    loading:()=>null
-  }
-);
+export default function ModelObjeto({ tipo }: { tipo: string }) {
+  const rutas: Record<string,string>={
 
-export default function ModelObjeto({
-tipo
-}:{
-tipo:string
-}){
+router:"/modelos/wifi.glb",
+receptor:"/modelos/wifi.glb",
 
-return <Modelo3D tipo={tipo}/>
+}
 
+  const ruta = rutas[tipo];
+
+  if (!ruta) return null;
+
+  const gltf = useGLTF(ruta);
+
+  return <Clone object={gltf.scene} scale={0.8} />;
 }

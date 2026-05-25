@@ -4,6 +4,7 @@ import { Canvas, useThree } from "@react-three/fiber";
 import { OrbitControls, Grid, Line } from "@react-three/drei";
 import { useRef, useState } from "react";
 import * as THREE from "three";
+import jsPDF from "jspdf";
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
 const SIONNA_API_URL = (process.env.NEXT_PUBLIC_SIONNA_API_URL || "").replace(
@@ -48,6 +49,10 @@ type RayoCobertura = {
   id: string;
   tipo: "directo" | "reflejado" | "debil";
   potenciaDbm: number;
+  los?: boolean;
+  nlos?: boolean;
+  numRebotes?: number;
+  objetosInteractuados?: number[];
   puntos: {
     x: number;
     y: number;
@@ -463,6 +468,151 @@ export default function CrearViviendaPage() {
   }
 };
 
+
+  const generarInformePDF = async () => {
+    if (!resultadoCobertura) {
+      alert("Calcula cobertura primero.");
+      return;
+    }
+
+    const pdf = new jsPDF("p", "mm", "a4");
+    const margenX = 18;
+    let y = 20;
+
+    const escribirTitulo = (texto: string) => {
+      pdf.setFontSize(18);
+      pdf.setTextColor(249, 115, 22);
+      pdf.text(texto, margenX, y);
+      y += 10;
+      pdf.setTextColor(0, 0, 0);
+    };
+
+    const escribirLinea = (texto: string, salto = 6) => {
+      if (y > 275) {
+        pdf.addPage();
+        y = 20;
+      }
+      pdf.setFontSize(10);
+      pdf.setTextColor(30, 30, 30);
+      pdf.text(texto, margenX, y);
+      y += salto;
+    };
+
+    pdf.setFillColor(0, 0, 0);
+    pdf.rect(0, 0, 210, 38, "F");
+
+    pdf.setFontSize(22);
+    pdf.setTextColor(255, 255, 255);
+    pdf.text("INFORME MASTESTO RF", margenX, 18);
+
+    pdf.setFontSize(10);
+    pdf.setTextColor(249, 115, 22);
+    pdf.text("Simulación WiFi · Sionna RT · Gemelo digital", margenX, 28);
+
+    y = 50;
+    pdf.setTextColor(0, 0, 0);
+
+    escribirTitulo("1. Resumen de simulación");
+
+    escribirLinea(`Fecha: ${new Date().toLocaleString()}`);
+    escribirLinea(`Frecuencia: ${resultadoCobertura.modelo?.frecuenciaMhz ?? frecuenciaMhz} MHz`);
+    escribirLinea(`Potencia TX: ${resultadoCobertura.modelo?.potenciaTxDbm ?? 20} dBm`);
+    escribirLinea(`Material paredes: ${resultadoCobertura.modelo?.materialPared ?? materialPared}`);
+    escribirLinea(`Sionna usado: ${resultadoCobertura.modelo?.sionnaUsado ? "Sí" : "No"}`);
+    escribirLinea(`XML Sionna cargado: ${resultadoCobertura.modelo?.sionnaXmlCargado ? "Sí" : "No"}`);
+    escribirLinea(`Receptores detectados: ${resultadoCobertura.modelo?.receptoresDetectados ?? 0}`);
+
+    y += 4;
+    escribirTitulo("2. Métricas de cobertura");
+
+    escribirLinea(`Score cobertura: ${resultadoCobertura.estadisticas.score}`);
+    escribirLinea(`Potencia media: ${resultadoCobertura.estadisticas.potenciaMediaDbm} dBm`);
+    escribirLinea(`Puntos analizados: ${resultadoCobertura.estadisticas.puntosAnalizados}`);
+    escribirLinea(`Zonas muertas: ${resultadoCobertura.estadisticas.zonasMuertas}`);
+    escribirLinea(`Porcentaje zonas muertas: ${resultadoCobertura.estadisticas.porcentajeZonasMuertas}%`);
+
+    if (resultadoCobertura.estadisticasMesh) {
+      y += 4;
+      escribirTitulo("3. Cobertura con Mesh");
+      escribirLinea(`Potencia media Mesh: ${resultadoCobertura.estadisticasMesh.potenciaMediaDbm} dBm`);
+      escribirLinea(`Mejora media: ${resultadoCobertura.estadisticasMesh.mejoraMediaDb} dB`);
+      escribirLinea(`Zonas muertas Mesh: ${resultadoCobertura.estadisticasMesh.porcentajeZonasMuertas}%`);
+    }
+
+    y += 4;
+    escribirTitulo("4. Router óptimo");
+
+    escribirLinea(`X: ${resultadoCobertura.routerOptimo.x.toFixed(2)} m`);
+    escribirLinea(`Y: ${resultadoCobertura.routerOptimo.y.toFixed(2)} m`);
+    escribirLinea(`Z: ${resultadoCobertura.routerOptimo.z.toFixed(2)} m`);
+
+    y += 4;
+    escribirTitulo("5. Análisis de rayos Sionna");
+
+    const rayosOrdenados = [...(resultadoCobertura.rayos ?? [])].sort(
+      (a: any, b: any) => b.potenciaDbm - a.potenciaDbm,
+    );
+
+    const rayosDirectos = rayosOrdenados.filter((r: any) => r.tipo === "directo" || r.los).length;
+    const rayosReflejados = rayosOrdenados.filter((r: any) => r.tipo === "reflejado").length;
+    const rayosNlos = rayosOrdenados.filter((r: any) => r.nlos).length;
+
+    escribirLinea(`Rayos totales: ${rayosOrdenados.length}`);
+    escribirLinea(`Rayos directos / LOS: ${rayosDirectos}`);
+    escribirLinea(`Rayos reflejados: ${rayosReflejados}`);
+    escribirLinea(`Rayos NLOS: ${rayosNlos}`);
+
+    y += 3;
+    rayosOrdenados.slice(0, Math.min(maxRayos, 15)).forEach((rayo: any, index: number) => {
+      escribirLinea(
+        `R${index + 1} · ${rayo.tipo} · ${rayo.potenciaDbm} dBm · rebotes: ${rayo.numRebotes ?? 0}`,
+        5,
+      );
+    });
+
+    y += 4;
+    escribirTitulo("6. Resumen por habitaciones");
+
+    resultadoCobertura.resumenHabitaciones.forEach((h) => {
+      escribirLinea(
+        `${h.habitacion}: ${h.potenciaMediaDbm ?? "Sin datos"} dBm · ${h.calidad}`,
+        5,
+      );
+    });
+
+    y += 4;
+    escribirTitulo("7. Recomendaciones");
+
+    resultadoCobertura.recomendaciones.forEach((rec) => {
+      const lineas = pdf.splitTextToSize(`• ${rec}`, 170);
+      if (y + lineas.length * 5 > 275) {
+        pdf.addPage();
+        y = 20;
+      }
+      pdf.setFontSize(9);
+      pdf.setTextColor(40, 40, 40);
+      pdf.text(lineas, margenX, y);
+      y += lineas.length * 5 + 2;
+    });
+
+    if (imagenRender && typeof imagenRender === "string") {
+      pdf.addPage();
+      pdf.setFontSize(18);
+      pdf.setTextColor(249, 115, 22);
+      pdf.text("8. Render premium Blender", margenX, 20);
+
+      try {
+        pdf.addImage(imagenRender, "PNG", 15, 35, 180, 100);
+      } catch (error) {
+        pdf.setFontSize(10);
+        pdf.setTextColor(0, 0, 0);
+        pdf.text("No se pudo insertar el render en el PDF.", margenX, 40);
+      }
+    }
+
+    pdf.save("informe-mastesto-rf.pdf");
+  };
+
   const aplicarRouterOptimo = () => {
     if (!resultadoCobertura) return;
 
@@ -748,6 +898,15 @@ export default function CrearViviendaPage() {
 >
   {generandoRender ? "Generando render..." : "✨ Generar vivienda premium"}
 </button>
+            
+
+            <button
+              onClick={generarInformePDF}
+              disabled={!resultadoCobertura}
+              className="mt-3 w-full py-4 rounded-xl bg-sky-500 text-black text-[10px] font-black uppercase hover:bg-white transition-all disabled:opacity-40"
+            >
+              📄 Descargar informe RF
+            </button>
 
             {resultadoCobertura && (
               <button
@@ -777,7 +936,7 @@ export default function CrearViviendaPage() {
             ) : null}
           </aside>
 
-          <section className="lg:col-span-6 bg-white border border-zinc-300 rounded-[2.5rem] overflow-hidden min-h-[680px]">
+          <section className="relative lg:col-span-6 bg-white border border-zinc-300 rounded-[2.5rem] overflow-hidden min-h-[680px]">
             <Canvas
               shadows
               camera={{ position: [10, 8, 10], fov: 48 }}
