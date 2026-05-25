@@ -1020,6 +1020,28 @@ export default function CrearViviendaPage() {
                   </button>
                 </div>
 
+                <div className="grid grid-cols-2 gap-3">
+
+  <button
+    onClick={() => setMostrarHeatmap((v) => !v)}
+  >
+    Heatmap
+  </button>
+
+  <button
+    onClick={() => setMostrarRayos((v) => !v)}
+  >
+    Rayos
+  </button>
+
+  <button
+    onClick={() => setMostrarRouterOptimo((v) => !v)}
+  >
+    Router óptimo
+  </button>
+
+</div>
+
                 <div className="bg-black border border-zinc-900 rounded-xl p-4 space-y-2">
                   <p className="text-[9px] uppercase text-zinc-500 font-black">
                     Potencia media
