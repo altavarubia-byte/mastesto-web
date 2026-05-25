@@ -244,6 +244,8 @@ export default function CrearViviendaPage() {
 
   const [maxRayos, setMaxRayos] = useState(15);
   const [simulando, setSimulando] = useState(false);
+  const [moverReceptor, setMoverReceptor] = useState(true);
+  const [moverPersonas, setMoverPersonas] = useState(true);
   const [velocidadSim, setVelocidadSim] = useState(1);
   const [velocidadRx, setVelocidadRx] = useState(1);
   const [unidadVelocidad, setUnidadVelocidad] = useState<"ms" | "kmh">("ms");
@@ -686,7 +688,10 @@ export default function CrearViviendaPage() {
         const nuevosObjetos = prev.map((obj) => {
           const tipo = obj.tipo.toLowerCase();
 
-          if (tipo === "receptor" || tipo === "rx" || tipo === "receiver") {
+          if (
+            moverReceptor &&
+            (tipo === "receptor" || tipo === "rx" || tipo === "receiver")
+          ) {
             const dx = dirX * velocidadRxMps * dt;
             const dz = dirZ * velocidadRxMps * dt;
 
@@ -697,7 +702,7 @@ export default function CrearViviendaPage() {
             };
           }
 
-          if (tipo === "persona") {
+          if (moverPersonas && tipo === "persona") {
             const velocidadPersona = obj.velocidadMps ?? 0.8;
             const recorrido = obj.recorridoM ?? 3;
             const origenX = obj.origenX ?? obj.x;
@@ -746,7 +751,14 @@ export default function CrearViviendaPage() {
     }, intervaloMs);
 
     return () => clearInterval(intervalo);
-  }, [simulando, velocidadRxMps, anguloMovimiento, intervaloSionna]);
+  }, [
+    simulando,
+    velocidadRxMps,
+    anguloMovimiento,
+    intervaloSionna,
+    moverReceptor,
+    moverPersonas,
+  ]);
 
   const generarRenderPremium = async () => {
   try {
@@ -1585,6 +1597,39 @@ export default function CrearViviendaPage() {
                     {simulando ? "Detener simulación" : "Iniciar simulación"}
                   </button>
 
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => setMoverReceptor((v) => !v)}
+                      className={`py-3 rounded-xl border text-[9px] font-black uppercase transition-all ${
+                        moverReceptor
+                          ? "bg-cyan-500 text-black border-cyan-400"
+                          : "bg-black text-zinc-400 border-zinc-800"
+                      }`}
+                    >
+                      RX {moverReceptor ? "móvil" : "fijo"}
+                    </button>
+
+                    <button
+                      onClick={() => setMoverPersonas((v) => !v)}
+                      className={`py-3 rounded-xl border text-[9px] font-black uppercase transition-all ${
+                        moverPersonas
+                          ? "bg-yellow-400 text-black border-yellow-300"
+                          : "bg-black text-zinc-400 border-zinc-800"
+                      }`}
+                    >
+                      Personas {moverPersonas ? "móviles" : "fijas"}
+                    </button>
+                  </div>
+
+                  <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-3">
+                    <p className="text-[8px] uppercase text-zinc-500 font-black">
+                      Estado dinámico
+                    </p>
+                    <p className="text-[9px] text-zinc-400 uppercase leading-relaxed mt-1">
+                      {moverReceptor ? "RX móvil" : "RX fijo"} · {moverPersonas ? "personas móviles" : "personas fijas"}
+                    </p>
+                  </div>
+
                   <div className="space-y-2">
                     <p className="text-[10px] text-zinc-400">
                       Velocidad receptor
@@ -1664,7 +1709,7 @@ export default function CrearViviendaPage() {
                   </div>
 
                   <p className="text-[9px] text-zinc-500 uppercase leading-relaxed mt-2">
-                    Al iniciar, el receptor se desplaza y Sionna / raytrace se recalcula cada 0.1 s por defecto, sin ventanas emergentes.
+                    Al iniciar, puedes elegir si se mueve el receptor, las personas o ambos. Sionna / raytrace se recalcula cada 0.1 s por defecto, sin ventanas emergentes.
                   </p>
                 </div>
 
