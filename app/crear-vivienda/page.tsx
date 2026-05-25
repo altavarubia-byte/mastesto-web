@@ -1481,22 +1481,34 @@ function CapaCobertura({
         ))}
 
       {mostrarRayos &&
-        resultado.rayos?.map((rayo) => {
-          const puntos = rayo.puntos.map(
-            (p) => [p.x, p.y, p.z] as [number, number, number],
-          );
+  resultado.rayos?.map((rayo) => {
 
-          if (puntos.length < 2) return null;
+    const puntos = rayo.puntos.map(
+      (p)=>[
+        p.x,
+        p.y,
+        p.z
+      ] as [number,number,number]
+    );
 
-          return (
-            <Line
-              key={rayo.id}
-              points={puntos}
-              color={colorRayo(rayo.tipo)}
-              lineWidth={rayo.tipo === "directo" ? 3 : 1.5}
-            />
-          );
-        })}
+    if(puntos.length<2) return null;
+
+    return(
+      <Line
+        key={rayo.id}
+        points={puntos}
+
+        color={
+          colorRayo(rayo)
+        }
+
+        lineWidth={
+          grosorRayo(rayo)
+        }
+      />
+    );
+
+})}
 
       {mostrarRouterOptimo && resultado.routerOptimo && (
         <group
@@ -1585,10 +1597,32 @@ function colorHeatmapMesh(potenciaDbm: number) {
   return "#0c4a6e";
 }
 
-function colorRayo(tipo: RayoCobertura["tipo"]) {
-  if (tipo === "directo") return "#22c55e";
-  if (tipo === "reflejado") return "#f97316";
-  return "#ef4444";
+function colorRayo(rayo:any){
+
+  if(rayo.tipo==="directo"){
+    return "#22c55e";
+  }
+
+  if(rayo.tipo==="reflejado"){
+    return "#f59e0b";
+  }
+
+  if(rayo.nlos){
+    return "#ef4444";
+  }
+
+  return "#a855f7";
+}
+
+
+
+function grosorRayo(rayo:any){
+
+  return Math.max(
+    1,
+    (rayo.potenciaDbm+100)/20
+  );
+
 }
 
 function MaterialSelect({
