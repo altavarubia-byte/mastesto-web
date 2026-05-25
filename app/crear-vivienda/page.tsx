@@ -241,6 +241,8 @@ export default function CrearViviendaPage() {
   const [unidadVelocidad, setUnidadVelocidad] = useState<"ms" | "kmh">("ms");
   const [anguloMovimiento, setAnguloMovimiento] = useState(0);
   const [dopplerActual, setDopplerActual] = useState(0);
+  const [intervaloSionna, setIntervaloSionna] = useState(0.1);
+  const calculandoDinamicoRef = useRef(false);
 
   const [cir, setCir] = useState<MuestraCIR[]>([]);
   const [cirResumen, setCirResumen] = useState<CirResumen | null>(null);
@@ -534,7 +536,9 @@ export default function CrearViviendaPage() {
     alert("Vivienda exportada correctamente.");
   };
 
-  const calcularCobertura = async () => {
+  const calcularCobertura = async (silencioso: boolean = false) => {
+    const modoSilencioso = silencioso === true;
+
     try {
       setCalculandoCobertura(true);
 
@@ -560,10 +564,12 @@ export default function CrearViviendaPage() {
       console.log("Resultado cobertura:", resultado);
 
       if (!res.ok || !resultado.ok) {
-        alert(
-          "Error calculando cobertura: " +
-            (resultado?.mensaje || resultado?.error || res.status),
-        );
+        if (!modoSilencioso) {
+          alert(
+            "Error calculando cobertura: " +
+              (resultado?.mensaje || resultado?.error || res.status),
+          );
+        }
         return;
       }
       setResultadoCobertura(resultado);
@@ -596,10 +602,14 @@ export default function CrearViviendaPage() {
         }
       }
 
-      alert("Cobertura calculada correctamente.");
+      if (!modoSilencioso) {
+        console.log("Cobertura calculada correctamente.");
+      }
     } catch (error) {
       console.error("Error enviando datos a /api/cobertura:", error);
-      alert("No se pudo conectar con la API de cobertura.");
+      if (!modoSilencioso) {
+        alert("No se pudo conectar con la API de cobertura.");
+      }
     } finally {
       setCalculandoCobertura(false);
     }
@@ -608,19 +618,24 @@ export default function CrearViviendaPage() {
   useEffect(() => {
     if (!simulando) return;
 
+    const intervaloMs = Math.max(0.1, intervaloSionna) * 1000;
+
     const intervalo = setInterval(() => {
       const ang = (anguloMovimiento * Math.PI) / 180;
-      const dt = 3;
+      const dt = Math.max(0.1, intervaloSionna);
       const dx = Math.cos(ang) * velocidadRxMps * dt;
       const dz = Math.sin(ang) * velocidadRxMps * dt;
 
       setObjetos((prev) =>
         prev.map((obj) => {
           if (obj.tipo === "receptor" || obj.tipo === "rx" || obj.tipo === "receiver") {
+            const nuevoX = obj.x + dx;
+            const nuevoZ = obj.z + dz;
+
             return {
               ...obj,
-              x: Number((obj.x + dx).toFixed(2)),
-              z: Number((obj.z + dz).toFixed(2)),
+              x: Math.max(-10, Math.min(10, Number(nuevoX.toFixed(2)))),
+              z: Math.max(-10, Math.min(10, Number(nuevoZ.toFixed(2)))),
             };
           }
 
@@ -628,13 +643,19 @@ export default function CrearViviendaPage() {
         }),
       );
 
+      if (calculandoDinamicoRef.current) return;
+
+      calculandoDinamicoRef.current = true;
+
       setTimeout(() => {
-        calcularCobertura();
-      }, 500);
-    }, 3000);
+        calcularCobertura(true).finally(() => {
+          calculandoDinamicoRef.current = false;
+        });
+      }, 30);
+    }, intervaloMs);
 
     return () => clearInterval(intervalo);
-  }, [simulando, velocidadRxMps, anguloMovimiento]);
+  }, [simulando, velocidadRxMps, anguloMovimiento, intervaloSionna]);
 
   const generarRenderPremium = async () => {
   try {
@@ -1113,7 +1134,7 @@ export default function CrearViviendaPage() {
               <option value="sionna">Verificar con Sionna</option>
             </select>
             <button
-              onClick={calcularCobertura}
+              onClick={() => calcularCobertura(false)}
               disabled={calculandoCobertura}
               className="mt-3 w-full py-4 rounded-xl bg-white text-black text-[10px] font-black uppercase hover:opacity-80 transition-all disabled:opacity-40"
             >
@@ -1496,6 +1517,25 @@ export default function CrearViviendaPage() {
 
                   <div className="space-y-2">
                     <p className="text-[10px] text-zinc-400">
+                      Recalcular Sionna cada:
+                    </p>
+
+                    <input
+                      type="number"
+                      value={intervaloSionna}
+                      step={0.1}
+                      min={0.1}
+                      onChange={(e) => setIntervaloSionna(Math.max(0.1, Number(e.target.value)))}
+                      className="w-full bg-black border border-zinc-800 rounded-xl p-2 text-white text-xs outline-none"
+                    />
+
+                    <p className="text-[9px] text-zinc-500 uppercase">
+                      {Math.max(0.1, intervaloSionna).toFixed(1)} s entre cálculos
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="text-[10px] text-zinc-400">
                       Dirección movimiento: {anguloMovimiento}°
                     </p>
 
@@ -1531,7 +1571,7 @@ export default function CrearViviendaPage() {
                   </div>
 
                   <p className="text-[9px] text-zinc-500 uppercase leading-relaxed mt-2">
-                    Al iniciar, el receptor se desplaza cada 3 segundos y se recalcula Sionna / raytrace para actualizar rayos, CIR y Doppler.
+                    Al iniciar, el receptor se desplaza y Sionna / raytrace se recalcula cada 0.1 s por defecto, sin ventanas emergentes.
                   </p>
                 </div>
 
