@@ -15,12 +15,18 @@ import {
   Tooltip,
 } from "recharts";
 
+// =========================================================
+// CONFIGURACIÓN DE APIS
+// =========================================================
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
 const SIONNA_API_URL = (process.env.NEXT_PUBLIC_SIONNA_API_URL || "").replace(
   /\/$/,
   "",
 );
 
+// =========================================================
+// TIPOS DE DATOS DEL SIMULADOR
+// =========================================================
 type Habitacion = {
   id: string;
   nombre: string;
@@ -274,7 +280,13 @@ type ResultadoCobertura = {
   };
 };
 
+// =========================================================
+// PÁGINA PRINCIPAL: CREAR VIVIENDA / SIMULADOR RF
+// =========================================================
 export default function CrearViviendaPage() {
+  // ---------------------------------------------------------
+  // ESTADO: VIVIENDA, HABITACIONES Y MATERIALES
+  // ---------------------------------------------------------
   const [habitaciones, setHabitaciones] = useState<Habitacion[]>([
     {
       id: "habitacion-1",
@@ -299,6 +311,9 @@ export default function CrearViviendaPage() {
   const [habitacionSeleccionada, setHabitacionSeleccionada] =
     useState("habitacion-1");
 
+  // ---------------------------------------------------------
+  // ESTADO: OBJETOS 3D, ROUTER, RECEPTORES Y PERSONAS
+  // ---------------------------------------------------------
   const [objetos, setObjetos] = useState<Objeto3D[]>([
     {
       id: "router-1",
@@ -318,6 +333,9 @@ export default function CrearViviendaPage() {
   const [resultadoCobertura, setResultadoCobertura] =
     useState<ResultadoCobertura | null>(null);
 
+  // ---------------------------------------------------------
+  // ESTADO: VISUALIZACIÓN, SIMULACIÓN DINÁMICA Y MIMO
+  // ---------------------------------------------------------
   const [maxRayos, setMaxRayos] = useState(15);
   const [simulando, setSimulando] = useState(false);
   const [moverReceptor, setMoverReceptor] = useState(true);
@@ -406,6 +424,9 @@ export default function CrearViviendaPage() {
     setCirResumen(null);
   };
 
+  // ---------------------------------------------------------
+  // ACCIONES: HABITACIONES
+  // ---------------------------------------------------------
   const crearHabitacion = () => {
     const nueva: Habitacion = {
       id: `habitacion-${Date.now()}`,
@@ -452,6 +473,9 @@ export default function CrearViviendaPage() {
     setResultadoCobertura(null);
   };
 
+  // ---------------------------------------------------------
+  // ACCIONES: OBJETOS 3D
+  // ---------------------------------------------------------
   const crearObjeto = (tipo: string) => {
     const base: Record<string, Partial<Objeto3D>> = {
       sofa: { sx: 1.8, sy: 0.6, sz: 0.8, color: "#7c2d12", material: "tejido" },
@@ -509,6 +533,9 @@ export default function CrearViviendaPage() {
     setResultadoCobertura(null);
   };
 
+  // ---------------------------------------------------------
+  // PAYLOAD PARA BACKEND: SIONNA, CIR, MIMO Y ANTENAS
+  // ---------------------------------------------------------
   const crearDatosVivienda = () => {
     return {
       version: "mastesto-vivienda-3d-v3",
@@ -623,7 +650,10 @@ export default function CrearViviendaPage() {
   };
 
   const extraerResumenCIR = (resultado: any): CirResumen | null => {
-    return (
+    // ---------------------------------------------------------
+  // RENDER PRINCIPAL DE LA PÁGINA
+  // ---------------------------------------------------------
+  return (
       resultado?.cirResumen ??
       resultado?.resumen ??
       resultado?.cir?.resumenGlobal ??
@@ -658,6 +688,9 @@ export default function CrearViviendaPage() {
     alert("Vivienda exportada correctamente.");
   };
 
+  // ---------------------------------------------------------
+  // LLAMADAS A BACKEND: COBERTURA, SIONNA, CIR Y MIMO
+  // ---------------------------------------------------------
   const calcularCobertura = async (silencioso: boolean = false) => {
     const modoSilencioso = silencioso === true;
 
@@ -777,6 +810,9 @@ export default function CrearViviendaPage() {
     }
   };
 
+  // ---------------------------------------------------------
+  // SIMULACIÓN DINÁMICA: MOVIMIENTO RX/PERSONAS + RECÁLCULO
+  // ---------------------------------------------------------
   useEffect(() => {
     if (!simulando) return;
 
@@ -864,6 +900,9 @@ export default function CrearViviendaPage() {
     moverPersonas,
   ]);
 
+  // ---------------------------------------------------------
+  // EXPORTACIÓN: RENDER, GLB Y PDF
+  // ---------------------------------------------------------
   const generarRenderPremium = async () => {
   try {
     setGenerandoRender(true);
@@ -2408,6 +2447,9 @@ Rebotes:
   );
 }
 
+// =========================================================
+// COMPONENTES 3D AUXILIARES
+// =========================================================
 function GrupoHabitacion({
   habitacion,
   seleccionada,
@@ -2763,6 +2805,9 @@ function SimulacionDinamica({
 }
 
 
+// ---------------------------------------------------------
+// VISUALIZACIÓN DE ARRAYS MIMO / ANTENAS FEKO-READY
+// ---------------------------------------------------------
 function CapaArraysMIMO({
   objetos,
   txRows,
@@ -2846,6 +2891,9 @@ function CapaArraysMIMO({
   );
 }
 
+// ---------------------------------------------------------
+// VISUALIZACIÓN DE HEATMAP, RAYOS, ROUTER ÓPTIMO Y PERSONAS
+// ---------------------------------------------------------
 function CapaCobertura({
   resultado,
   mostrarHeatmap,
@@ -3126,6 +3174,9 @@ function ModeloGLB({ url }: { url: string }) {
   );
 }
 
+// =========================================================
+// COMPONENTES UI REUTILIZABLES
+// =========================================================
 function Boton({ texto, onClick }: { texto: string; onClick: () => void }) {
   return (
     <button
