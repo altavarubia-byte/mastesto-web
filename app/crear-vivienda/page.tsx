@@ -209,6 +209,12 @@ type ResultadoCobertura = {
     arraySpacingLambda: number;
     arraysConfiguradosEnSionna: boolean;
     nota?: string;
+    catalogoAntenas?: { id: string; nombre: string; sionnaPattern: string; fekoFuturo: boolean }[];
+    antennaTypeTx?: string;
+    antennaTypeRx?: string;
+    polarizationTx?: string;
+    polarizationRx?: string;
+    mimoMode?: string;
   };
   mimoMetricas?: {
     nt: number;
@@ -228,6 +234,19 @@ type ResultadoCobertura = {
     capacidadSisoMbps: number;
     capacidadBeamformingIdealMbps: number;
     capacidadMultiplexingIdealMbps: number;
+    capacidadMimoRealGeomMbps?: number;
+    rankReal?: number | null;
+    matrizHDisponible?: boolean;
+    singularValues?: number[];
+    mimoMode?: string;
+    antenas?: {
+      tx?: string;
+      rx?: string;
+      polarizationTx?: string;
+      polarizationRx?: string;
+      fekoPatternTx?: string | null;
+      fekoPatternRx?: string | null;
+    };
     modelo?: {
       nota?: string;
       fisicoFormula?: string[];
@@ -329,6 +348,12 @@ export default function CrearViviendaPage() {
   const [rxRows, setRxRows] = useState(1);
   const [rxCols, setRxCols] = useState(1);
   const [arraySpacingLambda, setArraySpacingLambda] = useState(0.5);
+  const [mimoMode, setMimoMode] = useState<"siso" | "beamforming" | "multiplexing" | "diversity">("siso");
+  const [antennaTypeTx, setAntennaTypeTx] = useState("omni");
+  const [antennaTypeRx, setAntennaTypeRx] = useState("omni");
+  const [polarizationTx, setPolarizationTx] = useState("V");
+  const [polarizationRx, setPolarizationRx] = useState("V");
+  const [noiseFigureDb, setNoiseFigureDb] = useState(7);
 
   const habitacionActual = habitaciones.find(
     (h) => h.id === habitacionSeleccionada,
@@ -506,6 +531,12 @@ export default function CrearViviendaPage() {
         rxRows,
         rxCols,
         arraySpacingLambda,
+        mimoMode,
+        antennaTypeTx,
+        antennaTypeRx,
+        polarizationTx,
+        polarizationRx,
+        noiseFigureDb,
         incluirHeatmapCanal: true,
       },
       habitaciones,
@@ -1447,6 +1478,18 @@ export default function CrearViviendaPage() {
                 />
               ))}
 
+              <CapaArraysMIMO
+                objetos={objetos}
+                txRows={txRows}
+                txCols={txCols}
+                rxRows={rxRows}
+                rxCols={rxCols}
+                spacingLambda={arraySpacingLambda}
+                frecuenciaMhz={frecuenciaMhz}
+                antennaTypeTx={antennaTypeTx}
+                antennaTypeRx={antennaTypeRx}
+              />
+
               <SimulacionDinamica
                 activa={simulando}
                 velocidad={velocidadSim}
@@ -1734,6 +1777,9 @@ export default function CrearViviendaPage() {
                       <p className="text-[10px] text-zinc-300 uppercase leading-relaxed">
                         Multiplexing ideal: {resultadoCobertura.mimoMetricas.capacidadMultiplexingIdealMbps.toFixed(2)} Mbps
                       </p>
+                      <p className="text-[9px] text-green-400 uppercase leading-relaxed">
+                        MIMO geométrico H: {(resultadoCobertura.mimoMetricas.capacidadMimoRealGeomMbps ?? 0).toFixed(2)} Mbps · Rank real: {resultadoCobertura.mimoMetricas.rankReal ?? "N/D"}
+                      </p>
                     </div>
 
                     <p className="text-[9px] text-zinc-500 uppercase leading-relaxed">
@@ -1804,6 +1850,71 @@ export default function CrearViviendaPage() {
                     <p className="text-[9px] text-zinc-400 uppercase leading-relaxed mt-1">
                       {moverReceptor ? "RX móvil" : "RX fijo"} · {moverPersonas ? "personas móviles" : "personas fijas"}
                     </p>
+                  </div>
+
+                  <div className="space-y-2 border-t border-zinc-900 pt-3">
+                    <p className="text-[10px] text-zinc-400">Modo MIMO</p>
+                    <select value={mimoMode} onChange={(e)=>setMimoMode(e.target.value as any)} className="w-full bg-black border border-zinc-800 rounded-xl p-2 text-white text-xs outline-none">
+                      <option value="siso">SISO / referencia</option>
+                      <option value="beamforming">Beamforming</option>
+                      <option value="multiplexing">Spatial multiplexing</option>
+                      <option value="diversity">Diversity</option>
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <p className="text-[9px] text-zinc-400 mb-1">Antena TX</p>
+                      <select value={antennaTypeTx} onChange={(e)=>setAntennaTypeTx(e.target.value)} className="w-full bg-black border border-zinc-800 rounded-xl p-2 text-white text-xs outline-none">
+                        <option value="omni">Omni / isotrópica</option>
+                        <option value="dipolo">Dipolo λ/2</option>
+                        <option value="monopolo">Monopolo λ/4</option>
+                        <option value="patch">Patch microstrip</option>
+                        <option value="panel">Panel directiva</option>
+                        <option value="yagi">Yagi-Uda</option>
+                        <option value="helicoidal_axial">Helicoidal axial</option>
+                        <option value="array_dipolos">Array dipolos</option>
+                        <option value="array_patch">Array patch</option>
+                        <option value="feko_import">Importar FEKO</option>
+                      </select>
+                    </div>
+                    <div>
+                      <p className="text-[9px] text-zinc-400 mb-1">Antena RX</p>
+                      <select value={antennaTypeRx} onChange={(e)=>setAntennaTypeRx(e.target.value)} className="w-full bg-black border border-zinc-800 rounded-xl p-2 text-white text-xs outline-none">
+                        <option value="omni">Omni / isotrópica</option>
+                        <option value="dipolo">Dipolo λ/2</option>
+                        <option value="monopolo">Monopolo λ/4</option>
+                        <option value="patch">Patch microstrip</option>
+                        <option value="panel">Panel directiva</option>
+                        <option value="yagi">Yagi-Uda</option>
+                        <option value="helicoidal_axial">Helicoidal axial</option>
+                        <option value="array_dipolos">Array dipolos</option>
+                        <option value="array_patch">Array patch</option>
+                        <option value="feko_import">Importar FEKO</option>
+                      </select>
+                    </div>
+                    <div>
+                      <p className="text-[9px] text-zinc-400 mb-1">Pol. TX</p>
+                      <select value={polarizationTx} onChange={(e)=>setPolarizationTx(e.target.value)} className="w-full bg-black border border-zinc-800 rounded-xl p-2 text-white text-xs outline-none">
+                        <option value="V">Vertical</option>
+                        <option value="H">Horizontal</option>
+                        <option value="RHCP">RHCP FEKO</option>
+                        <option value="LHCP">LHCP FEKO</option>
+                      </select>
+                    </div>
+                    <div>
+                      <p className="text-[9px] text-zinc-400 mb-1">Pol. RX</p>
+                      <select value={polarizationRx} onChange={(e)=>setPolarizationRx(e.target.value)} className="w-full bg-black border border-zinc-800 rounded-xl p-2 text-white text-xs outline-none">
+                        <option value="V">Vertical</option>
+                        <option value="H">Horizontal</option>
+                        <option value="RHCP">RHCP FEKO</option>
+                        <option value="LHCP">LHCP FEKO</option>
+                      </select>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-[9px] text-zinc-400 mb-1">Figura ruido RX (dB)</p>
+                      <input type="number" min={0} step={0.5} value={noiseFigureDb} onChange={(e)=>setNoiseFigureDb(Math.max(0, Number(e.target.value)))} className="w-full bg-black border border-zinc-800 rounded-xl p-2 text-white text-xs outline-none" />
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
@@ -2648,6 +2759,90 @@ function SimulacionDinamica({
         lineWidth={2}
       />
     </group>
+  );
+}
+
+
+function CapaArraysMIMO({
+  objetos,
+  txRows,
+  txCols,
+  rxRows,
+  rxCols,
+  spacingLambda,
+  frecuenciaMhz,
+  antennaTypeTx,
+  antennaTypeRx,
+}: {
+  objetos: Objeto3D[];
+  txRows: number;
+  txCols: number;
+  rxRows: number;
+  rxCols: number;
+  spacingLambda: number;
+  frecuenciaMhz: number;
+  antennaTypeTx: string;
+  antennaTypeRx: string;
+}) {
+  const c = 299792458;
+  const lambda = c / Math.max(1, frecuenciaMhz * 1e6);
+  const spacingM = Math.max(0.02, spacingLambda * lambda);
+
+  const pintarArray = (obj: Objeto3D, rows: number, cols: number, esTx: boolean) => {
+    const elementos = [];
+    const rMax = Math.max(1, Math.min(8, rows));
+    const cMax = Math.max(1, Math.min(8, cols));
+    const color = esTx ? "#fb923c" : "#22d3ee";
+    const antena = esTx ? antennaTypeTx : antennaTypeRx;
+
+    for (let r = 0; r < rMax; r++) {
+      for (let cIdx = 0; cIdx < cMax; cIdx++) {
+        const ox = (cIdx - (cMax - 1) / 2) * spacingM;
+        const oy = (r - (rMax - 1) / 2) * spacingM;
+        elementos.push(
+          <group key={`${obj.id}-${r}-${cIdx}`} position={[obj.x + ox, obj.y + oy, obj.z]}>
+            <mesh>
+              <sphereGeometry args={[0.045, 12, 12]} />
+              <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.35} />
+            </mesh>
+            {antena.includes("dipolo") && (
+              <mesh rotation={[0, 0, Math.PI / 2]}>
+                <cylinderGeometry args={[0.012, 0.012, 0.32, 12]} />
+                <meshStandardMaterial color={color} />
+              </mesh>
+            )}
+            {antena.includes("patch") && (
+              <mesh position={[0, 0, 0.035]}>
+                <boxGeometry args={[0.18, 0.12, 0.018]} />
+                <meshStandardMaterial color={color} />
+              </mesh>
+            )}
+            {antena.includes("helicoidal") && (
+              <mesh>
+                <torusGeometry args={[0.08, 0.01, 8, 24]} />
+                <meshStandardMaterial color={color} />
+              </mesh>
+            )}
+          </group>,
+        );
+      }
+    }
+    return elementos;
+  };
+
+  return (
+    <>
+      {objetos.map((obj) => {
+        const tipo = obj.tipo.toLowerCase();
+        if (tipo === "router" || tipo === "tx" || tipo === "transmitter") {
+          return pintarArray(obj, txRows, txCols, true);
+        }
+        if (tipo === "receptor" || tipo === "rx" || tipo === "receiver") {
+          return pintarArray(obj, rxRows, rxCols, false);
+        }
+        return null;
+      })}
+    </>
   );
 }
 
