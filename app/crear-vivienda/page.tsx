@@ -1,7 +1,7 @@
 "use client";
 import ModelObjeto from "@/components/ModelObjeto";
 import { Canvas, useThree, useFrame } from "@react-three/fiber";
-import { OrbitControls, Grid, Line } from "@react-three/drei";
+import { OrbitControls, Grid, Line, useGLTF } from "@react-three/drei";
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import jsPDF from "jspdf";
@@ -209,6 +209,8 @@ export default function CrearViviendaPage() {
   const [calculandoCobertura, setCalculandoCobertura] = useState(false);
   const [generandoRender, setGenerandoRender] = useState(false);
   const [imagenRender, setImagenRender] = useState("");
+  const [modeloGlb,setModeloGlb]=useState("");
+  const [generandoGlb,setGenerandoGlb]=useState(false);
   const [mostrarMesh, setMostrarMesh] = useState(true);
   const [mostrarHeatmap, setMostrarHeatmap] = useState(true);
   const [mostrarRayos, setMostrarRayos] = useState(true);
@@ -527,6 +529,40 @@ velocidadSim
     alert("Error conectando con Blender render.");
   } finally {
     setGenerandoRender(false);
+  }
+};
+
+  const generarModeloGLB = async () => {
+  try {
+    setGenerandoGlb(true);
+    setModeloGlb("");
+
+    const datos = crearDatosVivienda();
+
+    const res = await fetch(`${SIONNA_API_URL}/generar-glb`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(datos),
+    });
+
+    if (!res.ok) {
+      const error = await res.text();
+      console.error(error);
+      alert("No se pudo generar el modelo GLB.");
+      return;
+    }
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+
+    setModeloGlb(url);
+  } catch (error) {
+    console.error(error);
+    alert("Error conectando con Blender GLB.");
+  } finally {
+    setGenerandoGlb(false);
   }
 };
 
@@ -955,6 +991,14 @@ velocidadSim
 </button>
 
             <button
+  onClick={generarModeloGLB}
+  disabled={generandoGlb}
+  className="mt-3 w-full py-4 rounded-xl bg-cyan-500 text-black text-[10px] font-black uppercase hover:bg-white transition-all disabled:opacity-40"
+>
+  {generandoGlb ? "Generando 3D..." : "🧊 Generar modelo 3D"}
+</button>
+
+            <button
               onClick={generarInformePDF}
               disabled={!resultadoCobertura}
               className="mt-3 w-full py-4 rounded-xl bg-sky-500 text-black text-[10px] font-black uppercase hover:bg-white transition-all disabled:opacity-40"
@@ -1099,6 +1143,25 @@ velocidadSim
       className="w-full rounded-xl border border-zinc-800"
     />
 
+  </div>
+)}
+
+            {modeloGlb && (
+  <div className="absolute bottom-4 right-4 w-[520px] h-[360px] bg-black/95 border border-cyan-900 rounded-2xl p-3 z-50">
+    <p className="text-[10px] uppercase text-cyan-400 font-black mb-3">
+      🧊 Modelo 3D Blender
+    </p>
+
+    <Canvas camera={{ position: [8, 6, 8], fov: 45 }}>
+      <ambientLight intensity={0.8} />
+      <directionalLight position={[5, 8, 5]} intensity={2} />
+
+      <Suspense fallback={null}>
+        <ModeloGLB url={modeloGlb} />
+      </Suspense>
+
+      <OrbitControls enablePan enableZoom enableRotate />
+    </Canvas>
   </div>
 )}
           </section>
@@ -2084,6 +2147,18 @@ function MaterialSelect({
         <option value="rx">Receptor RX</option>
       </select>
     </div>
+  );
+}
+
+function ModeloGLB({ url }: { url: string }) {
+  const gltf = useGLTF(url);
+
+  return (
+    <primitive
+      object={gltf.scene}
+      scale={1}
+      position={[0, 0, 0]}
+    />
   );
 }
 
