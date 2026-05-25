@@ -2,7 +2,7 @@
 import ModelObjeto from "@/components/ModelObjeto";
 import { Canvas, useThree, useFrame } from "@react-three/fiber";
 import { OrbitControls, Grid, Line, useGLTF } from "@react-three/drei";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import jsPDF from "jspdf";
 
