@@ -237,6 +237,10 @@ export default function CrearViviendaPage() {
   const [maxRayos, setMaxRayos] = useState(15);
   const [simulando, setSimulando] = useState(false);
   const [velocidadSim, setVelocidadSim] = useState(1);
+  const [velocidadRx, setVelocidadRx] = useState(1);
+  const [unidadVelocidad, setUnidadVelocidad] = useState<"ms" | "kmh">("ms");
+  const [anguloMovimiento, setAnguloMovimiento] = useState(0);
+  const [dopplerActual, setDopplerActual] = useState(0);
 
   const [cir, setCir] = useState<MuestraCIR[]>([]);
   const [cirResumen, setCirResumen] = useState<CirResumen | null>(null);
@@ -256,6 +260,8 @@ export default function CrearViviendaPage() {
   );
 
   const objetoActual = objetos.find((o) => o.id === objetoSeleccionado);
+
+  const velocidadRxMps = unidadVelocidad === "kmh" ? velocidadRx / 3.6 : velocidadRx;
 
   const esReceptor = (tipo: string) =>
     tipo === "receptor" || tipo === "rx" || tipo === "receiver";
@@ -404,9 +410,35 @@ export default function CrearViviendaPage() {
       materialSuelo,
       materialTecho,
       frecuenciaMhz,
+      parametrosCIR: {
+        anchoBandaMhz: 80,
+        numTaps: 128,
+        incluirDoppler: true,
+        velocidadRxMps,
+        velocidadAireMps: 0,
+        sigmaTurbulenciaMps: 0,
+      },
       habitaciones,
       objetos,
     };
+  };
+
+  const calcularDopplerHz = () => {
+    const c = 299792458;
+    const frecuenciaHz = frecuenciaMhz * 1e6;
+    const lambda = c / frecuenciaHz;
+    const thetaRad = (anguloMovimiento * Math.PI) / 180;
+    return (velocidadRxMps / lambda) * Math.cos(thetaRad);
+  };
+
+  const aplicarDopplerACIR = (taps: MuestraCIR[]) => {
+    const fd = calcularDopplerHz();
+    setDopplerActual(fd);
+
+    return taps.map((tap) => ({
+      ...tap,
+      dopplerHz: Number(fd.toFixed(3)),
+    }));
   };
 
   const normalizarCIR = (resultado: any): MuestraCIR[] => {
@@ -416,15 +448,37 @@ export default function CrearViviendaPage() {
         ? resultado.componentes
         : Array.isArray(resultado?.taps)
           ? resultado.taps
-          : [];
+          : Array.isArray(resultado?.cir?.canales)
+            ? resultado.cir.canales.flatMap((canal: any) => canal.componentes ?? [])
+            : Array.isArray(resultado?.cir?.componentes)
+              ? resultado.cir.componentes
+              : Array.isArray(resultado?.cir?.taps)
+                ? resultado.cir.taps
+                : Array.isArray(resultado?.canales)
+                  ? resultado.canales.flatMap((canal: any) => canal.componentes ?? [])
+                  : [];
 
     return bruto
       .map((c: any, index: number) => {
-        const delayNs =
-          Number(c.delayNs ?? c.retardoNs ?? c.tauNs ?? c.delay_ns ?? c.tau_ns ?? 0);
+        const delayNs = Number(
+          c.delayNs ??
+            c.retardoNs ??
+            c.tauNs ??
+            c.tau_ns ??
+            c.delay_ns ??
+            (typeof c.tauS === "number" ? c.tauS * 1e9 : 0) ??
+            (typeof c.tau_s === "number" ? c.tau_s * 1e9 : 0),
+        );
 
-        const potenciaDbm =
-          Number(c.potenciaDbm ?? c.powerDbm ?? c.potencia_dbm ?? c.power_dbm ?? c.potencia ?? -120);
+        const potenciaDbm = Number(
+          c.potenciaDbm ??
+            c.powerDbm ??
+            c.potencia_dbm ??
+            c.power_dbm ??
+            c.potencia ??
+            c.potenciaDb ??
+            -120,
+        );
 
         return {
           id: c.id ?? `cir-${index}`,
@@ -439,6 +493,17 @@ export default function CrearViviendaPage() {
       })
       .filter((c: MuestraCIR) => Number.isFinite(c.delayNs) && Number.isFinite(c.potenciaDbm))
       .sort((a: MuestraCIR, b: MuestraCIR) => a.delayNs - b.delayNs);
+  };
+
+  const extraerResumenCIR = (resultado: any): CirResumen | null => {
+    return (
+      resultado?.cirResumen ??
+      resultado?.resumen ??
+      resultado?.cir?.resumenGlobal ??
+      resultado?.cir?.canales?.[0]?.resumen ??
+      resultado?.canales?.[0]?.resumen ??
+      null
+    );
   };
 
   const exportarJSON = () => {
@@ -473,7 +538,7 @@ export default function CrearViviendaPage() {
       const datos = crearDatosVivienda();
 
       const url =
-        modoCalculo === "sionna"
+        simulando || modoCalculo === "sionna"
           ? `${SIONNA_API_URL}/raytrace`
           : `${API_URL}/calcular`;
 
@@ -500,9 +565,9 @@ export default function CrearViviendaPage() {
       }
       setResultadoCobertura(resultado);
 
-      const cirNormalizado = normalizarCIR(resultado);
+      const cirNormalizado = aplicarDopplerACIR(normalizarCIR(resultado));
       setCir(cirNormalizado);
-      setCirResumen(resultado?.cirResumen ?? null);
+      setCirResumen(extraerResumenCIR(resultado));
 
       if (cirNormalizado.length === 0 && modoCalculo === "sionna") {
         try {
@@ -519,9 +584,9 @@ export default function CrearViviendaPage() {
           console.log("Resultado CIR:", resultadoCir);
 
           if (resCir.ok && resultadoCir?.ok) {
-            const cirEndpoint = normalizarCIR(resultadoCir);
+            const cirEndpoint = aplicarDopplerACIR(normalizarCIR(resultadoCir));
             setCir(cirEndpoint);
-            setCirResumen(resultadoCir?.cirResumen ?? resultadoCir?.resumen ?? null);
+            setCirResumen(extraerResumenCIR(resultadoCir));
           }
         } catch (errorCir) {
           console.warn("No se pudo cargar /cir aparte:", errorCir);
@@ -538,65 +603,35 @@ export default function CrearViviendaPage() {
   };
 
   useEffect(() => {
+    if (!simulando) return;
 
-  if (!simulando) return;
+    const intervalo = setInterval(() => {
+      const ang = (anguloMovimiento * Math.PI) / 180;
+      const dt = 3;
+      const dx = Math.cos(ang) * velocidadRxMps * dt;
+      const dz = Math.sin(ang) * velocidadRxMps * dt;
 
-  const intervalo = setInterval(() => {
-
-    setObjetos((prev)=>
-      prev.map((obj)=>{
-
-        if(
-          obj.tipo==="receptor" ||
-          obj.tipo==="rx" ||
-          obj.tipo==="receiver"
-        ){
-
-          let nuevaX =
-            obj.x +
-            (0.25*velocidadSim);
-
-          if(nuevaX>10){
-            nuevaX=-10;
+      setObjetos((prev) =>
+        prev.map((obj) => {
+          if (obj.tipo === "receptor" || obj.tipo === "rx" || obj.tipo === "receiver") {
+            return {
+              ...obj,
+              x: Number((obj.x + dx).toFixed(2)),
+              z: Number((obj.z + dz).toFixed(2)),
+            };
           }
 
-          return{
+          return obj;
+        }),
+      );
 
-            ...obj,
+      setTimeout(() => {
+        calcularCobertura();
+      }, 500);
+    }, 3000);
 
-            x:Number(
-              nuevaX.toFixed(2)
-            )
-
-          };
-
-        }
-
-        return obj;
-
-      })
-    );
-
-    setTimeout(()=>{
-
-      calcularCobertura();
-
-    },500);
-
-  },3000);
-
-  return ()=>{
-
-    clearInterval(
-      intervalo
-    );
-
-  };
-
-},[
-simulando,
-velocidadSim
-]);
+    return () => clearInterval(intervalo);
+  }, [simulando, velocidadRxMps, anguloMovimiento]);
 
   const generarRenderPremium = async () => {
   try {
@@ -1421,9 +1456,9 @@ velocidadSim
   </p>
 </div>
 
-                <div className="bg-black border border-purple-900 rounded-xl p-4 mt-4">
+                <div className="bg-black border border-purple-900 rounded-xl p-4 mt-4 space-y-3">
                   <p className="text-[9px] uppercase text-zinc-500 font-black mb-2">
-                    Simulación dinámica
+                    Simulación dinámica Sionna
                   </p>
 
                   <button
@@ -1433,22 +1468,67 @@ velocidadSim
                     {simulando ? "Detener simulación" : "Iniciar simulación"}
                   </button>
 
-                  <input
-                    type="range"
-                    min={0.2}
-                    max={5}
-                    step={0.2}
-                    value={velocidadSim}
-                    onChange={(e) => setVelocidadSim(Number(e.target.value))}
-                    className="w-full mt-3 accent-purple-500"
-                  />
+                  <div className="space-y-2">
+                    <p className="text-[10px] text-zinc-400">
+                      Velocidad receptor
+                    </p>
 
-                  <p className="text-purple-400 text-xs font-black mt-2">
-                    Velocidad: {velocidadSim.toFixed(1)}x
-                  </p>
+                    <input
+                      type="number"
+                      value={velocidadRx}
+                      step={0.1}
+                      onChange={(e) => setVelocidadRx(Number(e.target.value))}
+                      className="w-full bg-black border border-zinc-800 rounded-xl p-2 text-white text-xs outline-none"
+                    />
+
+                    <select
+                      value={unidadVelocidad}
+                      onChange={(e) => setUnidadVelocidad(e.target.value as "ms" | "kmh")}
+                      className="w-full bg-black border border-zinc-800 rounded-xl p-2 text-white text-xs outline-none"
+                    >
+                      <option value="ms">m/s</option>
+                      <option value="kmh">km/h</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="text-[10px] text-zinc-400">
+                      Dirección movimiento: {anguloMovimiento}°
+                    </p>
+
+                    <input
+                      type="range"
+                      min={0}
+                      max={360}
+                      step={1}
+                      value={anguloMovimiento}
+                      onChange={(e) => setAnguloMovimiento(Number(e.target.value))}
+                      className="w-full accent-purple-500"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-3">
+                      <p className="text-[8px] uppercase text-zinc-500 font-black">
+                        Velocidad usada
+                      </p>
+                      <p className="text-xs font-black text-purple-400">
+                        {velocidadRxMps.toFixed(2)} m/s
+                      </p>
+                    </div>
+
+                    <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-3">
+                      <p className="text-[8px] uppercase text-zinc-500 font-black">
+                        Doppler estimado
+                      </p>
+                      <p className="text-xs font-black text-cyan-400">
+                        {dopplerActual.toFixed(2)} Hz
+                      </p>
+                    </div>
+                  </div>
 
                   <p className="text-[9px] text-zinc-500 uppercase leading-relaxed mt-2">
-                    Muestra un usuario dinámico recorriendo la vivienda para preparar futuras simulaciones temporales.
+                    Al iniciar, el receptor se desplaza cada 3 segundos y se recalcula Sionna / raytrace para actualizar rayos, CIR y Doppler.
                   </p>
                 </div>
 
