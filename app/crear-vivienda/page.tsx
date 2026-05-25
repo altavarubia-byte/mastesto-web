@@ -841,11 +841,12 @@ export default function CrearViviendaPage() {
 
               {resultadoCobertura && (
                 <CapaCobertura
-                  resultado={resultadoCobertura}
-                  mostrarHeatmap={mostrarHeatmap}
-                  mostrarRayos={mostrarRayos}
-                  mostrarRouterOptimo={mostrarRouterOptimo}
-                />
+  resultado={resultadoCobertura}
+  mostrarHeatmap={mostrarHeatmap}
+  mostrarRayos={mostrarRayos}
+  mostrarRouterOptimo={mostrarRouterOptimo}
+  maxRayos={maxRayos}
+/>
               )}
 
               <axesHelper args={[4]} />
