@@ -1182,18 +1182,116 @@ export default function CrearViviendaPage() {
                   <p className="text-[9px] uppercase text-zinc-500 font-black">
                     Recomendaciones
                   </p>
+{resultadoCobertura.recomendaciones.map((r, i) => (
+  <p
+    key={i}
+    className="text-[10px] text-zinc-400 leading-relaxed bg-black border border-zinc-900 rounded-xl p-3"
+  >
+    {r}
+  </p>
+))}
+</div>
 
-                  {resultadoCobertura.recomendaciones.map((r, i) => (
-                    <p
-                      key={i}
-                      className="text-[10px] text-zinc-400 leading-relaxed bg-black border border-zinc-900 rounded-xl p-3"
-                    >
-                      {r}
-                    </p>
-                  ))}
-                </div>
-              </div>
-            )}
+{/* ANALISIS RAYOS SIONNA */}
+
+{resultadoCobertura.rayos &&
+resultadoCobertura.rayos.length > 0 && (
+
+<div className="space-y-3 border-t border-zinc-900 pt-5">
+
+<p className="text-[9px] uppercase text-zinc-500 font-black">
+Análisis rayos Sionna
+</p>
+
+<div className="grid grid-cols-2 gap-3">
+
+<div className="bg-black border border-zinc-900 rounded-xl p-3">
+
+<p className="text-[8px] uppercase text-zinc-500 font-black">
+Total rayos
+</p>
+
+<p className="text-xl font-black text-white">
+{resultadoCobertura.rayos.length}
+</p>
+
+</div>
+
+<div className="bg-black border border-zinc-900 rounded-xl p-3">
+
+<p className="text-[8px] uppercase text-zinc-500 font-black">
+Mejor potencia
+</p>
+
+<p className="text-xl font-black text-green-400">
+{
+Math.max(
+...resultadoCobertura.rayos.map(
+(r:any)=>r.potenciaDbm
+)
+)
+} dBm
+</p>
+
+</div>
+
+</div>
+
+<div className="max-h-64 overflow-y-auto space-y-2">
+
+{resultadoCobertura.rayos
+
+.slice()
+
+.sort(
+(a:any,b:any)=>
+b.potenciaDbm-a.potenciaDbm
+)
+
+.slice(
+0,
+maxRayos
+)
+
+.map((rayo:any,index:number)=>(
+
+<div
+key={rayo.id}
+className="bg-black border border-zinc-900 rounded-xl p-3"
+>
+
+<p className="text-[10px] font-black uppercase text-white">
+Rayo {index+1}
+</p>
+
+<p className="text-[9px] text-zinc-500 uppercase">
+
+{rayo.tipo}
+
+·
+
+{rayo.potenciaDbm} dBm
+
+·
+
+Rebotes:
+
+{rayo.numRebotes ?? 0}
+
+</p>
+
+</div>
+
+))}
+
+</div>
+
+</div>
+
+)}
+
+</div>
+)}
 
             <div className="mt-6 border-t border-zinc-900 pt-5">
               <p className="text-[9px] text-zinc-500 uppercase font-bold leading-relaxed">
