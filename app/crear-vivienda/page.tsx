@@ -1618,9 +1618,14 @@ function colorRayo(rayo:any){
 
 function grosorRayo(rayo:any){
 
+  const p = rayo.potenciaDbm ?? -90;
+
   return Math.max(
     1,
-    (rayo.potenciaDbm+100)/20
+    Math.min(
+      8,
+      (p+100)/10
+    )
   );
 
 }
