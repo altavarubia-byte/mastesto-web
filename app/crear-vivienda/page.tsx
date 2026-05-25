@@ -5,6 +5,15 @@ import { OrbitControls, Grid, Line, useGLTF } from "@react-three/drei";
 import { Suspense, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import jsPDF from "jspdf";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+} from "recharts";
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
 const SIONNA_API_URL = (process.env.NEXT_PUBLIC_SIONNA_API_URL || "").replace(
@@ -57,6 +66,27 @@ type RayoCobertura = {
     y: number;
     z: number;
   }[];
+};
+
+type MuestraCIR = {
+  id?: string;
+  tipo?: string;
+  delayNs: number;
+  potenciaDbm: number;
+  magnitud?: number;
+  faseRad?: number;
+  dopplerHz?: number;
+  tap?: number;
+};
+
+type CirResumen = {
+  delaySpreadRmsNs?: number;
+  delaySpreadNs?: number;
+  retardoMedioNs?: number;
+  potenciaTotalDbm?: number;
+  potenciaTotal?: number;
+  numComponentes?: number;
+  anchoBandaMhz?: number;
 };
 
 type ResultadoCobertura = {
@@ -156,6 +186,8 @@ type ResultadoCobertura = {
     calidad: string;
   }[];
   recomendaciones: string[];
+  cir?: MuestraCIR[];
+  cirResumen?: CirResumen;
 };
 
 export default function CrearViviendaPage() {
@@ -206,7 +238,8 @@ export default function CrearViviendaPage() {
   const [simulando, setSimulando] = useState(false);
   const [velocidadSim, setVelocidadSim] = useState(1);
 
-  const [cir,setCir]=useState<any[]>([])
+  const [cir, setCir] = useState<MuestraCIR[]>([]);
+  const [cirResumen, setCirResumen] = useState<CirResumen | null>(null);
 
   const [calculandoCobertura, setCalculandoCobertura] = useState(false);
   const [generandoRender, setGenerandoRender] = useState(false);
@@ -262,6 +295,8 @@ export default function CrearViviendaPage() {
     );
 
     setResultadoCobertura(null);
+    setCir([]);
+    setCirResumen(null);
   };
 
   const crearHabitacion = () => {
@@ -374,6 +409,38 @@ export default function CrearViviendaPage() {
     };
   };
 
+  const normalizarCIR = (resultado: any): MuestraCIR[] => {
+    const bruto = Array.isArray(resultado?.cir)
+      ? resultado.cir
+      : Array.isArray(resultado?.componentes)
+        ? resultado.componentes
+        : Array.isArray(resultado?.taps)
+          ? resultado.taps
+          : [];
+
+    return bruto
+      .map((c: any, index: number) => {
+        const delayNs =
+          Number(c.delayNs ?? c.retardoNs ?? c.tauNs ?? c.delay_ns ?? c.tau_ns ?? 0);
+
+        const potenciaDbm =
+          Number(c.potenciaDbm ?? c.powerDbm ?? c.potencia_dbm ?? c.power_dbm ?? c.potencia ?? -120);
+
+        return {
+          id: c.id ?? `cir-${index}`,
+          tipo: c.tipo ?? c.type ?? "multipath",
+          delayNs,
+          potenciaDbm,
+          magnitud: c.magnitud ?? c.amplitud ?? c.amplitude,
+          faseRad: c.faseRad ?? c.phaseRad ?? c.fase_rad,
+          dopplerHz: c.dopplerHz ?? c.doppler_hz,
+          tap: c.tap ?? index,
+        };
+      })
+      .filter((c: MuestraCIR) => Number.isFinite(c.delayNs) && Number.isFinite(c.potenciaDbm))
+      .sort((a: MuestraCIR, b: MuestraCIR) => a.delayNs - b.delayNs);
+  };
+
   const exportarJSON = () => {
     const datos = crearDatosVivienda();
     const json = JSON.stringify(datos, null, 2);
@@ -432,6 +499,35 @@ export default function CrearViviendaPage() {
         return;
       }
       setResultadoCobertura(resultado);
+
+      const cirNormalizado = normalizarCIR(resultado);
+      setCir(cirNormalizado);
+      setCirResumen(resultado?.cirResumen ?? null);
+
+      if (cirNormalizado.length === 0 && modoCalculo === "sionna") {
+        try {
+          const resCir = await fetch(`${SIONNA_API_URL}/cir`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(datos),
+          });
+
+          const resultadoCir = await resCir.json();
+
+          console.log("Resultado CIR:", resultadoCir);
+
+          if (resCir.ok && resultadoCir?.ok) {
+            const cirEndpoint = normalizarCIR(resultadoCir);
+            setCir(cirEndpoint);
+            setCirResumen(resultadoCir?.cirResumen ?? resultadoCir?.resumen ?? null);
+          }
+        } catch (errorCir) {
+          console.warn("No se pudo cargar /cir aparte:", errorCir);
+        }
+      }
+
       alert("Cobertura calculada correctamente.");
     } catch (error) {
       console.error("Error enviando datos a /api/cobertura:", error);
@@ -1495,6 +1591,113 @@ velocidadSim
                     </div>
                   )}
 
+                {cir.length > 0 && (
+                  <div className="bg-black border border-orange-900 rounded-xl p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-[9px] uppercase text-orange-500 font-black">
+                          CIR / Power Delay Profile
+                        </p>
+                        <p className="text-[9px] text-zinc-500 uppercase leading-relaxed mt-1">
+                          Potencia recibida por cada retardo multipath.
+                        </p>
+                      </div>
+
+                      <p className="text-[10px] text-white font-black">
+                        {cir.length} taps
+                      </p>
+                    </div>
+
+                    <div className="h-56 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={cir}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis
+                            dataKey="delayNs"
+                            tick={{ fontSize: 9 }}
+                            label={{
+                              value: "Retardo (ns)",
+                              position: "insideBottom",
+                              offset: -3,
+                              fontSize: 9,
+                            }}
+                          />
+                          <YAxis
+                            tick={{ fontSize: 9 }}
+                            domain={["dataMin - 5", "dataMax + 5"]}
+                            label={{
+                              value: "dBm",
+                              angle: -90,
+                              position: "insideLeft",
+                              fontSize: 9,
+                            }}
+                          />
+                          <Tooltip
+                            formatter={(value: any, name: any) => [
+                              `${Number(value).toFixed(2)} dBm`,
+                              name === "potenciaDbm" ? "Potencia" : name,
+                            ]}
+                            labelFormatter={(label: any) =>
+                              `Retardo: ${Number(label).toFixed(2)} ns`
+                            }
+                          />
+                          <Bar dataKey="potenciaDbm" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    {cirResumen && (
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-3">
+                          <p className="text-[8px] uppercase text-zinc-500 font-black">
+                            Delay spread RMS
+                          </p>
+                          <p className="text-sm font-black text-orange-400">
+                            {Number(
+                              cirResumen.delaySpreadRmsNs ??
+                                cirResumen.delaySpreadNs ??
+                                0,
+                            ).toFixed(2)} ns
+                          </p>
+                        </div>
+
+                        <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-3">
+                          <p className="text-[8px] uppercase text-zinc-500 font-black">
+                            Potencia total
+                          </p>
+                          <p className="text-sm font-black text-white">
+                            {Number(
+                              cirResumen.potenciaTotalDbm ??
+                                cirResumen.potenciaTotal ??
+                                cir[0]?.potenciaDbm ??
+                                0,
+                            ).toFixed(2)} dBm
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="max-h-40 overflow-y-auto space-y-2">
+                      {cir.slice(0, 12).map((tap, index) => (
+                        <div
+                          key={tap.id ?? index}
+                          className="bg-zinc-950 border border-zinc-900 rounded-xl p-3"
+                        >
+                          <p className="text-[10px] font-black uppercase text-white">
+                            Tap {index + 1} · {tap.tipo ?? "multipath"}
+                          </p>
+                          <p className="text-[9px] text-zinc-500 uppercase">
+                            {tap.delayNs.toFixed(2)} ns · {tap.potenciaDbm.toFixed(2)} dBm
+                            {typeof tap.dopplerHz === "number"
+                              ? ` · Doppler ${tap.dopplerHz.toFixed(2)} Hz`
+                              : ""}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <p className="text-[9px] uppercase text-zinc-500 font-black">
                     Recomendaciones
@@ -2155,14 +2358,12 @@ function MaterialSelect({
 }
 
 function ModeloGLB({ url }: { url: string }) {
-  const gltf = useGLTF(url);
+  const gltf = useGLTF(url) as any;
 
   return (
-    <primitive
-      object={gltf.scene}
-      scale={1}
-      position={[0, 0, 0]}
-    />
+    <group scale={1} position={[0, 0, 0]}>
+      <primitive object={gltf.scene} />
+    </group>
   );
 }
 
