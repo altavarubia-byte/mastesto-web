@@ -41,7 +41,7 @@
     "@vercel/sandbox": "0.0.17",
     "ai": "6.0.105",
     "arctic": "3.7.0",
-    "botid": "1.4.5",
+    "botid": "^1.4.5",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "cookie": "^1.0.2",
