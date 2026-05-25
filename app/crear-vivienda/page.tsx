@@ -59,6 +59,15 @@ type Objeto3D = {
   recorridoM?: number;
   origenX?: number;
   origenZ?: number;
+
+  // Columna térmica dinámica
+  T_hot_K?: number;
+  T_amb_K?: number;
+  temperaturaC?: number;
+  v_mean_mps?: number;
+  sigma_v_mps?: number;
+  atenuacion_base_db?: number;
+  delay_extra_base_ns?: number;
 };
 
 type PuntoHeatmap = {
@@ -85,9 +94,6 @@ type RayoCobertura = {
   dopplerPersonaHz?: number;
   perdidaPersonaDb?: number;
   modeloInteraccionPersona?: string;
-  afectadoColumnaTermica?: boolean;
-  dopplerSpreadHz?: number;
-  modeloColumnaTermica?: ColumnaTermicaResultado;
   puntos: {
     x: number;
     y: number;
@@ -114,31 +120,6 @@ type CirResumen = {
   potenciaTotal?: number;
   numComponentes?: number;
   anchoBandaMhz?: number;
-};
-
-type ColumnaTermicaResultado = {
-  columnaActiva?: boolean;
-  aplicadaACIR?: boolean;
-  aplicada?: boolean;
-  pathsAfectados?: number;
-  indicesPathsAfectados?: number[];
-  porcentajePathsAfectados?: number;
-  nota?: string;
-  motivo?: string;
-  x?: number;
-  y?: number;
-  z?: number;
-  sx?: number;
-  sy?: number;
-  sz?: number;
-  T_amb_K?: number;
-  T_hot_K?: number;
-  deltaT_K?: number;
-  fdMeanHz?: number;
-  fdSigmaHz?: number;
-  atenuacionDb?: number;
-  delayExtraNs?: number;
-  [key: string]: any;
 };
 
 type ResultadoCobertura = {
@@ -232,7 +213,6 @@ type ResultadoCobertura = {
   };
   heatmap: PuntoHeatmap[];
   heatmapCanal?: PuntoHeatmap[];
-  columnaTermica?: ColumnaTermicaResultado;
   mimoArrays?: {
     txRows: number;
     txCols: number;
@@ -270,7 +250,6 @@ type ResultadoCobertura = {
     capacidadBeamformingIdealMbps: number;
     capacidadMultiplexingIdealMbps: number;
     capacidadMimoRealGeomMbps?: number;
-    capacidadMimoRealMbps?: number;
     rankReal?: number | null;
     matrizHDisponible?: boolean;
     singularValues?: number[];
@@ -299,6 +278,23 @@ type ResultadoCobertura = {
   recomendaciones: string[];
   cir?: MuestraCIR[];
   cirResumen?: CirResumen;
+  columnaTermica?: {
+    columnaActiva?: boolean;
+    aplicadaACIR?: boolean;
+    aplicada?: boolean;
+    pathsAfectados?: number;
+    porcentajePathsAfectados?: number;
+    deltaT_K?: number;
+    T_amb_K?: number;
+    T_hot_K?: number;
+    fdMeanHz?: number;
+    fdSigmaHz?: number;
+    atenuacionDb?: number;
+    delayExtraNs?: number;
+    nota?: string;
+    motivo?: string;
+    [key: string]: any;
+  };
   modeloFisico?: {
     principio?: string;
     calculadoPorFormula?: string[];
@@ -402,6 +398,9 @@ export default function CrearViviendaPage() {
   const [polarizationTx, setPolarizationTx] = useState("V");
   const [polarizationRx, setPolarizationRx] = useState("V");
   const [noiseFigureDb, setNoiseFigureDb] = useState(7);
+  const [temperaturaColumnaC, setTemperaturaColumnaC] = useState(327);
+  const [velocidadColumnaMps, setVelocidadColumnaMps] = useState(2);
+  const [turbulenciaColumnaMps, setTurbulenciaColumnaMps] = useState(0.5);
 
   const habitacionActual = habitaciones.find(
     (h) => h.id === habitacionSeleccionada,
@@ -421,6 +420,21 @@ export default function CrearViviendaPage() {
       router: { sx: 0.35, sy: 0.35, sz: 0.35, color: "#f97316", material: undefined },
       receptor: { sx: 0.25, sy: 0.25, sz: 0.25, color: "#22c55e", material: "rx", y: 1.2 },
       persona: { sx: 0.55, sy: 1.25, sz: 0.55, color: "#facc15", material: "persona", y: 0.9, velocidadMps: 0.8, recorridoM: 3, sentido: 1 },
+      columna_termica: {
+        sx: 1.2,
+        sy: 3,
+        sz: 1.2,
+        color: "#ff6b00",
+        material: "aire_caliente",
+        y: 1.5,
+        temperaturaC: temperaturaColumnaC,
+        T_amb_K: 293.15,
+        T_hot_K: temperaturaColumnaC + 273.15,
+        v_mean_mps: velocidadColumnaMps,
+        sigma_v_mps: turbulenciaColumnaMps,
+        atenuacion_base_db: 1.5,
+        delay_extra_base_ns: 2,
+      },
       sofa: { sx: 1.8, sy: 0.6, sz: 0.8, color: "#7c2d12", material: "tejido", y: 0.4 },
       mesa: { sx: 1.2, sy: 0.25, sz: 0.8, color: "#92400e", material: "madera", y: 0.4 },
       silla: { sx: 0.5, sy: 0.8, sz: 0.5, color: "#57534e", material: "madera", y: 0.4 },
@@ -444,6 +458,13 @@ export default function CrearViviendaPage() {
               y: config.y ?? o.y,
               color: config.color ?? o.color,
               material: config.material,
+              temperaturaC: config.temperaturaC ?? o.temperaturaC,
+              T_amb_K: config.T_amb_K ?? o.T_amb_K,
+              T_hot_K: config.T_hot_K ?? o.T_hot_K,
+              v_mean_mps: config.v_mean_mps ?? o.v_mean_mps,
+              sigma_v_mps: config.sigma_v_mps ?? o.sigma_v_mps,
+              atenuacion_base_db: config.atenuacion_base_db ?? o.atenuacion_base_db,
+              delay_extra_base_ns: config.delay_extra_base_ns ?? o.delay_extra_base_ns,
             }
           : o,
       ),
@@ -517,6 +538,20 @@ export default function CrearViviendaPage() {
       armario: { sx: 1.2, sy: 2, sz: 0.5, color: "#44403c", material: "madera" },
       receptor: { sx: 0.25, sy: 0.25, sz: 0.25, color: "#22c55e", material: "rx" },
       persona: { sx: 0.55, sy: 1.25, sz: 0.55, color: "#facc15", material: "persona", velocidadMps: 0.8, recorridoM: 3, sentido: 1 },
+      columna_termica: {
+        sx: 1.2,
+        sy: 3,
+        sz: 1.2,
+        color: "#ff6b00",
+        material: "aire_caliente",
+        temperaturaC: temperaturaColumnaC,
+        T_amb_K: 293.15,
+        T_hot_K: temperaturaColumnaC + 273.15,
+        v_mean_mps: velocidadColumnaMps,
+        sigma_v_mps: turbulenciaColumnaMps,
+        atenuacion_base_db: 1.5,
+        delay_extra_base_ns: 2,
+      },
       ventana: { sx: 1.8, sy: 1.1, sz: 0.08, color: "#7dd3fc", material: "cristal" },
     };
 
@@ -527,13 +562,20 @@ export default function CrearViviendaPage() {
       id: `${tipo}-${Date.now()}`,
       tipo,
       x: h ? h.x : 0,
-      y: tipo === "tv" ? 1.4 : tipo === "router" || tipo === "receptor" ? 1.2 : tipo === "persona" ? 0.9 : tipo === "ventana" ? 1.5 : 0.4,
+      y: tipo === "tv" ? 1.4 : tipo === "router" || tipo === "receptor" ? 1.2 : tipo === "persona" ? 0.9 : tipo === "columna_termica" ? 1.5 : tipo === "ventana" ? 1.5 : 0.4,
       z: h ? h.z : 0,
       sx: config.sx || 1,
       sy: config.sy || 1,
       sz: config.sz || 1,
       color: config.color || "#ffffff",
       material: config.material,
+      temperaturaC: tipo === "columna_termica" ? temperaturaColumnaC : undefined,
+      T_amb_K: tipo === "columna_termica" ? 293.15 : undefined,
+      T_hot_K: tipo === "columna_termica" ? temperaturaColumnaC + 273.15 : undefined,
+      v_mean_mps: tipo === "columna_termica" ? velocidadColumnaMps : undefined,
+      sigma_v_mps: tipo === "columna_termica" ? turbulenciaColumnaMps : undefined,
+      atenuacion_base_db: tipo === "columna_termica" ? 1.5 : undefined,
+      delay_extra_base_ns: tipo === "columna_termica" ? 2 : undefined,
       direccionDeg: tipo === "persona" ? anguloMovimiento : undefined,
       sentido: tipo === "persona" ? 1 : undefined,
       velocidadMps: tipo === "persona" ? 0.8 : undefined,
@@ -596,6 +638,25 @@ export default function CrearViviendaPage() {
         noiseFigureDb,
         incluirHeatmapCanal: true,
       },
+      columnaTermica: objetos
+        .filter((o) => o.tipo === "columna_termica")
+        .map((o) => ({
+          activa: true,
+          nombre: o.id,
+          x: o.x,
+          y: o.y,
+          z: o.z,
+          sx: o.sx,
+          sy: o.sy,
+          sz: o.sz,
+          T_amb_K: o.T_amb_K ?? 293.15,
+          T_hot_K: o.T_hot_K ?? ((o.temperaturaC ?? temperaturaColumnaC) + 273.15),
+          temperaturaC: o.temperaturaC ?? temperaturaColumnaC,
+          v_mean_mps: o.v_mean_mps ?? velocidadColumnaMps,
+          sigma_v_mps: o.sigma_v_mps ?? turbulenciaColumnaMps,
+          atenuacion_base_db: o.atenuacion_base_db ?? 1.5,
+          delay_extra_base_ns: o.delay_extra_base_ns ?? 2,
+        })),
       habitaciones,
       objetos,
     };
@@ -1136,12 +1197,12 @@ export default function CrearViviendaPage() {
 
     pdf.setTextColor(249, 115, 22);
     pdf.setFontSize(24);
-    pdf.text("INFORME MASTESTO RF", 18, y);
+    pdf.text("INFORME TÉCNICO RF · SIONNA", 18, y);
 
     y += 9;
     pdf.setTextColor(180, 180, 180);
     pdf.setFontSize(10);
-    pdf.text("Planificación WiFi · Sionna RT · Ray tracing · Blender", 18, y);
+    pdf.text("Ray tracing indoor · CIR · MIMO · Doppler · Columna térmica · FEKO-ready", 18, y);
 
     y += 8;
     pdf.text(`Fecha: ${fecha}`, 18, y);
@@ -1174,6 +1235,36 @@ export default function CrearViviendaPage() {
       pdf.text(linea, 22, y);
       y += 6;
     });
+
+    if (resultadoCobertura.columnaTermica) {
+      y += 6;
+      nuevaPaginaSiHaceFalta(42);
+      pdf.setTextColor(249, 115, 22);
+      pdf.setFontSize(15);
+      pdf.text("Columna térmica dinámica", 18, y);
+
+      y += 8;
+      pdf.setFontSize(9);
+      pdf.setTextColor(220, 220, 220);
+
+      const ct = resultadoCobertura.columnaTermica;
+      const lineasColumna = [
+        `Estado: ${ct.columnaActiva ? "Activa" : "Inactiva"}`,
+        `Temperatura seleccionada: ${temperaturaColumnaC.toFixed(0)} °C`,
+        `Delta térmica backend: ${(ct.deltaT_K ?? 0).toFixed(2)} K`,
+        `Paths afectados: ${ct.pathsAfectados ?? 0} (${(ct.porcentajePathsAfectados ?? 0).toFixed(2)}%)`,
+        `Doppler térmico medio: ${(ct.fdMeanHz ?? 0).toFixed(3)} Hz`,
+        `Ensanchamiento Doppler: ${(ct.fdSigmaHz ?? 0).toFixed(3)} Hz`,
+        `Atenuación adicional: ${(ct.atenuacionDb ?? 0).toFixed(2)} dB`,
+        `Retardo extra: ${(ct.delayExtraNs ?? 0).toFixed(3)} ns`,
+      ];
+
+      lineasColumna.forEach((linea) => {
+        nuevaPaginaSiHaceFalta(7);
+        pdf.text(linea, 22, y);
+        y += 5;
+      });
+    }
 
     y += 6;
     nuevaPaginaSiHaceFalta(25);
@@ -1282,10 +1373,10 @@ export default function CrearViviendaPage() {
       const m = resultadoCobertura.mimoMetricas;
       const lineasMimo = [
         `Configuración: TX ${m.nt} elementos · RX ${m.nr} elementos`,
-        `SNR usada: ${(m.snrDb ?? 0).toFixed(2)} dB`,
-        `Capacidad SISO: ${(m.capacidadSisoMbps ?? 0).toFixed(2)} Mbps`,
-        `Capacidad beamforming ideal: ${(m.capacidadBeamformingIdealMbps ?? 0).toFixed(2)} Mbps`,
-        `Capacidad multiplexing ideal: ${(m.capacidadMultiplexingIdealMbps ?? 0).toFixed(2)} Mbps`,
+        `SNR usada: ${m.snrDb.toFixed(2)} dB`,
+        `Capacidad SISO: ${m.capacidadSisoMbps.toFixed(2)} Mbps`,
+        `Capacidad beamforming ideal: ${m.capacidadBeamformingIdealMbps.toFixed(2)} Mbps`,
+        `Capacidad multiplexing ideal: ${m.capacidadMultiplexingIdealMbps.toFixed(2)} Mbps`,
         `Rank real: ${m.rankReal ?? "N/D"}`,
       ];
 
@@ -1294,43 +1385,6 @@ export default function CrearViviendaPage() {
         pdf.text(linea, 22, y);
         y += 5;
       });
-    }
-
-    if (resultadoCobertura.columnaTermica) {
-      y += 6;
-      nuevaPaginaSiHaceFalta(55);
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(15);
-      pdf.text("Columna térmica", 18, y);
-
-      y += 8;
-      pdf.setFontSize(9);
-      pdf.setTextColor(220, 220, 220);
-
-      const c = resultadoCobertura.columnaTermica;
-      const lineasColumna = [
-        `Activa: ${c.columnaActiva ? "Sí" : "No"}`,
-        `Paths afectados: ${c.pathsAfectados ?? 0}`,
-        `Porcentaje afectados: ${(c.porcentajePathsAfectados ?? 0).toFixed(2)}%`,
-        `Doppler medio térmico: ${(c.fdMeanHz ?? 0).toFixed(3)} Hz`,
-        `Spread Doppler térmico: ${(c.fdSigmaHz ?? 0).toFixed(3)} Hz`,
-        `Atenuación extra: ${(c.atenuacionDb ?? 0).toFixed(3)} dB`,
-        `Retardo extra: ${(c.delayExtraNs ?? 0).toFixed(3)} ns`,
-      ];
-
-      lineasColumna.forEach((linea) => {
-        nuevaPaginaSiHaceFalta(7);
-        pdf.text(linea, 22, y);
-        y += 5;
-      });
-
-      const explicacionColumna = pdf.splitTextToSize(
-        "La columna térmica representa una región de aire caliente/turbulento que modifica únicamente los caminos que la atraviesan. El modelo marca rayos afectados y ajusta potencia, retardo y Doppler sin crear caminos artificiales.",
-        165,
-      );
-      nuevaPaginaSiHaceFalta(explicacionColumna.length * 5 + 8);
-      pdf.text(explicacionColumna, 22, y);
-      y += explicacionColumna.length * 5 + 2;
     }
 
     const heatmapParaPdf =
@@ -1680,6 +1734,7 @@ export default function CrearViviendaPage() {
               <Boton texto="Router" onClick={() => crearObjeto("router")} />
               <Boton texto="Receptor" onClick={() => crearObjeto("receptor")} />
               <Boton texto="Persona" onClick={() => crearObjeto("persona")} />
+              <Boton texto="Columna térmica" onClick={() => crearObjeto("columna_termica")} />
               <Boton texto="Armario" onClick={() => crearObjeto("armario")} />
               <Boton texto="Ventana" onClick={() => crearObjeto("ventana")} />
             </div>
@@ -1950,6 +2005,7 @@ export default function CrearViviendaPage() {
                     <option value="router">Router / TX</option>
                     <option value="receptor">Receptor / RX</option>
                     <option value="persona">Personaje móvil</option>
+                    <option value="columna_termica">Columna térmica</option>
                     <option value="sofa">Sofá</option>
                     <option value="mesa">Mesa</option>
                     <option value="silla">Silla</option>
@@ -2026,6 +2082,55 @@ export default function CrearViviendaPage() {
                   onChange={(v) => actualizarObjeto("material", v)}
                 />
 
+                {objetoActual.tipo === "columna_termica" && (
+                  <div className="border border-orange-900/70 bg-orange-950/20 rounded-xl p-4 space-y-4">
+                    <p className="text-[9px] uppercase text-orange-300 font-black">
+                      Parámetros térmicos dinámicos
+                    </p>
+
+                    <Control
+                      label="Temperatura columna °C"
+                      value={objetoActual.temperaturaC ?? temperaturaColumnaC}
+                      min={20}
+                      max={900}
+                      step={10}
+                      onChange={(v) => {
+                        setTemperaturaColumnaC(v);
+                        actualizarObjeto("temperaturaC", v);
+                        actualizarObjeto("T_hot_K", v + 273.15);
+                      }}
+                    />
+
+                    <Control
+                      label="Velocidad aire caliente m/s"
+                      value={objetoActual.v_mean_mps ?? velocidadColumnaMps}
+                      min={0}
+                      max={12}
+                      step={0.1}
+                      onChange={(v) => {
+                        setVelocidadColumnaMps(v);
+                        actualizarObjeto("v_mean_mps", v);
+                      }}
+                    />
+
+                    <Control
+                      label="Turbulencia σv m/s"
+                      value={objetoActual.sigma_v_mps ?? turbulenciaColumnaMps}
+                      min={0}
+                      max={5}
+                      step={0.1}
+                      onChange={(v) => {
+                        setTurbulenciaColumnaMps(v);
+                        actualizarObjeto("sigma_v_mps", v);
+                      }}
+                    />
+
+                    <p className="text-[9px] text-orange-200/80 uppercase leading-relaxed">
+                      Esta temperatura se manda al backend para modificar los rayos/CIR afectados.
+                    </p>
+                  </div>
+                )}
+
                 <button
                   onClick={eliminarSeleccionado}
                   className="w-full py-3 rounded-xl bg-red-600 text-white text-[10px] font-black uppercase hover:bg-red-500 transition-all"
@@ -2089,6 +2194,58 @@ export default function CrearViviendaPage() {
                   </p>
                 </div>
 
+                {resultadoCobertura.columnaTermica && (
+                  <div className="bg-black border border-orange-900 rounded-xl p-4 mt-4 space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-[9px] uppercase text-orange-400 font-black">
+                        Columna térmica dinámica
+                      </p>
+                      <span className={`text-[8px] uppercase font-black px-2 py-1 rounded-lg border ${
+                        resultadoCobertura.columnaTermica.columnaActiva
+                          ? "text-orange-300 border-orange-700 bg-orange-950/40"
+                          : "text-slate-400 border-slate-700 bg-slate-950"
+                      }`}>
+                        {resultadoCobertura.columnaTermica.columnaActiva ? "Activa" : "Inactiva"}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                        <p className="text-[8px] uppercase text-slate-500 font-black">Paths afectados</p>
+                        <p className="text-sm font-black text-orange-300">
+                          {resultadoCobertura.columnaTermica.pathsAfectados ?? 0}
+                        </p>
+                      </div>
+
+                      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                        <p className="text-[8px] uppercase text-slate-500 font-black">Afección</p>
+                        <p className="text-sm font-black text-orange-300">
+                          {(resultadoCobertura.columnaTermica.porcentajePathsAfectados ?? 0).toFixed(2)}%
+                        </p>
+                      </div>
+
+                      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                        <p className="text-[8px] uppercase text-slate-500 font-black">Doppler térmico</p>
+                        <p className="text-sm font-black text-cyan-300">
+                          {(resultadoCobertura.columnaTermica.fdMeanHz ?? 0).toFixed(2)} Hz
+                        </p>
+                      </div>
+
+                      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                        <p className="text-[8px] uppercase text-slate-500 font-black">Delay extra</p>
+                        <p className="text-sm font-black text-cyan-300">
+                          {(resultadoCobertura.columnaTermica.delayExtraNs ?? 0).toFixed(2)} ns
+                        </p>
+                      </div>
+                    </div>
+
+                    <p className="text-[9px] text-slate-500 uppercase leading-relaxed">
+                      Temperatura enviada: {temperaturaColumnaC.toFixed(0)} °C · ΔT backend:
+                      {(resultadoCobertura.columnaTermica.deltaT_K ?? 0).toFixed(1)} K.
+                    </p>
+                  </div>
+                )}
+
                 {resultadoCobertura.mimoArrays && (
                   <div className="bg-black/70 border border-cyan-900 rounded-xl p-4 mt-4 space-y-2">
                     <p className="text-[9px] uppercase text-cyan-400 font-black">
@@ -2113,14 +2270,14 @@ export default function CrearViviendaPage() {
                       <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
                         <p className="text-[8px] uppercase text-slate-500 font-black">SNR</p>
                         <p className="text-sm font-black text-white">
-                          {(resultadoCobertura.mimoMetricas.snrDb ?? 0).toFixed(2)} dB
+                          {resultadoCobertura.mimoMetricas.snrDb.toFixed(2)} dB
                         </p>
                       </div>
 
                       <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
                         <p className="text-[8px] uppercase text-slate-500 font-black">Ganancia array ideal</p>
                         <p className="text-sm font-black text-emerald-400">
-                          +{(resultadoCobertura.mimoMetricas.arrayGainBeamformingDbIdeal ?? 0).toFixed(2)} dB
+                          +{resultadoCobertura.mimoMetricas.arrayGainBeamformingDbIdeal.toFixed(2)} dB
                         </p>
                       </div>
 
@@ -2142,65 +2299,21 @@ export default function CrearViviendaPage() {
                     <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-1">
                       <p className="text-[8px] uppercase text-slate-500 font-black">Capacidad Shannon</p>
                       <p className="text-[10px] text-slate-300 uppercase leading-relaxed">
-                        SISO: {(resultadoCobertura.mimoMetricas.capacidadSisoMbps ?? 0).toFixed(2)} Mbps
+                        SISO: {resultadoCobertura.mimoMetricas.capacidadSisoMbps.toFixed(2)} Mbps
                       </p>
                       <p className="text-[10px] text-slate-300 uppercase leading-relaxed">
-                        Beamforming ideal: {(resultadoCobertura.mimoMetricas.capacidadBeamformingIdealMbps ?? 0).toFixed(2)} Mbps
+                        Beamforming ideal: {resultadoCobertura.mimoMetricas.capacidadBeamformingIdealMbps.toFixed(2)} Mbps
                       </p>
                       <p className="text-[10px] text-slate-300 uppercase leading-relaxed">
-                        Multiplexing ideal: {(resultadoCobertura.mimoMetricas.capacidadMultiplexingIdealMbps ?? 0).toFixed(2)} Mbps
+                        Multiplexing ideal: {resultadoCobertura.mimoMetricas.capacidadMultiplexingIdealMbps.toFixed(2)} Mbps
                       </p>
                       <p className="text-[9px] text-green-400 uppercase leading-relaxed">
-                        MIMO H real: {(resultadoCobertura.mimoMetricas.capacidadMimoRealMbps ?? resultadoCobertura.mimoMetricas.capacidadMimoRealGeomMbps ?? 0).toFixed(2)} Mbps · Rank real: {resultadoCobertura.mimoMetricas.rankReal ?? "N/D"}
+                        MIMO geométrico H: {(resultadoCobertura.mimoMetricas.capacidadMimoRealGeomMbps ?? 0).toFixed(2)} Mbps · Rank real: {resultadoCobertura.mimoMetricas.rankReal ?? "N/D"}
                       </p>
                     </div>
 
                     <p className="text-[9px] text-slate-500 uppercase leading-relaxed">
                       {resultadoCobertura.mimoMetricas.modelo?.nota ?? "La capacidad MIMO real completa requiere matriz H por elemento."}
-                    </p>
-                  </div>
-                )}
-
-                {resultadoCobertura.columnaTermica && (
-                  <div className="bg-black/70 border border-orange-900 rounded-xl p-4 mt-4 space-y-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-[9px] uppercase text-orange-400 font-black">
-                        Columna térmica
-                      </p>
-                      <span className={`text-[8px] uppercase font-black px-2 py-1 rounded-lg border ${resultadoCobertura.columnaTermica.columnaActiva ? "text-orange-300 border-orange-700 bg-orange-950/40" : "text-slate-400 border-slate-700 bg-slate-950"}`}>
-                        {resultadoCobertura.columnaTermica.columnaActiva ? "Activa" : "Inactiva"}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
-                        <p className="text-[8px] uppercase text-slate-500 font-black">Paths afectados</p>
-                        <p className="text-sm font-black text-orange-300">
-                          {resultadoCobertura.columnaTermica.pathsAfectados ?? 0}
-                        </p>
-                      </div>
-                      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
-                        <p className="text-[8px] uppercase text-slate-500 font-black">Afectación</p>
-                        <p className="text-sm font-black text-orange-300">
-                          {(resultadoCobertura.columnaTermica.porcentajePathsAfectados ?? 0).toFixed(2)}%
-                        </p>
-                      </div>
-                      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
-                        <p className="text-[8px] uppercase text-slate-500 font-black">Doppler térmico</p>
-                        <p className="text-sm font-black text-cyan-300">
-                          {(resultadoCobertura.columnaTermica.fdMeanHz ?? 0).toFixed(2)} Hz
-                        </p>
-                      </div>
-                      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
-                        <p className="text-[8px] uppercase text-slate-500 font-black">Retardo extra</p>
-                        <p className="text-sm font-black text-cyan-300">
-                          {(resultadoCobertura.columnaTermica.delayExtraNs ?? 0).toFixed(2)} ns
-                        </p>
-                      </div>
-                    </div>
-
-                    <p className="text-[9px] text-slate-500 uppercase leading-relaxed">
-                      {resultadoCobertura.columnaTermica.nota ?? resultadoCobertura.columnaTermica.motivo ?? "Se visualiza como cilindro naranja en la escena y marca rayos afectados."}
                     </p>
                   </div>
                 )}
@@ -2934,7 +3047,8 @@ function ObjetoMovible({
     tipo === "receptor" ||
     tipo === "rx" ||
     tipo === "receiver" ||
-    tipo === "persona";
+    tipo === "persona" ||
+    tipo === "columna_termica";
 
   const moverEnSuelo = (event: any) => {
     if (!arrastrando || !movible) return;
@@ -3016,6 +3130,8 @@ function ObjetoMovible({
         </mesh>
       ) : tipo === "persona" ? (
         <PersonajeMovil color={obj.color} seleccionado={seleccionado} />
+      ) : tipo === "columna_termica" ? (
+        <ColumnaTermica3D obj={obj} seleccionado={seleccionado} />
       ) : (
         <mesh castShadow receiveShadow scale={[obj.sx, obj.sy, obj.sz]}>
           <boxGeometry />
@@ -3027,16 +3143,20 @@ function ObjetoMovible({
         </mesh>
       )}
 
-      {(tipo === "router" || tipo === "receptor" || tipo === "persona") && (
+      {(tipo === "router" || tipo === "receptor" || tipo === "persona" || tipo === "columna_termica") && (
         <mesh position={[0, -obj.y + 0.06, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <ringGeometry args={[0.45, 0.7, 32]} />
           <meshBasicMaterial
             color={
-              tipo === "persona"
+              tipo === "columna_termica"
                 ? seleccionado
-                  ? "#facc15"
-                  : "#fde68a"
-                : tipo === "receptor"
+                  ? "#ff7a18"
+                  : "#fb923c"
+                : tipo === "persona"
+                  ? seleccionado
+                    ? "#facc15"
+                    : "#fde68a"
+                  : tipo === "receptor"
                   ? seleccionado
                     ? "#22c55e"
                     : "#86efac"
@@ -3049,6 +3169,64 @@ function ObjetoMovible({
           />
         </mesh>
       )}
+    </group>
+  );
+}
+
+function ColumnaTermica3D({
+  obj,
+  seleccionado,
+}: {
+  obj: Objeto3D;
+  seleccionado: boolean;
+}) {
+  const ref = useRef<THREE.Group>(null);
+  const temperaturaC = obj.temperaturaC ?? ((obj.T_hot_K ?? 600) - 273.15);
+  const intensidad = Math.max(0.15, Math.min(1, temperaturaC / 900));
+
+  useFrame((_, delta) => {
+    if (!ref.current) return;
+    ref.current.rotation.y += delta * (0.8 + intensidad);
+  });
+
+  return (
+    <group ref={ref}>
+      <mesh castShadow receiveShadow scale={[obj.sx, obj.sy, obj.sz]}>
+        <cylinderGeometry args={[0.38, 0.62, 1, 36, 1, true]} />
+        <meshStandardMaterial
+          color="#ff6b00"
+          emissive="#ff3b00"
+          emissiveIntensity={0.25 + intensidad * 0.9}
+          transparent
+          opacity={0.22 + intensidad * 0.28}
+          roughness={0.35}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+
+      <mesh scale={[obj.sx * 0.8, obj.sy * 0.7, obj.sz * 0.8]}>
+        <cylinderGeometry args={[0.28, 0.48, 1, 28, 1, true]} />
+        <meshBasicMaterial
+          color="#f97316"
+          transparent
+          opacity={0.12 + intensidad * 0.18}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+
+      <mesh position={[0, obj.sy * 0.55, 0]} scale={[obj.sx * 0.45, obj.sx * 0.45, obj.sx * 0.45]}>
+        <sphereGeometry args={[1, 32, 32]} />
+        <meshBasicMaterial color="#fed7aa" transparent opacity={0.18 + intensidad * 0.25} />
+      </mesh>
+
+      <Line
+        points={[
+          [0, -obj.sy / 2, 0],
+          [0, obj.sy / 2, 0],
+        ]}
+        color={seleccionado ? "#fff7ed" : "#fdba74"}
+        lineWidth={seleccionado ? 3 : 1.5}
+      />
     </group>
   );
 }
@@ -3303,10 +3481,6 @@ function CapaCobertura({
 
   return (
     <group>
-      {resultado.columnaTermica?.columnaActiva && (
-        <ColumnaTermicaVisual columna={resultado.columnaTermica} />
-      )}
-
       {mostrarMesh &&
         heatmapMesh.map((p, index) => (
           <mesh
@@ -3445,44 +3619,6 @@ function CapaCobertura({
   );
 }
 
-function ColumnaTermicaVisual({ columna }: { columna: ColumnaTermicaResultado }) {
-  const x = Number(columna.x ?? 0);
-  const y = Number(columna.y ?? 1.5);
-  const z = Number(columna.z ?? 0);
-  const sx = Math.max(0.3, Number(columna.sx ?? 1.2));
-  const sy = Math.max(0.5, Number(columna.sy ?? 3.0));
-  const sz = Math.max(0.3, Number(columna.sz ?? 1.2));
-  const radio = Math.max(sx, sz) / 2;
-
-  return (
-    <group position={[x, y, z]}>
-      <mesh>
-        <cylinderGeometry args={[radio, radio * 0.65, sy, 48, 1, true]} />
-        <meshBasicMaterial
-          color="#fb923c"
-          transparent
-          opacity={0.22}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-
-      <mesh position={[0, -sy / 2 + 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[radio * 0.8, radio * 1.15, 48]} />
-        <meshBasicMaterial color="#fb923c" transparent opacity={0.7} />
-      </mesh>
-
-      <mesh position={[0, sy / 2, 0]}>
-        <sphereGeometry args={[Math.max(0.08, radio * 0.18), 24, 24]} />
-        <meshStandardMaterial
-          color="#fb923c"
-          emissive="#7c2d12"
-          emissiveIntensity={1.2}
-        />
-      </mesh>
-    </group>
-  );
-}
-
 function colorHeatmapModo(p: PuntoHeatmap, modo: "potencia" | "delay" | "doppler") {
   if (modo === "delay") {
     const d = Math.abs(p.delaySpreadRmsNs ?? 0);
@@ -3524,10 +3660,6 @@ function colorRayo(rayo:any){
     return "#ef4444";
   }
 
-  if(rayo.afectadoColumnaTermica){
-    return "#fb923c";
-  }
-
   if(rayo.tipo==="directo"){
     return "#22c55e";
   }
@@ -3549,10 +3681,6 @@ function grosorRayo(rayo:any){
 
   if(rayo.afectadoPorPersona || rayo.tipo==="afectado_persona" || rayo.tipoVisual==="afectado_persona"){
     return 5;
-  }
-
-  if(rayo.afectadoColumnaTermica){
-    return 4.5;
   }
 
   const p = rayo.potenciaDbm ?? -90;
