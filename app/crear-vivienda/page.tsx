@@ -616,53 +616,44 @@ export default function CrearViviendaPage() {
   };
 
   const calcularCoberturaConObjetos = async (
-  objetosActualizados: Objeto3D[]
-) => {
+    objetosActualizados: Objeto3D[],
+  ) => {
+    if (calculandoDinamicoRef.current) return;
 
-  try {
+    try {
+      calculandoDinamicoRef.current = true;
 
-    const datos = {
-      ...crearDatosVivienda(),
-      objetos: objetosActualizados,
-    };
+      const datos = {
+        ...crearDatosVivienda(),
+        objetos: objetosActualizados,
+      };
 
-    const res = await fetch(
-      `${SIONNA_API_URL}/raytrace`,
-      {
-        method:"POST",
-        headers:{
-          "Content-Type":"application/json"
+      const res = await fetch(`${SIONNA_API_URL}/raytrace`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-        body:JSON.stringify(datos)
+        body: JSON.stringify(datos),
+      });
+
+      const resultado = await res.json();
+
+      if (!res.ok || !resultado.ok) {
+        console.warn("Sionna dinámico no devolvió resultado válido", resultado);
+        return;
       }
-    );
 
-    const resultado=await res.json();
+      setResultadoCobertura(resultado);
 
-    if(!res.ok || !resultado.ok){
-      return;
+      const cirNormalizado = aplicarDopplerACIR(normalizarCIR(resultado));
+      setCir(cirNormalizado);
+      setCirResumen(extraerResumenCIR(resultado));
+    } catch (e) {
+      console.error("Error en Sionna dinámico:", e);
+    } finally {
+      calculandoDinamicoRef.current = false;
     }
-
-    setResultadoCobertura(resultado);
-
-    const cirNormalizado=
-      aplicarDopplerACIR(
-        normalizarCIR(resultado)
-      );
-
-    setCir(cirNormalizado);
-
-    setCirResumen(
-      extraerResumenCIR(resultado)
-    );
-
-  } catch(e){
-
-    console.error(e);
-
-  }
-
-};
+  };
 
   useEffect(() => {
     if (!simulando) return;
@@ -676,40 +667,29 @@ export default function CrearViviendaPage() {
       const dz = Math.sin(ang) * velocidadRxMps * dt;
 
       setObjetos((prev) => {
-  const nuevosObjetos = prev.map((obj) => {
-    if (
-      obj.tipo === "receptor" ||
-      obj.tipo === "rx" ||
-      obj.tipo === "receiver"
-    ) {
-      const nuevoX = obj.x + dx;
-      const nuevoZ = obj.z + dz;
+        const nuevosObjetos = prev.map((obj) => {
+          if (
+            obj.tipo === "receptor" ||
+            obj.tipo === "rx" ||
+            obj.tipo === "receiver"
+          ) {
+            const nuevoX = obj.x + dx;
+            const nuevoZ = obj.z + dz;
 
-      return {
-        ...obj,
-        x: Math.max(-10, Math.min(10, Number(nuevoX.toFixed(2)))),
-        z: Math.max(-10, Math.min(10, Number(nuevoZ.toFixed(2)))),
-      };
-    }
+            return {
+              ...obj,
+              x: Math.max(-10, Math.min(10, Number(nuevoX.toFixed(2)))),
+              z: Math.max(-10, Math.min(10, Number(nuevoZ.toFixed(2)))),
+            };
+          }
 
-    return obj;
-  });
-
-  calcularCoberturaConObjetos(nuevosObjetos);
-
-  return nuevosObjetos;
-});
-      
-
-      if (calculandoDinamicoRef.current) return;
-
-      calculandoDinamicoRef.current = true;
-
-      setTimeout(() => {
-        calcularCobertura(true).finally(() => {
-          calculandoDinamicoRef.current = false;
+          return obj;
         });
-      }, 30);
+
+        calcularCoberturaConObjetos(nuevosObjetos);
+
+        return nuevosObjetos;
+      });
     }, intervaloMs);
 
     return () => clearInterval(intervalo);
