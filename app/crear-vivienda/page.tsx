@@ -1,6 +1,6 @@
 "use client";
 import ModelObjeto from "@/components/ModelObjeto";
-import { Canvas, useThree } from "@react-three/fiber";
+import { Canvas, useThree, useFrame } from "@react-three/fiber";
 import { OrbitControls, Grid, Line } from "@react-three/drei";
 import { useRef, useState } from "react";
 import * as THREE from "three";
@@ -52,7 +52,6 @@ type RayoCobertura = {
   los?: boolean;
   nlos?: boolean;
   numRebotes?: number;
-  objetosInteractuados?: number[];
   puntos: {
     x: number;
     y: number;
@@ -204,6 +203,8 @@ export default function CrearViviendaPage() {
     useState<ResultadoCobertura | null>(null);
 
   const [maxRayos, setMaxRayos] = useState(15);
+  const [simulando, setSimulando] = useState(false);
+  const [velocidadSim, setVelocidadSim] = useState(1);
 
   const [calculandoCobertura, setCalculandoCobertura] = useState(false);
   const [generandoRender, setGenerandoRender] = useState(false);
@@ -476,137 +477,130 @@ export default function CrearViviendaPage() {
     }
 
     const pdf = new jsPDF("p", "mm", "a4");
-    const margenX = 18;
-    let y = 20;
+    const fecha = new Date().toLocaleString();
+    let y = 18;
 
-    const escribirTitulo = (texto: string) => {
-      pdf.setFontSize(18);
-      pdf.setTextColor(249, 115, 22);
-      pdf.text(texto, margenX, y);
-      y += 10;
-      pdf.setTextColor(0, 0, 0);
-    };
-
-    const escribirLinea = (texto: string, salto = 6) => {
-      if (y > 275) {
+    const nuevaPaginaSiHaceFalta = (altoNecesario = 15) => {
+      if (y + altoNecesario > 280) {
         pdf.addPage();
-        y = 20;
+        y = 18;
       }
-      pdf.setFontSize(10);
-      pdf.setTextColor(30, 30, 30);
-      pdf.text(texto, margenX, y);
-      y += salto;
     };
 
-    pdf.setFillColor(0, 0, 0);
-    pdf.rect(0, 0, 210, 38, "F");
+    pdf.setFillColor(5, 5, 5);
+    pdf.rect(0, 0, 210, 297, "F");
 
-    pdf.setFontSize(22);
-    pdf.setTextColor(255, 255, 255);
-    pdf.text("INFORME MASTESTO RF", margenX, 18);
-
-    pdf.setFontSize(10);
     pdf.setTextColor(249, 115, 22);
-    pdf.text("Simulación WiFi · Sionna RT · Gemelo digital", margenX, 28);
+    pdf.setFontSize(24);
+    pdf.text("INFORME MASTESTO RF", 18, y);
 
-    y = 50;
-    pdf.setTextColor(0, 0, 0);
+    y += 9;
+    pdf.setTextColor(180, 180, 180);
+    pdf.setFontSize(10);
+    pdf.text("Planificación WiFi · Sionna RT · Ray tracing · Blender", 18, y);
 
-    escribirTitulo("1. Resumen de simulación");
+    y += 8;
+    pdf.text(`Fecha: ${fecha}`, 18, y);
 
-    escribirLinea(`Fecha: ${new Date().toLocaleString()}`);
-    escribirLinea(`Frecuencia: ${resultadoCobertura.modelo?.frecuenciaMhz ?? frecuenciaMhz} MHz`);
-    escribirLinea(`Potencia TX: ${resultadoCobertura.modelo?.potenciaTxDbm ?? 20} dBm`);
-    escribirLinea(`Material paredes: ${resultadoCobertura.modelo?.materialPared ?? materialPared}`);
-    escribirLinea(`Sionna usado: ${resultadoCobertura.modelo?.sionnaUsado ? "Sí" : "No"}`);
-    escribirLinea(`XML Sionna cargado: ${resultadoCobertura.modelo?.sionnaXmlCargado ? "Sí" : "No"}`);
-    escribirLinea(`Receptores detectados: ${resultadoCobertura.modelo?.receptoresDetectados ?? 0}`);
+    y += 14;
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(15);
+    pdf.text("Resumen de simulación", 18, y);
 
-    y += 4;
-    escribirTitulo("2. Métricas de cobertura");
+    y += 8;
+    pdf.setFontSize(10);
+    pdf.setTextColor(220, 220, 220);
 
-    escribirLinea(`Score cobertura: ${resultadoCobertura.estadisticas.score}`);
-    escribirLinea(`Potencia media: ${resultadoCobertura.estadisticas.potenciaMediaDbm} dBm`);
-    escribirLinea(`Puntos analizados: ${resultadoCobertura.estadisticas.puntosAnalizados}`);
-    escribirLinea(`Zonas muertas: ${resultadoCobertura.estadisticas.zonasMuertas}`);
-    escribirLinea(`Porcentaje zonas muertas: ${resultadoCobertura.estadisticas.porcentajeZonasMuertas}%`);
+    const resumen = [
+      `Frecuencia: ${resultadoCobertura.modelo?.frecuenciaMhz ?? frecuenciaMhz} MHz`,
+      `Potencia TX: ${resultadoCobertura.modelo?.potenciaTxDbm ?? 20} dBm`,
+      `Material paredes: ${resultadoCobertura.modelo?.materialPared ?? materialPared}`,
+      `Sionna usado: ${resultadoCobertura.modelo?.sionnaUsado ? "Sí" : "No"}`,
+      `XML Sionna cargado: ${resultadoCobertura.modelo?.sionnaXmlCargado ? "Sí" : "No"}`,
+      `Potencia media: ${resultadoCobertura.estadisticas.potenciaMediaDbm} dBm`,
+      `Zonas muertas: ${resultadoCobertura.estadisticas.porcentajeZonasMuertas}%`,
+      `Puntos analizados: ${resultadoCobertura.estadisticas.puntosAnalizados}`,
+      `Rayos totales: ${resultadoCobertura.rayos?.length ?? 0}`,
+      `Rayos directos: ${resultadoCobertura.modelo?.rayosDirectos ?? resultadoCobertura.rayos?.filter((r:any)=>r.tipo === "directo").length ?? 0}`,
+      `Rayos reflejados: ${resultadoCobertura.modelo?.rayosReflejados ?? resultadoCobertura.rayos?.filter((r:any)=>r.tipo === "reflejado").length ?? 0}`,
+    ];
 
-    if (resultadoCobertura.estadisticasMesh) {
-      y += 4;
-      escribirTitulo("3. Cobertura con Mesh");
-      escribirLinea(`Potencia media Mesh: ${resultadoCobertura.estadisticasMesh.potenciaMediaDbm} dBm`);
-      escribirLinea(`Mejora media: ${resultadoCobertura.estadisticasMesh.mejoraMediaDb} dB`);
-      escribirLinea(`Zonas muertas Mesh: ${resultadoCobertura.estadisticasMesh.porcentajeZonasMuertas}%`);
-    }
-
-    y += 4;
-    escribirTitulo("4. Router óptimo");
-
-    escribirLinea(`X: ${resultadoCobertura.routerOptimo.x.toFixed(2)} m`);
-    escribirLinea(`Y: ${resultadoCobertura.routerOptimo.y.toFixed(2)} m`);
-    escribirLinea(`Z: ${resultadoCobertura.routerOptimo.z.toFixed(2)} m`);
-
-    y += 4;
-    escribirTitulo("5. Análisis de rayos Sionna");
-
-    const rayosOrdenados = [...(resultadoCobertura.rayos ?? [])].sort(
-      (a: any, b: any) => b.potenciaDbm - a.potenciaDbm,
-    );
-
-    const rayosDirectos = rayosOrdenados.filter((r: any) => r.tipo === "directo" || r.los).length;
-    const rayosReflejados = rayosOrdenados.filter((r: any) => r.tipo === "reflejado").length;
-    const rayosNlos = rayosOrdenados.filter((r: any) => r.nlos).length;
-
-    escribirLinea(`Rayos totales: ${rayosOrdenados.length}`);
-    escribirLinea(`Rayos directos / LOS: ${rayosDirectos}`);
-    escribirLinea(`Rayos reflejados: ${rayosReflejados}`);
-    escribirLinea(`Rayos NLOS: ${rayosNlos}`);
-
-    y += 3;
-    rayosOrdenados.slice(0, Math.min(maxRayos, 15)).forEach((rayo: any, index: number) => {
-      escribirLinea(
-        `R${index + 1} · ${rayo.tipo} · ${rayo.potenciaDbm} dBm · rebotes: ${rayo.numRebotes ?? 0}`,
-        5,
-      );
+    resumen.forEach((linea) => {
+      nuevaPaginaSiHaceFalta(7);
+      pdf.text(linea, 22, y);
+      y += 6;
     });
 
-    y += 4;
-    escribirTitulo("6. Resumen por habitaciones");
+    y += 6;
+    nuevaPaginaSiHaceFalta(25);
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(15);
+    pdf.text("Router óptimo", 18, y);
 
-    resultadoCobertura.resumenHabitaciones.forEach((h) => {
-      escribirLinea(
-        `${h.habitacion}: ${h.potenciaMediaDbm ?? "Sin datos"} dBm · ${h.calidad}`,
-        5,
-      );
-    });
+    y += 8;
+    pdf.setFontSize(10);
+    pdf.setTextColor(220, 220, 220);
+    pdf.text(`X: ${resultadoCobertura.routerOptimo.x.toFixed(2)} m`, 22, y);
+    y += 6;
+    pdf.text(`Y: ${resultadoCobertura.routerOptimo.y.toFixed(2)} m`, 22, y);
+    y += 6;
+    pdf.text(`Z: ${resultadoCobertura.routerOptimo.z.toFixed(2)} m`, 22, y);
 
-    y += 4;
-    escribirTitulo("7. Recomendaciones");
+    y += 12;
+    nuevaPaginaSiHaceFalta(30);
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(15);
+    pdf.text("Recomendaciones", 18, y);
+
+    y += 8;
+    pdf.setFontSize(9);
+    pdf.setTextColor(220, 220, 220);
 
     resultadoCobertura.recomendaciones.forEach((rec) => {
-      const lineas = pdf.splitTextToSize(`• ${rec}`, 170);
-      if (y + lineas.length * 5 > 275) {
-        pdf.addPage();
-        y = 20;
-      }
-      pdf.setFontSize(9);
-      pdf.setTextColor(40, 40, 40);
-      pdf.text(lineas, margenX, y);
+      nuevaPaginaSiHaceFalta(12);
+      const lineas = pdf.splitTextToSize(`• ${rec}`, 165);
+      pdf.text(lineas, 22, y);
       y += lineas.length * 5 + 2;
     });
 
+    y += 6;
+    nuevaPaginaSiHaceFalta(40);
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(15);
+    pdf.text("Top rayos Sionna", 18, y);
+
+    y += 8;
+    pdf.setFontSize(8);
+    pdf.setTextColor(220, 220, 220);
+
+    resultadoCobertura.rayos
+      .slice()
+      .sort((a:any,b:any)=>b.potenciaDbm-a.potenciaDbm)
+      .slice(0, 12)
+      .forEach((rayo:any, index:number) => {
+        nuevaPaginaSiHaceFalta(7);
+        pdf.text(
+          `R${index + 1} · ${rayo.tipo} · ${rayo.potenciaDbm} dBm · rebotes: ${rayo.numRebotes ?? Math.max(0, (rayo.puntos?.length ?? 2) - 2)}`,
+          22,
+          y,
+        );
+        y += 5;
+      });
+
     if (imagenRender && typeof imagenRender === "string") {
       pdf.addPage();
-      pdf.setFontSize(18);
+      pdf.setFillColor(5, 5, 5);
+      pdf.rect(0, 0, 210, 297, "F");
       pdf.setTextColor(249, 115, 22);
-      pdf.text("8. Render premium Blender", margenX, 20);
+      pdf.setFontSize(20);
+      pdf.text("Render premium Blender", 18, 22);
 
       try {
-        pdf.addImage(imagenRender, "PNG", 15, 35, 180, 100);
+        pdf.addImage(imagenRender, "PNG", 15, 38, 180, 105);
       } catch (error) {
+        pdf.setTextColor(255, 80, 80);
         pdf.setFontSize(10);
-        pdf.setTextColor(0, 0, 0);
-        pdf.text("No se pudo insertar el render en el PDF.", margenX, 40);
+        pdf.text("No se pudo insertar el render en el PDF.", 18, 42);
       }
     }
 
@@ -898,7 +892,6 @@ export default function CrearViviendaPage() {
 >
   {generandoRender ? "Generando render..." : "✨ Generar vivienda premium"}
 </button>
-            
 
             <button
               onClick={generarInformePDF}
@@ -997,6 +990,12 @@ export default function CrearViviendaPage() {
                   }}
                 />
               ))}
+
+              <SimulacionDinamica
+                activa={simulando}
+                velocidad={velocidadSim}
+                habitaciones={habitaciones}
+              />
 
               {resultadoCobertura && (
                 <CapaCobertura
@@ -1197,6 +1196,37 @@ export default function CrearViviendaPage() {
     {maxRayos} rayos visibles
   </p>
 </div>
+
+                <div className="bg-black border border-purple-900 rounded-xl p-4 mt-4">
+                  <p className="text-[9px] uppercase text-zinc-500 font-black mb-2">
+                    Simulación dinámica
+                  </p>
+
+                  <button
+                    onClick={() => setSimulando((v) => !v)}
+                    className="w-full py-3 rounded-xl bg-purple-600 text-white text-[10px] font-black uppercase hover:bg-purple-500 transition-all"
+                  >
+                    {simulando ? "Detener simulación" : "Iniciar simulación"}
+                  </button>
+
+                  <input
+                    type="range"
+                    min={0.2}
+                    max={5}
+                    step={0.2}
+                    value={velocidadSim}
+                    onChange={(e) => setVelocidadSim(Number(e.target.value))}
+                    className="w-full mt-3 accent-purple-500"
+                  />
+
+                  <p className="text-purple-400 text-xs font-black mt-2">
+                    Velocidad: {velocidadSim.toFixed(1)}x
+                  </p>
+
+                  <p className="text-[9px] text-zinc-500 uppercase leading-relaxed mt-2">
+                    Muestra un usuario dinámico recorriendo la vivienda para preparar futuras simulaciones temporales.
+                  </p>
+                </div>
 
                 <div className="bg-black border border-zinc-900 rounded-xl p-4 space-y-2">
                   <p className="text-[9px] uppercase text-zinc-500 font-black">
@@ -1698,6 +1728,66 @@ function ObjetoMovible({
   );
 }
 
+
+function SimulacionDinamica({
+  activa,
+  velocidad,
+  habitaciones,
+}: {
+  activa: boolean;
+  velocidad: number;
+  habitaciones: Habitacion[];
+}) {
+  const ref = useRef<THREE.Group>(null);
+  const t = useRef(0);
+
+  const habitacion = habitaciones[0];
+  const centroX = habitacion?.x ?? 0;
+  const centroZ = habitacion?.z ?? 0;
+  const ancho = Math.max(2, habitacion?.ancho ?? 6);
+  const largo = Math.max(2, habitacion?.largo ?? 5);
+
+  useFrame((_, delta) => {
+    if (!activa || !ref.current) return;
+
+    t.current += delta * velocidad;
+
+    const x = centroX + Math.sin(t.current) * (ancho * 0.35);
+    const z = centroZ + Math.cos(t.current * 0.7) * (largo * 0.35);
+
+    ref.current.position.set(x, 0.9, z);
+  });
+
+  if (!activa) return null;
+
+  return (
+    <group ref={ref} position={[centroX, 0.9, centroZ]}>
+      <mesh>
+        <sphereGeometry args={[0.22, 24, 24]} />
+        <meshStandardMaterial
+          color="#a855f7"
+          emissive="#581c87"
+          emissiveIntensity={0.8}
+        />
+      </mesh>
+
+      <mesh position={[0, -0.45, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.3, 0.48, 32]} />
+        <meshBasicMaterial color="#a855f7" transparent opacity={0.45} />
+      </mesh>
+
+      <Line
+        points={[
+          [0, 0, 0],
+          [0, 0.6, 0],
+        ]}
+        color="#a855f7"
+        lineWidth={2}
+      />
+    </group>
+  );
+}
+
 function CapaCobertura({
   resultado,
   mostrarHeatmap,
@@ -1762,50 +1852,26 @@ function CapaCobertura({
         ))}
 
       {mostrarRayos &&
-  resultado.rayos
-    ?.sort(
-      (a,b)=>
-        b.potenciaDbm-a.potenciaDbm
-    )
+        resultado.rayos
+          ?.slice()
+          .sort((a, b) => b.potenciaDbm - a.potenciaDbm)
+          .slice(0, maxRayos)
+          .map((rayo) => {
+            const puntos = rayo.puntos.map(
+              (p) => [p.x, p.y, p.z] as [number, number, number],
+            );
 
-    .slice(
-      0,
-      maxRayos
-    )
+            if (puntos.length < 2) return null;
 
-    .map((rayo)=>{
-
-      const puntos=rayo.puntos.map(
-        (p)=>[
-          p.x,
-          p.y,
-          p.z
-        ] as [number,number,number]
-      );
-
-      if(puntos.length<2){
-        return null;
-      }
-
-      return(
-
-        <Line
-          key={rayo.id}
-          points={puntos}
-
-          color={
-            colorRayo(rayo)
-          }
-
-          lineWidth={
-            grosorRayo(rayo)
-          }
-
-        />
-
-      );
-
-})}
+            return (
+              <Line
+                key={rayo.id}
+                points={puntos}
+                color={colorRayo(rayo)}
+                lineWidth={grosorRayo(rayo)}
+              />
+            );
+          })}
 
       {mostrarRouterOptimo && resultado.routerOptimo && (
         <group
