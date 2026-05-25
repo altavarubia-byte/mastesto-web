@@ -85,6 +85,9 @@ type RayoCobertura = {
   dopplerPersonaHz?: number;
   perdidaPersonaDb?: number;
   modeloInteraccionPersona?: string;
+  afectadoColumnaTermica?: boolean;
+  dopplerSpreadHz?: number;
+  modeloColumnaTermica?: ColumnaTermicaResultado;
   puntos: {
     x: number;
     y: number;
@@ -111,6 +114,31 @@ type CirResumen = {
   potenciaTotal?: number;
   numComponentes?: number;
   anchoBandaMhz?: number;
+};
+
+type ColumnaTermicaResultado = {
+  columnaActiva?: boolean;
+  aplicadaACIR?: boolean;
+  aplicada?: boolean;
+  pathsAfectados?: number;
+  indicesPathsAfectados?: number[];
+  porcentajePathsAfectados?: number;
+  nota?: string;
+  motivo?: string;
+  x?: number;
+  y?: number;
+  z?: number;
+  sx?: number;
+  sy?: number;
+  sz?: number;
+  T_amb_K?: number;
+  T_hot_K?: number;
+  deltaT_K?: number;
+  fdMeanHz?: number;
+  fdSigmaHz?: number;
+  atenuacionDb?: number;
+  delayExtraNs?: number;
+  [key: string]: any;
 };
 
 type ResultadoCobertura = {
@@ -204,6 +232,7 @@ type ResultadoCobertura = {
   };
   heatmap: PuntoHeatmap[];
   heatmapCanal?: PuntoHeatmap[];
+  columnaTermica?: ColumnaTermicaResultado;
   mimoArrays?: {
     txRows: number;
     txCols: number;
@@ -241,6 +270,7 @@ type ResultadoCobertura = {
     capacidadBeamformingIdealMbps: number;
     capacidadMultiplexingIdealMbps: number;
     capacidadMimoRealGeomMbps?: number;
+    capacidadMimoRealMbps?: number;
     rankReal?: number | null;
     matrizHDisponible?: boolean;
     singularValues?: number[];
@@ -1252,10 +1282,10 @@ export default function CrearViviendaPage() {
       const m = resultadoCobertura.mimoMetricas;
       const lineasMimo = [
         `Configuración: TX ${m.nt} elementos · RX ${m.nr} elementos`,
-        `SNR usada: ${m.snrDb.toFixed(2)} dB`,
-        `Capacidad SISO: ${m.capacidadSisoMbps.toFixed(2)} Mbps`,
-        `Capacidad beamforming ideal: ${m.capacidadBeamformingIdealMbps.toFixed(2)} Mbps`,
-        `Capacidad multiplexing ideal: ${m.capacidadMultiplexingIdealMbps.toFixed(2)} Mbps`,
+        `SNR usada: ${(m.snrDb ?? 0).toFixed(2)} dB`,
+        `Capacidad SISO: ${(m.capacidadSisoMbps ?? 0).toFixed(2)} Mbps`,
+        `Capacidad beamforming ideal: ${(m.capacidadBeamformingIdealMbps ?? 0).toFixed(2)} Mbps`,
+        `Capacidad multiplexing ideal: ${(m.capacidadMultiplexingIdealMbps ?? 0).toFixed(2)} Mbps`,
         `Rank real: ${m.rankReal ?? "N/D"}`,
       ];
 
@@ -1264,6 +1294,43 @@ export default function CrearViviendaPage() {
         pdf.text(linea, 22, y);
         y += 5;
       });
+    }
+
+    if (resultadoCobertura.columnaTermica) {
+      y += 6;
+      nuevaPaginaSiHaceFalta(55);
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(15);
+      pdf.text("Columna térmica", 18, y);
+
+      y += 8;
+      pdf.setFontSize(9);
+      pdf.setTextColor(220, 220, 220);
+
+      const c = resultadoCobertura.columnaTermica;
+      const lineasColumna = [
+        `Activa: ${c.columnaActiva ? "Sí" : "No"}`,
+        `Paths afectados: ${c.pathsAfectados ?? 0}`,
+        `Porcentaje afectados: ${(c.porcentajePathsAfectados ?? 0).toFixed(2)}%`,
+        `Doppler medio térmico: ${(c.fdMeanHz ?? 0).toFixed(3)} Hz`,
+        `Spread Doppler térmico: ${(c.fdSigmaHz ?? 0).toFixed(3)} Hz`,
+        `Atenuación extra: ${(c.atenuacionDb ?? 0).toFixed(3)} dB`,
+        `Retardo extra: ${(c.delayExtraNs ?? 0).toFixed(3)} ns`,
+      ];
+
+      lineasColumna.forEach((linea) => {
+        nuevaPaginaSiHaceFalta(7);
+        pdf.text(linea, 22, y);
+        y += 5;
+      });
+
+      const explicacionColumna = pdf.splitTextToSize(
+        "La columna térmica representa una región de aire caliente/turbulento que modifica únicamente los caminos que la atraviesan. El modelo marca rayos afectados y ajusta potencia, retardo y Doppler sin crear caminos artificiales.",
+        165,
+      );
+      nuevaPaginaSiHaceFalta(explicacionColumna.length * 5 + 8);
+      pdf.text(explicacionColumna, 22, y);
+      y += explicacionColumna.length * 5 + 2;
     }
 
     const heatmapParaPdf =
@@ -2046,14 +2113,14 @@ export default function CrearViviendaPage() {
                       <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
                         <p className="text-[8px] uppercase text-slate-500 font-black">SNR</p>
                         <p className="text-sm font-black text-white">
-                          {resultadoCobertura.mimoMetricas.snrDb.toFixed(2)} dB
+                          {(resultadoCobertura.mimoMetricas.snrDb ?? 0).toFixed(2)} dB
                         </p>
                       </div>
 
                       <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
                         <p className="text-[8px] uppercase text-slate-500 font-black">Ganancia array ideal</p>
                         <p className="text-sm font-black text-emerald-400">
-                          +{resultadoCobertura.mimoMetricas.arrayGainBeamformingDbIdeal.toFixed(2)} dB
+                          +{(resultadoCobertura.mimoMetricas.arrayGainBeamformingDbIdeal ?? 0).toFixed(2)} dB
                         </p>
                       </div>
 
@@ -2075,21 +2142,65 @@ export default function CrearViviendaPage() {
                     <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-1">
                       <p className="text-[8px] uppercase text-slate-500 font-black">Capacidad Shannon</p>
                       <p className="text-[10px] text-slate-300 uppercase leading-relaxed">
-                        SISO: {resultadoCobertura.mimoMetricas.capacidadSisoMbps.toFixed(2)} Mbps
+                        SISO: {(resultadoCobertura.mimoMetricas.capacidadSisoMbps ?? 0).toFixed(2)} Mbps
                       </p>
                       <p className="text-[10px] text-slate-300 uppercase leading-relaxed">
-                        Beamforming ideal: {resultadoCobertura.mimoMetricas.capacidadBeamformingIdealMbps.toFixed(2)} Mbps
+                        Beamforming ideal: {(resultadoCobertura.mimoMetricas.capacidadBeamformingIdealMbps ?? 0).toFixed(2)} Mbps
                       </p>
                       <p className="text-[10px] text-slate-300 uppercase leading-relaxed">
-                        Multiplexing ideal: {resultadoCobertura.mimoMetricas.capacidadMultiplexingIdealMbps.toFixed(2)} Mbps
+                        Multiplexing ideal: {(resultadoCobertura.mimoMetricas.capacidadMultiplexingIdealMbps ?? 0).toFixed(2)} Mbps
                       </p>
                       <p className="text-[9px] text-green-400 uppercase leading-relaxed">
-                        MIMO geométrico H: {(resultadoCobertura.mimoMetricas.capacidadMimoRealGeomMbps ?? 0).toFixed(2)} Mbps · Rank real: {resultadoCobertura.mimoMetricas.rankReal ?? "N/D"}
+                        MIMO H real: {(resultadoCobertura.mimoMetricas.capacidadMimoRealMbps ?? resultadoCobertura.mimoMetricas.capacidadMimoRealGeomMbps ?? 0).toFixed(2)} Mbps · Rank real: {resultadoCobertura.mimoMetricas.rankReal ?? "N/D"}
                       </p>
                     </div>
 
                     <p className="text-[9px] text-slate-500 uppercase leading-relaxed">
                       {resultadoCobertura.mimoMetricas.modelo?.nota ?? "La capacidad MIMO real completa requiere matriz H por elemento."}
+                    </p>
+                  </div>
+                )}
+
+                {resultadoCobertura.columnaTermica && (
+                  <div className="bg-black/70 border border-orange-900 rounded-xl p-4 mt-4 space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-[9px] uppercase text-orange-400 font-black">
+                        Columna térmica
+                      </p>
+                      <span className={`text-[8px] uppercase font-black px-2 py-1 rounded-lg border ${resultadoCobertura.columnaTermica.columnaActiva ? "text-orange-300 border-orange-700 bg-orange-950/40" : "text-slate-400 border-slate-700 bg-slate-950"}`}>
+                        {resultadoCobertura.columnaTermica.columnaActiva ? "Activa" : "Inactiva"}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                        <p className="text-[8px] uppercase text-slate-500 font-black">Paths afectados</p>
+                        <p className="text-sm font-black text-orange-300">
+                          {resultadoCobertura.columnaTermica.pathsAfectados ?? 0}
+                        </p>
+                      </div>
+                      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                        <p className="text-[8px] uppercase text-slate-500 font-black">Afectación</p>
+                        <p className="text-sm font-black text-orange-300">
+                          {(resultadoCobertura.columnaTermica.porcentajePathsAfectados ?? 0).toFixed(2)}%
+                        </p>
+                      </div>
+                      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                        <p className="text-[8px] uppercase text-slate-500 font-black">Doppler térmico</p>
+                        <p className="text-sm font-black text-cyan-300">
+                          {(resultadoCobertura.columnaTermica.fdMeanHz ?? 0).toFixed(2)} Hz
+                        </p>
+                      </div>
+                      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                        <p className="text-[8px] uppercase text-slate-500 font-black">Retardo extra</p>
+                        <p className="text-sm font-black text-cyan-300">
+                          {(resultadoCobertura.columnaTermica.delayExtraNs ?? 0).toFixed(2)} ns
+                        </p>
+                      </div>
+                    </div>
+
+                    <p className="text-[9px] text-slate-500 uppercase leading-relaxed">
+                      {resultadoCobertura.columnaTermica.nota ?? resultadoCobertura.columnaTermica.motivo ?? "Se visualiza como cilindro naranja en la escena y marca rayos afectados."}
                     </p>
                   </div>
                 )}
@@ -3192,6 +3303,10 @@ function CapaCobertura({
 
   return (
     <group>
+      {resultado.columnaTermica?.columnaActiva && (
+        <ColumnaTermicaVisual columna={resultado.columnaTermica} />
+      )}
+
       {mostrarMesh &&
         heatmapMesh.map((p, index) => (
           <mesh
@@ -3330,6 +3445,44 @@ function CapaCobertura({
   );
 }
 
+function ColumnaTermicaVisual({ columna }: { columna: ColumnaTermicaResultado }) {
+  const x = Number(columna.x ?? 0);
+  const y = Number(columna.y ?? 1.5);
+  const z = Number(columna.z ?? 0);
+  const sx = Math.max(0.3, Number(columna.sx ?? 1.2));
+  const sy = Math.max(0.5, Number(columna.sy ?? 3.0));
+  const sz = Math.max(0.3, Number(columna.sz ?? 1.2));
+  const radio = Math.max(sx, sz) / 2;
+
+  return (
+    <group position={[x, y, z]}>
+      <mesh>
+        <cylinderGeometry args={[radio, radio * 0.65, sy, 48, 1, true]} />
+        <meshBasicMaterial
+          color="#fb923c"
+          transparent
+          opacity={0.22}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+
+      <mesh position={[0, -sy / 2 + 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[radio * 0.8, radio * 1.15, 48]} />
+        <meshBasicMaterial color="#fb923c" transparent opacity={0.7} />
+      </mesh>
+
+      <mesh position={[0, sy / 2, 0]}>
+        <sphereGeometry args={[Math.max(0.08, radio * 0.18), 24, 24]} />
+        <meshStandardMaterial
+          color="#fb923c"
+          emissive="#7c2d12"
+          emissiveIntensity={1.2}
+        />
+      </mesh>
+    </group>
+  );
+}
+
 function colorHeatmapModo(p: PuntoHeatmap, modo: "potencia" | "delay" | "doppler") {
   if (modo === "delay") {
     const d = Math.abs(p.delaySpreadRmsNs ?? 0);
@@ -3371,6 +3524,10 @@ function colorRayo(rayo:any){
     return "#ef4444";
   }
 
+  if(rayo.afectadoColumnaTermica){
+    return "#fb923c";
+  }
+
   if(rayo.tipo==="directo"){
     return "#22c55e";
   }
@@ -3392,6 +3549,10 @@ function grosorRayo(rayo:any){
 
   if(rayo.afectadoPorPersona || rayo.tipo==="afectado_persona" || rayo.tipoVisual==="afectado_persona"){
     return 5;
+  }
+
+  if(rayo.afectadoColumnaTermica){
+    return 4.5;
   }
 
   const p = rayo.potenciaDbm ?? -90;
