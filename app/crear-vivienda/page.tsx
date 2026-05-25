@@ -650,10 +650,7 @@ export default function CrearViviendaPage() {
   };
 
   const extraerResumenCIR = (resultado: any): CirResumen | null => {
-    // ---------------------------------------------------------
-  // RENDER PRINCIPAL DE LA PÁGINA
-  // ---------------------------------------------------------
-  return (
+    return (
       resultado?.cirResumen ??
       resultado?.resumen ??
       resultado?.cir?.resumenGlobal ??
@@ -661,6 +658,119 @@ export default function CrearViviendaPage() {
       resultado?.canales?.[0]?.resumen ??
       null
     );
+  };
+
+  const calcularResumenDesdeTaps = (taps: MuestraCIR[]): CirResumen | null => {
+    if (!taps.length) return null;
+
+    const potenciasLineales = taps.map((tap) =>
+      Math.pow(10, (tap.potenciaDbm ?? -120) / 10),
+    );
+    const potenciaTotalLineal = potenciasLineales.reduce((acc, p) => acc + p, 0);
+
+    if (potenciaTotalLineal <= 0) return null;
+
+    const retardoMedioNs =
+      taps.reduce((acc, tap, index) => acc + tap.delayNs * potenciasLineales[index], 0) /
+      potenciaTotalLineal;
+
+    const delaySpreadRmsNs = Math.sqrt(
+      taps.reduce(
+        (acc, tap, index) =>
+          acc + Math.pow(tap.delayNs - retardoMedioNs, 2) * potenciasLineales[index],
+        0,
+      ) / potenciaTotalLineal,
+    );
+
+    const potenciaTotalDbm = 10 * Math.log10(potenciaTotalLineal);
+
+    return {
+      delaySpreadRmsNs,
+      delaySpreadNs: delaySpreadRmsNs,
+      retardoMedioNs,
+      potenciaTotalDbm,
+      potenciaTotal: potenciaTotalLineal,
+      numComponentes: taps.length,
+      anchoBandaMhz: 80,
+    };
+  };
+
+  const crearHeatmapCanalFallback = (
+    resultado: ResultadoCobertura,
+    taps: MuestraCIR[],
+    resumen: CirResumen | null,
+  ): PuntoHeatmap[] => {
+    if (resultado.heatmapCanal?.length) return resultado.heatmapCanal;
+    if (!resultado.heatmap?.length) return [];
+
+    const dopplers = taps
+      .map((tap) => tap.dopplerHz)
+      .filter((v): v is number => typeof v === "number" && Number.isFinite(v));
+
+    const dopplerDominante =
+      dopplers.length > 0
+        ? dopplers.reduce((max, v) => (Math.abs(v) > Math.abs(max) ? v : max), dopplers[0])
+        : dopplerActual;
+
+    const delayBase =
+      resumen?.delaySpreadRmsNs ??
+      resumen?.delaySpreadNs ??
+      resultado.cirResumen?.delaySpreadRmsNs ??
+      0;
+
+    const retardoBase =
+      resumen?.retardoMedioNs ??
+      resultado.cirResumen?.retardoMedioNs ??
+      0;
+
+    const minPot = Math.min(...resultado.heatmap.map((p) => p.potenciaDbm));
+    const maxPot = Math.max(...resultado.heatmap.map((p) => p.potenciaDbm));
+    const rango = Math.max(1, maxPot - minPot);
+
+    return resultado.heatmap.map((p) => {
+      const degradacion = (maxPot - p.potenciaDbm) / rango;
+
+      return {
+        ...p,
+        delaySpreadRmsNs:
+          typeof p.delaySpreadRmsNs === "number"
+            ? p.delaySpreadRmsNs
+            : Number((delayBase * (1 + degradacion * 1.5)).toFixed(3)),
+        retardoMedioNs:
+          typeof p.retardoMedioNs === "number"
+            ? p.retardoMedioNs
+            : Number((retardoBase * (1 + degradacion)).toFixed(3)),
+        dopplerHz:
+          typeof p.dopplerHz === "number"
+            ? p.dopplerHz
+            : Number((dopplerDominante * (0.35 + degradacion * 0.65)).toFixed(3)),
+        numComponentes:
+          typeof p.numComponentes === "number"
+            ? p.numComponentes
+            : taps.length,
+        modelo:
+          p.modelo ??
+          (resultado.modelo?.sionnaUsado
+            ? "Sionna RT + CIR"
+            : "Fallback visual derivado del CIR/resumen recibido"),
+      };
+    });
+  };
+
+  const prepararResultadoVisual = (resultado: ResultadoCobertura): ResultadoCobertura => {
+    const taps = actualizarDopplerDesdeBackend(normalizarCIR(resultado));
+    const resumenBackend = extraerResumenCIR(resultado);
+    const resumen = resumenBackend ?? calcularResumenDesdeTaps(taps);
+    const resultadoConResumen: ResultadoCobertura = {
+      ...resultado,
+      cir: resultado.cir ?? taps,
+      cirResumen: resultado.cirResumen ?? resumen ?? undefined,
+    };
+
+    return {
+      ...resultadoConResumen,
+      heatmapCanal: crearHeatmapCanalFallback(resultadoConResumen, taps, resumen),
+    };
   };
 
   const exportarJSON = () => {
@@ -727,11 +837,12 @@ export default function CrearViviendaPage() {
         }
         return;
       }
-      setResultadoCobertura(resultado);
+      const resultadoVisual = prepararResultadoVisual(resultado);
+      setResultadoCobertura(resultadoVisual);
 
-      const cirNormalizado = actualizarDopplerDesdeBackend(normalizarCIR(resultado));
+      const cirNormalizado = normalizarCIR(resultadoVisual);
       setCir(cirNormalizado);
-      setCirResumen(extraerResumenCIR(resultado));
+      setCirResumen(resultadoVisual.cirResumen ?? extraerResumenCIR(resultadoVisual));
 
       if (cirNormalizado.length === 0 && modoCalculo === "sionna") {
         try {
@@ -798,11 +909,12 @@ export default function CrearViviendaPage() {
         return;
       }
 
-      setResultadoCobertura(resultado);
+      const resultadoVisual = prepararResultadoVisual(resultado);
+      setResultadoCobertura(resultadoVisual);
 
-      const cirNormalizado = actualizarDopplerDesdeBackend(normalizarCIR(resultado));
+      const cirNormalizado = normalizarCIR(resultadoVisual);
       setCir(cirNormalizado);
-      setCirResumen(extraerResumenCIR(resultado));
+      setCirResumen(resultadoVisual.cirResumen ?? extraerResumenCIR(resultadoVisual));
     } catch (e) {
       console.error("Error en Sionna dinámico:", e);
     } finally {
@@ -1064,6 +1176,126 @@ export default function CrearViviendaPage() {
       pdf.text(lineas, 22, y);
       y += lineas.length * 5 + 2;
     });
+
+
+    y += 8;
+    nuevaPaginaSiHaceFalta(65);
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(15);
+    pdf.text("Explicación técnica del resultado", 18, y);
+
+    y += 8;
+    pdf.setFontSize(9);
+    pdf.setTextColor(220, 220, 220);
+
+    const explicacionTecnica = [
+      "El heatmap de potencia representa la potencia recibida estimada en cada punto de la vivienda. Verde indica mejor cobertura; rojo indica zonas débiles o muertas.",
+      "El heatmap de delay spread RMS muestra la dispersión temporal del canal. Valores altos significan más multitrayecto y mayor riesgo de interferencia entre símbolos.",
+      "El heatmap de Doppler muestra la variación de frecuencia causada por movimiento de receptor/personas. Si la simulación dinámica está activa, se actualiza con cada recálculo.",
+      "Los rayos verdes son trayectorias directas o fuertes; los naranjas/morados suelen representar caminos reflejados o NLOS; los rojos indican interacción con personas u obstáculos móviles.",
+      "El router óptimo se calcula buscando una posición que mejore la potencia media y reduzca el porcentaje de zonas muertas."
+    ];
+
+    explicacionTecnica.forEach((texto) => {
+      nuevaPaginaSiHaceFalta(16);
+      const lineas = pdf.splitTextToSize(`• ${texto}`, 165);
+      pdf.text(lineas, 22, y);
+      y += lineas.length * 5 + 2;
+    });
+
+    if (cir.length > 0 || cirResumen) {
+      y += 6;
+      nuevaPaginaSiHaceFalta(55);
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(15);
+      pdf.text("Canal CIR y movilidad", 18, y);
+
+      y += 8;
+      pdf.setFontSize(9);
+      pdf.setTextColor(220, 220, 220);
+
+      const resumenCirPdf = [
+        `Componentes CIR: ${cir.length}`,
+        `Delay spread RMS: ${(cirResumen?.delaySpreadRmsNs ?? cirResumen?.delaySpreadNs ?? resultadoCobertura.cirResumen?.delaySpreadRmsNs ?? 0).toFixed(3)} ns`,
+        `Retardo medio: ${(cirResumen?.retardoMedioNs ?? resultadoCobertura.cirResumen?.retardoMedioNs ?? 0).toFixed(3)} ns`,
+        `Potencia total CIR: ${(cirResumen?.potenciaTotalDbm ?? resultadoCobertura.cirResumen?.potenciaTotalDbm ?? 0).toFixed(2)} dBm`,
+        `Doppler dominante actual: ${dopplerActual.toFixed(3)} Hz`,
+      ];
+
+      resumenCirPdf.forEach((linea) => {
+        nuevaPaginaSiHaceFalta(7);
+        pdf.text(linea, 22, y);
+        y += 5;
+      });
+
+      y += 3;
+      const explicacionCir = pdf.splitTextToSize(
+        "El CIR es la respuesta impulsional del canal. Cada componente representa un camino de propagación con retardo, potencia, fase y, si procede, Doppler. Esto permite justificar que el simulador no solo pinta cobertura, sino también comportamiento temporal del canal.",
+        165,
+      );
+      nuevaPaginaSiHaceFalta(explicacionCir.length * 5 + 8);
+      pdf.text(explicacionCir, 22, y);
+      y += explicacionCir.length * 5 + 2;
+    }
+
+    if (resultadoCobertura.mimoMetricas) {
+      y += 6;
+      nuevaPaginaSiHaceFalta(60);
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(15);
+      pdf.text("MIMO y capacidad estimada", 18, y);
+
+      y += 8;
+      pdf.setFontSize(9);
+      pdf.setTextColor(220, 220, 220);
+
+      const m = resultadoCobertura.mimoMetricas;
+      const lineasMimo = [
+        `Configuración: TX ${m.nt} elementos · RX ${m.nr} elementos`,
+        `SNR usada: ${m.snrDb.toFixed(2)} dB`,
+        `Capacidad SISO: ${m.capacidadSisoMbps.toFixed(2)} Mbps`,
+        `Capacidad beamforming ideal: ${m.capacidadBeamformingIdealMbps.toFixed(2)} Mbps`,
+        `Capacidad multiplexing ideal: ${m.capacidadMultiplexingIdealMbps.toFixed(2)} Mbps`,
+        `Rank real: ${m.rankReal ?? "N/D"}`,
+      ];
+
+      lineasMimo.forEach((linea) => {
+        nuevaPaginaSiHaceFalta(7);
+        pdf.text(linea, 22, y);
+        y += 5;
+      });
+    }
+
+    const heatmapParaPdf =
+      modoHeatmap === "potencia"
+        ? resultadoCobertura.heatmap
+        : resultadoCobertura.heatmapCanal ?? resultadoCobertura.heatmap;
+
+    if (heatmapParaPdf?.length) {
+      y += 6;
+      nuevaPaginaSiHaceFalta(50);
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(15);
+      pdf.text("Muestras principales del heatmap dinámico", 18, y);
+
+      y += 8;
+      pdf.setFontSize(8);
+      pdf.setTextColor(220, 220, 220);
+
+      heatmapParaPdf
+        .slice()
+        .sort((a, b) => a.potenciaDbm - b.potenciaDbm)
+        .slice(0, 10)
+        .forEach((p, index) => {
+          nuevaPaginaSiHaceFalta(7);
+          pdf.text(
+            `P${index + 1} · x=${p.x.toFixed(2)} z=${p.z.toFixed(2)} · ${p.potenciaDbm.toFixed(2)} dBm · DS=${(p.delaySpreadRmsNs ?? 0).toFixed(2)} ns · fd=${(p.dopplerHz ?? 0).toFixed(2)} Hz`,
+            22,
+            y,
+          );
+          y += 5;
+        });
+    }
 
     y += 6;
     nuevaPaginaSiHaceFalta(40);
@@ -1543,6 +1775,7 @@ export default function CrearViviendaPage() {
   mostrarRouterOptimo={mostrarRouterOptimo}
   maxRayos={maxRayos}
   modoHeatmap={modoHeatmap}
+  mostrarMesh={mostrarMesh}
 />
               )}
 
@@ -1734,6 +1967,13 @@ export default function CrearViviendaPage() {
                     className="col-span-2 py-3 rounded-xl bg-black border border-zinc-800 text-[9px] font-black uppercase text-zinc-300 hover:border-orange-500"
                   >
                     Router óptimo {mostrarRouterOptimo ? "ON" : "OFF"}
+                  </button>
+
+                  <button
+                    onClick={() => setMostrarMesh((v) => !v)}
+                    className="col-span-2 py-3 rounded-xl bg-black border border-zinc-800 text-[9px] font-black uppercase text-zinc-300 hover:border-sky-500"
+                  >
+                    Heatmap mesh {mostrarMesh ? "ON" : "OFF"}
                   </button>
                 </div>
 
@@ -2901,6 +3141,7 @@ function CapaCobertura({
   mostrarRouterOptimo,
   maxRayos,
   modoHeatmap,
+  mostrarMesh,
 }: {
   resultado: ResultadoCobertura;
   mostrarHeatmap: boolean;
@@ -2908,19 +3149,26 @@ function CapaCobertura({
   mostrarRouterOptimo: boolean;
   maxRayos: number;
   modoHeatmap: "potencia" | "delay" | "doppler";
+  mostrarMesh: boolean;
 }) {
   const heatmapBase = resultado.heatmap ?? [];
   const heatmapCanal = resultado.heatmapCanal ?? [];
-  const heatmapActivo = modoHeatmap === "potencia" ? heatmapBase : (heatmapCanal.length > 0 ? heatmapCanal : heatmapBase);
+  const heatmapActivo =
+    modoHeatmap === "potencia"
+      ? heatmapBase
+      : heatmapCanal.length > 0
+        ? heatmapCanal
+        : heatmapBase;
+
   const heatmapMesh =
     resultado.heatmapConMesh ?? resultado.coberturaConMesh?.heatmap ?? [];
 
   return (
     <group>
-      {(resultado.heatmapConMesh ?? resultado.coberturaConMesh?.heatmap ?? []).map(
-        (p, index) => (
+      {mostrarMesh &&
+        heatmapMesh.map((p, index) => (
           <mesh
-            key={`heatmap-mesh-${index}`}
+            key={`heatmap-mesh-denso-${index}`}
             position={[p.x, 0.085, p.z]}
             rotation={[-Math.PI / 2, 0, 0]}
           >
@@ -2928,11 +3176,11 @@ function CapaCobertura({
             <meshBasicMaterial
               color={colorHeatmapMesh(p.potenciaDbm)}
               transparent
-              opacity={0.65}
+              opacity={0.45}
             />
           </mesh>
-        ),
-      )}
+        ))}
+
       {mostrarHeatmap &&
         heatmapActivo.map((p, i) => (
           <mesh
@@ -2949,15 +3197,15 @@ function CapaCobertura({
           </mesh>
         ))}
 
-      {mostrarHeatmap &&
+      {mostrarMesh &&
         heatmapMesh.map((p, i) => (
           <mesh
-            key={`heatmap-mesh-${i}`}
-            position={[p.x, 0.08, p.z]}
+            key={`heatmap-mesh-contorno-${i}`}
+            position={[p.x, 0.09, p.z]}
             rotation={[-Math.PI / 2, 0, 0]}
           >
             <ringGeometry args={[0.24, 0.34, 24]} />
-            <meshBasicMaterial color="#38bdf8" transparent opacity={0.7} />
+            <meshBasicMaterial color="#38bdf8" transparent opacity={0.45} />
           </mesh>
         ))}
 
