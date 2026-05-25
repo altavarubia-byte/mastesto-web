@@ -1020,26 +1020,23 @@ export default function CrearViviendaPage() {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="bg-black border border-zinc-900 rounded-xl p-4 mt-4">
+  <p className="text-[9px] uppercase text-zinc-500 font-black mb-2">
+    Límite rayos Sionna
+  </p>
 
-  <button
-    onClick={() => setMostrarHeatmap((v) => !v)}
-  >
-    Heatmap
-  </button>
+  <input
+    type="range"
+    min={1}
+    max={100}
+    value={maxRayos}
+    onChange={(e) => setMaxRayos(Number(e.target.value))}
+    className="w-full accent-orange-600"
+  />
 
-  <button
-    onClick={() => setMostrarRayos((v) => !v)}
-  >
-    Rayos
-  </button>
-
-  <button
-    onClick={() => setMostrarRouterOptimo((v) => !v)}
-  >
-    Router óptimo
-  </button>
-
+  <p className="text-orange-500 text-sm font-black mt-2">
+    {maxRayos} rayos visibles
+  </p>
 </div>
 
                 <div className="bg-black border border-zinc-900 rounded-xl p-4 space-y-2">
