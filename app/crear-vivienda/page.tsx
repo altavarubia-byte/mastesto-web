@@ -210,6 +210,31 @@ type ResultadoCobertura = {
     arraysConfiguradosEnSionna: boolean;
     nota?: string;
   };
+  mimoMetricas?: {
+    nt: number;
+    nr: number;
+    streamsMaxTeoricos: number;
+    rankMaxTeorico: number;
+    rankRealDisponible: boolean;
+    potenciaRxDbmUsada: number;
+    anchoBandaMhz: number;
+    noiseFloorDbm: number;
+    noiseFigureDb: number;
+    snrDb: number;
+    arrayGainTxDbIdeal: number;
+    arrayGainRxDbIdeal: number;
+    arrayGainBeamformingDbIdeal: number;
+    snrBeamformingDbIdeal: number;
+    capacidadSisoMbps: number;
+    capacidadBeamformingIdealMbps: number;
+    capacidadMultiplexingIdealMbps: number;
+    modelo?: {
+      nota?: string;
+      fisicoFormula?: string[];
+      empiricoDeclarado?: string[];
+      pendienteParaMimoRealCompleto?: string[];
+    };
+  };
   rayos: RayoCobertura[];
   resumenHabitaciones: {
     habitacion: string;
@@ -1662,6 +1687,61 @@ export default function CrearViviendaPage() {
                   </div>
                 )}
 
+                {resultadoCobertura.mimoMetricas && (
+                  <div className="bg-black border border-emerald-900 rounded-xl p-4 mt-4 space-y-3">
+                    <p className="text-[9px] uppercase text-emerald-400 font-black">
+                      Parámetros MIMO calculados
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-3">
+                        <p className="text-[8px] uppercase text-zinc-500 font-black">SNR</p>
+                        <p className="text-sm font-black text-white">
+                          {resultadoCobertura.mimoMetricas.snrDb.toFixed(2)} dB
+                        </p>
+                      </div>
+
+                      <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-3">
+                        <p className="text-[8px] uppercase text-zinc-500 font-black">Ganancia array ideal</p>
+                        <p className="text-sm font-black text-emerald-400">
+                          +{resultadoCobertura.mimoMetricas.arrayGainBeamformingDbIdeal.toFixed(2)} dB
+                        </p>
+                      </div>
+
+                      <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-3">
+                        <p className="text-[8px] uppercase text-zinc-500 font-black">Rank máximo teórico</p>
+                        <p className="text-sm font-black text-cyan-400">
+                          {resultadoCobertura.mimoMetricas.rankMaxTeorico}
+                        </p>
+                      </div>
+
+                      <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-3">
+                        <p className="text-[8px] uppercase text-zinc-500 font-black">Streams máximos</p>
+                        <p className="text-sm font-black text-cyan-400">
+                          {resultadoCobertura.mimoMetricas.streamsMaxTeoricos}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-3 space-y-1">
+                      <p className="text-[8px] uppercase text-zinc-500 font-black">Capacidad Shannon</p>
+                      <p className="text-[10px] text-zinc-300 uppercase leading-relaxed">
+                        SISO: {resultadoCobertura.mimoMetricas.capacidadSisoMbps.toFixed(2)} Mbps
+                      </p>
+                      <p className="text-[10px] text-zinc-300 uppercase leading-relaxed">
+                        Beamforming ideal: {resultadoCobertura.mimoMetricas.capacidadBeamformingIdealMbps.toFixed(2)} Mbps
+                      </p>
+                      <p className="text-[10px] text-zinc-300 uppercase leading-relaxed">
+                        Multiplexing ideal: {resultadoCobertura.mimoMetricas.capacidadMultiplexingIdealMbps.toFixed(2)} Mbps
+                      </p>
+                    </div>
+
+                    <p className="text-[9px] text-zinc-500 uppercase leading-relaxed">
+                      {resultadoCobertura.mimoMetricas.modelo?.nota ?? "La capacidad MIMO real completa requiere matriz H por elemento."}
+                    </p>
+                  </div>
+                )}
+
                 <div className="bg-black border border-zinc-900 rounded-xl p-4 mt-4">
   <p className="text-[9px] uppercase text-zinc-500 font-black mb-2">
     Límite rayos Sionna
@@ -2166,7 +2246,7 @@ Rayo {index+1}
 
 <p className="text-[9px] text-zinc-500 uppercase">
 
-{rayo.afectadoPorPersona || rayo.tipo==="afectado_persona"
+{rayo.afectadoPorPersona || rayo.tipo==="afectado_persona" || rayo.tipoVisual==="afectado_persona"
 ? "AFECTADO POR PERSONA"
 : rayo.tipo}
 
@@ -2769,7 +2849,7 @@ function colorHeatmapMesh(potenciaDbm: number) {
 
 function colorRayo(rayo:any){
 
-  if(rayo.afectadoPorPersona || rayo.tipo==="afectado_persona"){
+  if(rayo.afectadoPorPersona || rayo.tipo==="afectado_persona" || rayo.tipoVisual==="afectado_persona"){
     return "#ef4444";
   }
 
@@ -2792,7 +2872,7 @@ function colorRayo(rayo:any){
 
 function grosorRayo(rayo:any){
 
-  if(rayo.afectadoPorPersona || rayo.tipo==="afectado_persona"){
+  if(rayo.afectadoPorPersona || rayo.tipo==="afectado_persona" || rayo.tipoVisual==="afectado_persona"){
     return 5;
   }
 
