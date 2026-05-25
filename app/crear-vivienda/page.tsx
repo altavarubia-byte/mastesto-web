@@ -1427,11 +1427,13 @@ function CapaCobertura({
   mostrarHeatmap,
   mostrarRayos,
   mostrarRouterOptimo,
+  maxRayos,
 }: {
   resultado: ResultadoCobertura;
   mostrarHeatmap: boolean;
   mostrarRayos: boolean;
   mostrarRouterOptimo: boolean;
+  maxRayos: number;
 }) {
   const heatmapBase = resultado.heatmap ?? [];
   const heatmapMesh =
