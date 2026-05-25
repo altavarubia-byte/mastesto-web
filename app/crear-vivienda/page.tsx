@@ -206,6 +206,8 @@ export default function CrearViviendaPage() {
   const [simulando, setSimulando] = useState(false);
   const [velocidadSim, setVelocidadSim] = useState(1);
 
+  const [cir,setCir]=useState<any[]>([])
+
   const [calculandoCobertura, setCalculandoCobertura] = useState(false);
   const [generandoRender, setGenerandoRender] = useState(false);
   const [imagenRender, setImagenRender] = useState("");
@@ -381,6 +383,8 @@ export default function CrearViviendaPage() {
     });
 
     const enlace = document.createElement("a");
+
+    
 
     enlace.href = URL.createObjectURL(archivo);
     enlace.download = "vivienda-mastesto.json";
