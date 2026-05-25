@@ -45,6 +45,14 @@ type Objeto3D = {
   sz: number;
   color: string;
   material?: string;
+
+  // Movimiento dinámico para personajes/personas
+  direccionDeg?: number;
+  sentido?: 1 | -1;
+  velocidadMps?: number;
+  recorridoM?: number;
+  origenX?: number;
+  origenZ?: number;
 };
 
 type PuntoHeatmap = {
@@ -274,6 +282,7 @@ export default function CrearViviendaPage() {
     const configs: Record<string, Partial<Objeto3D>> = {
       router: { sx: 0.35, sy: 0.35, sz: 0.35, color: "#f97316", material: undefined },
       receptor: { sx: 0.25, sy: 0.25, sz: 0.25, color: "#22c55e", material: "rx", y: 1.2 },
+      persona: { sx: 0.55, sy: 1.25, sz: 0.55, color: "#facc15", material: "persona", y: 0.9, velocidadMps: 0.8, recorridoM: 3, sentido: 1 },
       sofa: { sx: 1.8, sy: 0.6, sz: 0.8, color: "#7c2d12", material: "tejido", y: 0.4 },
       mesa: { sx: 1.2, sy: 0.25, sz: 0.8, color: "#92400e", material: "madera", y: 0.4 },
       silla: { sx: 0.5, sy: 0.8, sz: 0.5, color: "#57534e", material: "madera", y: 0.4 },
@@ -363,6 +372,7 @@ export default function CrearViviendaPage() {
       router: { sx: 0.35, sy: 0.35, sz: 0.35, color: "#f97316" },
       armario: { sx: 1.2, sy: 2, sz: 0.5, color: "#44403c", material: "madera" },
       receptor: { sx: 0.25, sy: 0.25, sz: 0.25, color: "#22c55e", material: "rx" },
+      persona: { sx: 0.55, sy: 1.25, sz: 0.55, color: "#facc15", material: "persona", velocidadMps: 0.8, recorridoM: 3, sentido: 1 },
       ventana: { sx: 1.8, sy: 1.1, sz: 0.08, color: "#7dd3fc", material: "cristal" },
     };
 
@@ -373,13 +383,19 @@ export default function CrearViviendaPage() {
       id: `${tipo}-${Date.now()}`,
       tipo,
       x: h ? h.x : 0,
-      y: tipo === "tv" ? 1.4 : tipo === "router" || tipo === "receptor" ? 1.2 : tipo === "ventana" ? 1.5 : 0.4,
+      y: tipo === "tv" ? 1.4 : tipo === "router" || tipo === "receptor" ? 1.2 : tipo === "persona" ? 0.9 : tipo === "ventana" ? 1.5 : 0.4,
       z: h ? h.z : 0,
       sx: config.sx || 1,
       sy: config.sy || 1,
       sz: config.sz || 1,
       color: config.color || "#ffffff",
       material: config.material,
+      direccionDeg: tipo === "persona" ? anguloMovimiento : undefined,
+      sentido: tipo === "persona" ? 1 : undefined,
+      velocidadMps: tipo === "persona" ? 0.8 : undefined,
+      recorridoM: tipo === "persona" ? 3 : undefined,
+      origenX: tipo === "persona" ? (h ? h.x : 0) : undefined,
+      origenZ: tipo === "persona" ? (h ? h.z : 0) : undefined,
     };
 
     setObjetos((prev) => [...prev, nuevo]);
@@ -663,21 +679,58 @@ export default function CrearViviendaPage() {
     const intervalo = setInterval(() => {
       const ang = (anguloMovimiento * Math.PI) / 180;
       const dt = Math.max(0.1, intervaloSionna);
-      const dx = Math.cos(ang) * velocidadRxMps * dt;
-      const dz = Math.sin(ang) * velocidadRxMps * dt;
+      const dirX = Math.cos(ang);
+      const dirZ = Math.sin(ang);
 
       setObjetos((prev) => {
         const nuevosObjetos = prev.map((obj) => {
-          if (
-            obj.tipo === "receptor" ||
-            obj.tipo === "rx" ||
-            obj.tipo === "receiver"
-          ) {
-            const nuevoX = obj.x + dx;
-            const nuevoZ = obj.z + dz;
+          const tipo = obj.tipo.toLowerCase();
+
+          if (tipo === "receptor" || tipo === "rx" || tipo === "receiver") {
+            const dx = dirX * velocidadRxMps * dt;
+            const dz = dirZ * velocidadRxMps * dt;
 
             return {
               ...obj,
+              x: Math.max(-10, Math.min(10, Number((obj.x + dx).toFixed(2)))),
+              z: Math.max(-10, Math.min(10, Number((obj.z + dz).toFixed(2)))),
+            };
+          }
+
+          if (tipo === "persona") {
+            const velocidadPersona = obj.velocidadMps ?? 0.8;
+            const recorrido = obj.recorridoM ?? 3;
+            const origenX = obj.origenX ?? obj.x;
+            const origenZ = obj.origenZ ?? obj.z;
+            const sentidoActual = obj.sentido ?? 1;
+
+            let nuevoX = obj.x + dirX * velocidadPersona * dt * sentidoActual;
+            let nuevoZ = obj.z + dirZ * velocidadPersona * dt * sentidoActual;
+
+            const proyeccion =
+              (nuevoX - origenX) * dirX +
+              (nuevoZ - origenZ) * dirZ;
+
+            let nuevoSentido: 1 | -1 = sentidoActual;
+
+            if (proyeccion > recorrido) {
+              nuevoSentido = -1;
+              nuevoX = origenX + dirX * recorrido;
+              nuevoZ = origenZ + dirZ * recorrido;
+            }
+
+            if (proyeccion < -recorrido) {
+              nuevoSentido = 1;
+              nuevoX = origenX - dirX * recorrido;
+              nuevoZ = origenZ - dirZ * recorrido;
+            }
+
+            return {
+              ...obj,
+              origenX,
+              origenZ,
+              direccionDeg: anguloMovimiento,
+              sentido: nuevoSentido,
               x: Math.max(-10, Math.min(10, Number(nuevoX.toFixed(2)))),
               z: Math.max(-10, Math.min(10, Number(nuevoZ.toFixed(2)))),
             };
@@ -1150,6 +1203,7 @@ export default function CrearViviendaPage() {
               <Boton texto="Cama" onClick={() => crearObjeto("cama")} />
               <Boton texto="Router" onClick={() => crearObjeto("router")} />
               <Boton texto="Receptor" onClick={() => crearObjeto("receptor")} />
+              <Boton texto="Persona" onClick={() => crearObjeto("persona")} />
               <Boton texto="Armario" onClick={() => crearObjeto("armario")} />
               <Boton texto="Ventana" onClick={() => crearObjeto("ventana")} />
             </div>
@@ -1385,6 +1439,7 @@ export default function CrearViviendaPage() {
                   >
                     <option value="router">Router / TX</option>
                     <option value="receptor">Receptor / RX</option>
+                    <option value="persona">Personaje móvil</option>
                     <option value="sofa">Sofá</option>
                     <option value="mesa">Mesa</option>
                     <option value="silla">Silla</option>
@@ -2088,12 +2143,16 @@ function ObjetoMovible({
 
   const [arrastrando, setArrastrando] = useState(false);
 
+  const tipo = obj.tipo.toLowerCase();
+  const movible =
+    tipo === "router" ||
+    tipo === "receptor" ||
+    tipo === "rx" ||
+    tipo === "receiver" ||
+    tipo === "persona";
+
   const moverEnSuelo = (event: any) => {
-    if (!arrastrando) return;
-    if (
-      !(obj.tipo === "router" || obj.tipo === "receptor" || obj.tipo === "rx" || obj.tipo === "receiver")
-    )
-      return;
+    if (!arrastrando || !movible) return;
 
     const rect = gl.domElement.getBoundingClientRect();
 
@@ -2116,106 +2175,164 @@ function ObjetoMovible({
   };
 
   return (
-    <group>
-      <mesh
-        castShadow
-        receiveShadow
-        position={[obj.x, obj.y, obj.z]}
-        scale={[obj.sx, obj.sy, obj.sz]}
-        onClick={(e) => {
-          e.stopPropagation();
-          onSeleccionar();
-        }}
-        onPointerDown={(e: any) => {
-          e.stopPropagation();
-          onSeleccionar();
+    <group
+      position={[obj.x, obj.y, obj.z]}
+      onClick={(e) => {
+        e.stopPropagation();
+        onSeleccionar();
+      }}
+      onPointerDown={(e: any) => {
+        e.stopPropagation();
+        onSeleccionar();
 
-          if (
-            obj.tipo === "router" ||
-            obj.tipo === "receptor" ||
-            obj.tipo === "rx" ||
-            obj.tipo === "receiver"
-          ) {
-            setArrastrando(true);
-            gl.domElement.style.cursor = "grabbing";
+        if (movible) {
+          setArrastrando(true);
+          gl.domElement.style.cursor = "grabbing";
 
-            if (e.target?.setPointerCapture) {
-              e.target.setPointerCapture(e.pointerId);
-            }
+          if (e.target?.setPointerCapture) {
+            e.target.setPointerCapture(e.pointerId);
           }
-        }}
-        onPointerMove={(e: any) => {
-          if (arrastrando) {
-            e.stopPropagation();
-            moverEnSuelo(e);
-          }
-        }}
-        onPointerUp={(e: any) => {
+        }
+      }}
+      onPointerMove={(e: any) => {
+        if (arrastrando) {
           e.stopPropagation();
-          setArrastrando(false);
+          moverEnSuelo(e);
+        }
+      }}
+      onPointerUp={(e: any) => {
+        e.stopPropagation();
+        setArrastrando(false);
+        gl.domElement.style.cursor = "default";
+
+        if (e.target?.releasePointerCapture) {
+          e.target.releasePointerCapture(e.pointerId);
+        }
+      }}
+      onPointerLeave={() => {
+        if (!arrastrando) {
           gl.domElement.style.cursor = "default";
+        }
+      }}
+      onPointerOver={() => {
+        if (movible) {
+          gl.domElement.style.cursor = "grab";
+        }
+      }}
+      onPointerOut={() => {
+        if (!arrastrando) {
+          gl.domElement.style.cursor = "default";
+        }
+      }}
+    >
+      {tipo === "router" || tipo === "receptor" ? (
+        <mesh castShadow receiveShadow scale={[obj.sx, obj.sy, obj.sz]}>
+          <ModelObjeto tipo={obj.tipo} />
+        </mesh>
+      ) : tipo === "persona" ? (
+        <PersonajeMovil color={obj.color} seleccionado={seleccionado} />
+      ) : (
+        <mesh castShadow receiveShadow scale={[obj.sx, obj.sy, obj.sz]}>
+          <boxGeometry />
+          <meshStandardMaterial
+            color={obj.color}
+            emissive="#000000"
+            emissiveIntensity={0}
+          />
+        </mesh>
+      )}
 
-          if (e.target?.releasePointerCapture) {
-            e.target.releasePointerCapture(e.pointerId);
-          }
-        }}
-        onPointerLeave={() => {
-          if (!arrastrando) {
-            gl.domElement.style.cursor = "default";
-          }
-        }}
-        onPointerOver={() => {
-          if (
-            obj.tipo === "router" ||
-            obj.tipo === "receptor" ||
-            obj.tipo === "rx" ||
-            obj.tipo === "receiver"
-          ) {
-            gl.domElement.style.cursor = "grab";
-          }
-        }}
-        onPointerOut={() => {
-          if (!arrastrando) {
-            gl.domElement.style.cursor = "default";
-          }
-        }}
-      >
-       
- {obj.tipo === "router" || obj.tipo === "receptor" ? (
-  <ModelObjeto tipo={obj.tipo} />
-) : (
-  <>
-    <boxGeometry />
-    <meshStandardMaterial
-      color={obj.color}
-      emissive="#000000"
-      emissiveIntensity={0}
-    />
-  </>
-)}
-      </mesh>
-
-      {(obj.tipo === "router" || obj.tipo === "receptor") && (
-        <mesh
-          position={[obj.x, 0.06, obj.z]}
-          rotation={[-Math.PI / 2, 0, 0]}
-        >
+      {(tipo === "router" || tipo === "receptor" || tipo === "persona") && (
+        <mesh position={[0, -obj.y + 0.06, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <ringGeometry args={[0.45, 0.7, 32]} />
           <meshBasicMaterial
             color={
-              obj.tipo === "receptor"
+              tipo === "persona"
                 ? seleccionado
-                  ? "#22c55e"
-                  : "#86efac"
-                : seleccionado
-                  ? "#f97316"
-                  : "#fb923c"
+                  ? "#facc15"
+                  : "#fde68a"
+                : tipo === "receptor"
+                  ? seleccionado
+                    ? "#22c55e"
+                    : "#86efac"
+                  : seleccionado
+                    ? "#f97316"
+                    : "#fb923c"
             }
             transparent
             opacity={seleccionado ? 0.55 : 0.25}
           />
         </mesh>
       )}
+    </group>
+  );
+}
+
+function PersonajeMovil({
+  color,
+  seleccionado,
+}: {
+  color: string;
+  seleccionado: boolean;
+}) {
+  const ref = useRef<THREE.Group>(null);
+
+  useFrame((_, delta) => {
+    if (!ref.current) return;
+    ref.current.rotation.y += delta * 1.8;
+  });
+
+  return (
+    <group ref={ref}>
+      <mesh castShadow position={[0, 0.42, 0]} scale={[0.45, 0.55, 0.45]}>
+        <sphereGeometry args={[1, 32, 32]} />
+        <meshStandardMaterial
+          color={color}
+          emissive={seleccionado ? "#facc15" : "#000000"}
+          emissiveIntensity={seleccionado ? 0.25 : 0}
+          roughness={0.65}
+        />
+      </mesh>
+
+      <mesh castShadow position={[0, 1.08, 0]} scale={[0.36, 0.36, 0.36]}>
+        <sphereGeometry args={[1, 32, 32]} />
+        <meshStandardMaterial color="#fde68a" roughness={0.7} />
+      </mesh>
+
+      <mesh castShadow position={[-0.28, 1.36, 0]} rotation={[0, 0, -0.35]}>
+        <coneGeometry args={[0.14, 0.45, 24]} />
+        <meshStandardMaterial color={color} />
+      </mesh>
+
+      <mesh castShadow position={[0.28, 1.36, 0]} rotation={[0, 0, 0.35]}>
+        <coneGeometry args={[0.14, 0.45, 24]} />
+        <meshStandardMaterial color={color} />
+      </mesh>
+
+      <mesh position={[-0.13, 1.12, 0.32]}>
+        <sphereGeometry args={[0.045, 16, 16]} />
+        <meshStandardMaterial color="#020617" />
+      </mesh>
+
+      <mesh position={[0.13, 1.12, 0.32]}>
+        <sphereGeometry args={[0.045, 16, 16]} />
+        <meshStandardMaterial color="#020617" />
+      </mesh>
+
+      <mesh castShadow position={[-0.18, 0.05, 0.04]} scale={[0.16, 0.12, 0.23]}>
+        <sphereGeometry args={[1, 16, 16]} />
+        <meshStandardMaterial color="#111827" />
+      </mesh>
+
+      <mesh castShadow position={[0.18, 0.05, 0.04]} scale={[0.16, 0.12, 0.23]}>
+        <sphereGeometry args={[1, 16, 16]} />
+        <meshStandardMaterial color="#111827" />
+      </mesh>
+
+      <mesh position={[0, 0.25, -0.48]} rotation={[0.75, 0, 0]}>
+        <coneGeometry args={[0.12, 0.65, 18]} />
+        <meshStandardMaterial color={color} />
+      </mesh>
     </group>
   );
 }
