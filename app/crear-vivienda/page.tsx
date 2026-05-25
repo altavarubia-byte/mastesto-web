@@ -615,6 +615,55 @@ export default function CrearViviendaPage() {
     }
   };
 
+  const calcularCoberturaConObjetos = async (
+  objetosActualizados: Objeto3D[]
+) => {
+
+  try {
+
+    const datos = {
+      ...crearDatosVivienda(),
+      objetos: objetosActualizados,
+    };
+
+    const res = await fetch(
+      `${SIONNA_API_URL}/raytrace`,
+      {
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json"
+        },
+        body:JSON.stringify(datos)
+      }
+    );
+
+    const resultado=await res.json();
+
+    if(!res.ok || !resultado.ok){
+      return;
+    }
+
+    setResultadoCobertura(resultado);
+
+    const cirNormalizado=
+      aplicarDopplerACIR(
+        normalizarCIR(resultado)
+      );
+
+    setCir(cirNormalizado);
+
+    setCirResumen(
+      extraerResumenCIR(resultado)
+    );
+
+  } catch(e){
+
+    console.error(e);
+
+  }
+
+};
+
   useEffect(() => {
     if (!simulando) return;
 
@@ -626,22 +675,31 @@ export default function CrearViviendaPage() {
       const dx = Math.cos(ang) * velocidadRxMps * dt;
       const dz = Math.sin(ang) * velocidadRxMps * dt;
 
-      setObjetos((prev) =>
-        prev.map((obj) => {
-          if (obj.tipo === "receptor" || obj.tipo === "rx" || obj.tipo === "receiver") {
-            const nuevoX = obj.x + dx;
-            const nuevoZ = obj.z + dz;
+      setObjetos((prev) => {
+  const nuevosObjetos = prev.map((obj) => {
+    if (
+      obj.tipo === "receptor" ||
+      obj.tipo === "rx" ||
+      obj.tipo === "receiver"
+    ) {
+      const nuevoX = obj.x + dx;
+      const nuevoZ = obj.z + dz;
 
-            return {
-              ...obj,
-              x: Math.max(-10, Math.min(10, Number(nuevoX.toFixed(2)))),
-              z: Math.max(-10, Math.min(10, Number(nuevoZ.toFixed(2)))),
-            };
-          }
+      return {
+        ...obj,
+        x: Math.max(-10, Math.min(10, Number(nuevoX.toFixed(2)))),
+        z: Math.max(-10, Math.min(10, Number(nuevoZ.toFixed(2)))),
+      };
+    }
 
-          return obj;
-        }),
-      );
+    return obj;
+  });
+
+  calcularCoberturaConObjetos(nuevosObjetos);
+
+  return nuevosObjetos;
+});
+      
 
       if (calculandoDinamicoRef.current) return;
 
