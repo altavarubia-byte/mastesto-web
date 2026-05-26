@@ -38,6 +38,14 @@ type Habitacion = {
   materialPared?: string;
   materialSuelo?: string;
   materialTecho?: string;
+
+  // Propiedades físicas RF opcionales
+  espesorParedM?: number;
+  espesorSueloM?: number;
+  espesorTechoM?: number;
+  rugosidadParedM?: number;
+  rugosidadSueloM?: number;
+  rugosidadTechoM?: number;
 };
 
 type Objeto3D = {
@@ -74,6 +82,13 @@ type Objeto3D = {
   humidity_rel?: number;
   turbulence_strength?: number;
   absorcion_extra_db_m?: number;
+
+  // Propiedades RF opcionales del objeto/obstáculo
+  espesorM?: number;
+  rugosidadM?: number;
+  epsR?: number;
+  sigmaS_m?: number;
+  tanDelta?: number;
 };
 
 type PuntoHeatmap = {
@@ -126,6 +141,28 @@ type CirResumen = {
   potenciaTotal?: number;
   numComponentes?: number;
   anchoBandaMhz?: number;
+};
+
+type MaterialRF = {
+  nombre?: string;
+  material?: string;
+  rol?: string;
+  frecuenciaHz?: number;
+  frecuenciaGhz?: number;
+  epsR?: number;
+  sigmaS_m?: number;
+  tanDelta?: number;
+  epsComplejaReal?: number;
+  epsComplejaImag?: number;
+  espesorM?: number;
+  rugosidadM?: number;
+  perdidaSlabDb?: number;
+  perdidaRugosidadDb?: number;
+  perdidaTotalDb?: number;
+  coefReflexionAbs?: number;
+  perdidaReflexionDb?: number;
+  modelo?: string;
+  [key: string]: any;
 };
 
 type ResultadoCobertura = {
@@ -219,6 +256,14 @@ type ResultadoCobertura = {
   };
   heatmap: PuntoHeatmap[];
   heatmapCanal?: PuntoHeatmap[];
+  materialesRF?: MaterialRF[];
+  anchoBanda?: {
+    anchoBandaMhz?: number;
+    anchoBandaHz?: number;
+    ruidoTermicoDbm?: number;
+    resolucionTemporalNs?: number;
+    [key: string]: any;
+  };
   mimoArrays?: {
     txRows: number;
     txCols: number;
@@ -348,6 +393,12 @@ export default function CrearViviendaPage() {
       materialPared: "ladrillo",
       materialSuelo: "hormigon",
       materialTecho: "pladur",
+      espesorParedM: 0.115,
+      espesorSueloM: 0.2,
+      espesorTechoM: 0.013,
+      rugosidadParedM: 0.0015,
+      rugosidadSueloM: 0.002,
+      rugosidadTechoM: 0.0005,
     },
   ]);
 
@@ -356,6 +407,15 @@ export default function CrearViviendaPage() {
   const [materialSuelo, setMaterialSuelo] = useState("hormigon");
   const [materialTecho, setMaterialTecho] = useState("pladur");
   const [frecuenciaMhz, setFrecuenciaMhz] = useState(5000);
+  const [anchoBandaMhz, setAnchoBandaMhz] = useState(80);
+
+  // Propiedades físicas RF globales si una habitación no las sobrescribe
+  const [espesorParedM, setEspesorParedM] = useState(0.115);
+  const [espesorSueloM, setEspesorSueloM] = useState(0.2);
+  const [espesorTechoM, setEspesorTechoM] = useState(0.013);
+  const [rugosidadParedM, setRugosidadParedM] = useState(0.0015);
+  const [rugosidadSueloM, setRugosidadSueloM] = useState(0.002);
+  const [rugosidadTechoM, setRugosidadTechoM] = useState(0.0005);
 
   const [habitacionSeleccionada, setHabitacionSeleccionada] =
     useState("habitacion-1");
@@ -607,6 +667,12 @@ export default function CrearViviendaPage() {
       materialPared,
       materialSuelo,
       materialTecho,
+      espesorParedM,
+      espesorSueloM,
+      espesorTechoM,
+      rugosidadParedM,
+      rugosidadSueloM,
+      rugosidadTechoM,
     };
 
     setHabitaciones((prev) => [...prev, nueva]);
@@ -769,11 +835,20 @@ export default function CrearViviendaPage() {
     setResultadoCobertura(null);
   };
 
-  const actualizarObjeto = (campo: keyof Objeto3D, valor: number | string) => {
+  const actualizarObjeto = (
+    campo: keyof Objeto3D,
+    valor: number | string | null | undefined,
+  ) => {
     setObjetos((prev) =>
-      prev.map((o) =>
-        o.id === objetoSeleccionado ? { ...o, [campo]: valor } : o,
-      ),
+      prev.map((o) => {
+        if (o.id !== objetoSeleccionado) return o;
+        if (valor === null || typeof valor === "undefined" || valor === "") {
+          const copia: any = { ...o };
+          delete copia[campo];
+          return copia;
+        }
+        return { ...o, [campo]: valor };
+      }),
     );
 
     setResultadoCobertura(null);
@@ -821,8 +896,14 @@ export default function CrearViviendaPage() {
       materialSuelo,
       materialTecho,
       frecuenciaMhz,
+      espesorParedM,
+      espesorSueloM,
+      espesorTechoM,
+      rugosidadParedM,
+      rugosidadSueloM,
+      rugosidadTechoM,
       parametrosCIR: {
-        anchoBandaMhz: 80,
+        anchoBandaMhz,
         numTaps: 128,
         incluirDoppler: true,
         velocidadRxMps,
@@ -866,7 +947,15 @@ export default function CrearViviendaPage() {
           turbulence_strength: o.turbulence_strength ?? intensidadTurbulencia,
           absorcion_extra_db_m: o.absorcion_extra_db_m ?? absorcionExtraDbM,
         })),
-      habitaciones,
+      habitaciones: habitaciones.map((h) => ({
+        ...h,
+        espesorParedM: h.espesorParedM ?? espesorParedM,
+        espesorSueloM: h.espesorSueloM ?? espesorSueloM,
+        espesorTechoM: h.espesorTechoM ?? espesorTechoM,
+        rugosidadParedM: h.rugosidadParedM ?? rugosidadParedM,
+        rugosidadSueloM: h.rugosidadSueloM ?? rugosidadSueloM,
+        rugosidadTechoM: h.rugosidadTechoM ?? rugosidadTechoM,
+      })),
       objetos,
     };
   };
@@ -1005,7 +1094,7 @@ export default function CrearViviendaPage() {
       potenciaTotalDbm,
       potenciaTotal: potenciaTotalLineal,
       numComponentes: taps.length,
-      anchoBandaMhz: 80,
+      anchoBandaMhz,
     };
   };
 
@@ -1454,6 +1543,7 @@ export default function CrearViviendaPage() {
 
     const resumen = [
       `Frecuencia: ${resultadoCobertura.modelo?.frecuenciaMhz ?? frecuenciaMhz} MHz`,
+      `Ancho de banda: ${resultadoCobertura.mimoMetricas?.anchoBandaMhz ?? anchoBandaMhz} MHz`,
       `Potencia TX: ${resultadoCobertura.modelo?.potenciaTxDbm ?? 20} dBm`,
       `Material paredes: ${resultadoCobertura.modelo?.materialPared ?? materialPared}`,
       `Sionna usado: ${resultadoCobertura.modelo?.sionnaUsado ? "Sí" : "No"}`,
@@ -1471,6 +1561,27 @@ export default function CrearViviendaPage() {
       pdf.text(linea, 22, y);
       y += 6;
     });
+
+    if (resultadoCobertura.materialesRF?.length) {
+      y += 6;
+      nuevaPaginaSiHaceFalta(45);
+      pdf.setTextColor(125, 211, 252);
+      pdf.setFontSize(15);
+      pdf.text("Materiales RF físicos", 18, y);
+      y += 8;
+      pdf.setFontSize(8);
+      pdf.setTextColor(220, 220, 220);
+
+      resultadoCobertura.materialesRF.slice(0, 10).forEach((m: any) => {
+        nuevaPaginaSiHaceFalta(7);
+        pdf.text(
+          `${m.rol ?? m.nombre ?? m.material ?? "material"} · epsR=${(m.epsR ?? 0).toFixed(3)} · sigma=${(m.sigmaS_m ?? 0).toExponential(2)} S/m · d=${(m.espesorM ?? 0).toFixed(3)} m · rug=${(m.rugosidadM ?? 0).toFixed(4)} m · loss=${(m.perdidaTotalDb ?? m.perdidaSlabDb ?? 0).toFixed(2)} dB`,
+          22,
+          y,
+        );
+        y += 5;
+      });
+    }
 
     if (resultadoCobertura.columnaTermica) {
       y += 6;
@@ -1727,8 +1838,16 @@ export default function CrearViviendaPage() {
       r?.mimoRealSionna || r?.mimoTermicoSionna || r?.mimoRealTermicoSionna,
   ) as any;
 
-  const hSionnaBase = primerRayoConH?.mimoRealSionna;
+  const hContainer = primerRayoConH?.mimoRealSionna ?? primerRayoConH?.mimoTermicoSionna ?? primerRayoConH?.mimoRealTermicoSionna;
+  const hSionnaBase =
+    hContainer?.HBaseSionna ??
+    hContainer?.H_base ??
+    hContainer?.base ??
+    (hContainer?.H_real ? hContainer : null);
   const hSionnaTermica =
+    hContainer?.HTermicaSionna ??
+    hContainer?.H_termica ??
+    hContainer?.termica ??
     primerRayoConH?.mimoTermicoSionna ??
     primerRayoConH?.mimoRealTermicoSionna ??
     primerRayoConH?.mimoRealSionnaTermica;
@@ -1899,6 +2018,18 @@ export default function CrearViviendaPage() {
                   onChange={(v) => actualizarHabitacion("materialTecho", v)}
                 />
 
+                <div className="border-t border-slate-800 pt-4 space-y-4">
+                  <p className="text-[9px] uppercase text-cyan-300 font-black">
+                    Propiedades RF habitación
+                  </p>
+                  <Control label="Espesor pared m" value={habitacionActual.espesorParedM ?? espesorParedM} min={0.005} max={0.6} step={0.005} onChange={(v) => actualizarHabitacion("espesorParedM", v)} />
+                  <Control label="Rugosidad pared m" value={habitacionActual.rugosidadParedM ?? rugosidadParedM} min={0} max={0.02} step={0.0005} onChange={(v) => actualizarHabitacion("rugosidadParedM", v)} />
+                  <Control label="Espesor suelo m" value={habitacionActual.espesorSueloM ?? espesorSueloM} min={0.005} max={0.6} step={0.005} onChange={(v) => actualizarHabitacion("espesorSueloM", v)} />
+                  <Control label="Rugosidad suelo m" value={habitacionActual.rugosidadSueloM ?? rugosidadSueloM} min={0} max={0.02} step={0.0005} onChange={(v) => actualizarHabitacion("rugosidadSueloM", v)} />
+                  <Control label="Espesor techo m" value={habitacionActual.espesorTechoM ?? espesorTechoM} min={0.005} max={0.6} step={0.005} onChange={(v) => actualizarHabitacion("espesorTechoM", v)} />
+                  <Control label="Rugosidad techo m" value={habitacionActual.rugosidadTechoM ?? rugosidadTechoM} min={0} max={0.02} step={0.0005} onChange={(v) => actualizarHabitacion("rugosidadTechoM", v)} />
+                </div>
+
                 <button
                   onClick={eliminarHabitacion}
                   className="w-full py-3 rounded-xl bg-red-700 text-white text-[10px] font-black uppercase hover:bg-red-600 transition-all"
@@ -1997,6 +2128,41 @@ export default function CrearViviendaPage() {
               <p className="mt-3 text-[9px] text-slate-500 uppercase leading-relaxed">
                 2.4 GHz mayor cobertura · 5 GHz equilibrio · 6 GHz más velocidad
                 y menor alcance.
+              </p>
+            </div>
+
+            <div className="mb-6 border-t border-slate-800 pt-5">
+              <h2 className="text-xs font-black uppercase tracking-widest text-cyan-300 mb-4">
+                Ancho de banda y materiales RF
+              </h2>
+
+              <select
+                value={anchoBandaMhz}
+                onChange={(e) => {
+                  setAnchoBandaMhz(Number(e.target.value));
+                  setResultadoCobertura(null);
+                  setCir([]);
+                  setCirResumen(null);
+                }}
+                className="w-full bg-black/70 border border-slate-700 rounded-xl p-3 text-xs text-white outline-none mb-4"
+              >
+                <option value={20}>20 MHz</option>
+                <option value={40}>40 MHz</option>
+                <option value={80}>80 MHz</option>
+                <option value={160}>160 MHz</option>
+                <option value={320}>320 MHz WiFi 7</option>
+              </select>
+
+              <Control label="Espesor pared m" value={espesorParedM} min={0.005} max={0.6} step={0.005} onChange={(v) => { setEspesorParedM(v); setResultadoCobertura(null); }} />
+              <Control label="Rugosidad pared m" value={rugosidadParedM} min={0} max={0.02} step={0.0005} onChange={(v) => { setRugosidadParedM(v); setResultadoCobertura(null); }} />
+              <Control label="Espesor suelo m" value={espesorSueloM} min={0.005} max={0.6} step={0.005} onChange={(v) => { setEspesorSueloM(v); setResultadoCobertura(null); }} />
+              <Control label="Rugosidad suelo m" value={rugosidadSueloM} min={0} max={0.02} step={0.0005} onChange={(v) => { setRugosidadSueloM(v); setResultadoCobertura(null); }} />
+              <Control label="Espesor techo m" value={espesorTechoM} min={0.005} max={0.6} step={0.005} onChange={(v) => { setEspesorTechoM(v); setResultadoCobertura(null); }} />
+              <Control label="Rugosidad techo m" value={rugosidadTechoM} min={0} max={0.02} step={0.0005} onChange={(v) => { setRugosidadTechoM(v); setResultadoCobertura(null); }} />
+
+              <p className="mt-3 text-[9px] text-slate-500 uppercase leading-relaxed">
+                Backend: εr(f), σ(f), tanδ, permitividad compleja, slab loss,
+                rugosidad/lambda, ruido kTB y resolución temporal 1/B.
               </p>
             </div>
 
@@ -2508,6 +2674,51 @@ export default function CrearViviendaPage() {
                   onChange={(v) => actualizarObjeto("material", v)}
                 />
 
+                {objetoActual.tipo !== "router" &&
+                  !esReceptor(objetoActual.tipo) &&
+                  objetoActual.tipo !== "columna_termica" && (
+                    <div className="border border-cyan-900/40 bg-cyan-950/10 rounded-xl p-4 space-y-4">
+                      <p className="text-[9px] uppercase text-cyan-300 font-black">
+                        Propiedades RF del objeto
+                      </p>
+                      <Control
+                        label="Espesor objeto m"
+                        value={objetoActual.espesorM ?? Math.max(0.01, Math.min(objetoActual.sx, objetoActual.sy, objetoActual.sz))}
+                        min={0.001}
+                        max={1}
+                        step={0.001}
+                        onChange={(v) => actualizarObjeto("espesorM", v)}
+                      />
+                      <Control
+                        label="Rugosidad objeto m"
+                        value={objetoActual.rugosidadM ?? 0.001}
+                        min={0}
+                        max={0.02}
+                        step={0.0005}
+                        onChange={(v) => actualizarObjeto("rugosidadM", v)}
+                      />
+                      <Control
+                        label="εr override opcional"
+                        value={objetoActual.epsR ?? 0}
+                        min={0}
+                        max={20}
+                        step={0.1}
+                        onChange={(v) => actualizarObjeto("epsR", v === 0 ? null : v)}
+                      />
+                      <Control
+                        label="σ override S/m opcional"
+                        value={objetoActual.sigmaS_m ?? 0}
+                        min={0}
+                        max={10}
+                        step={0.001}
+                        onChange={(v) => actualizarObjeto("sigmaS_m", v === 0 ? null : v)}
+                      />
+                      <p className="text-[9px] text-slate-500 uppercase leading-relaxed">
+                        Si dejas εr/σ a 0, main.py calcula valores por material y frecuencia.
+                      </p>
+                    </div>
+                  )}
+
                 {objetoActual.tipo === "columna_termica" && (
                   <div className="border border-orange-900/70 bg-orange-950/20 rounded-xl p-4 space-y-4">
                     <p className="text-[9px] uppercase text-orange-300 font-black">
@@ -2678,6 +2889,37 @@ export default function CrearViviendaPage() {
                     calculado en main.py desde rayos/CIR.
                   </p>
                 </div>
+
+                {resultadoCobertura.materialesRF?.length ? (
+                  <div className="bg-black/70 border border-sky-900 rounded-xl p-4 mt-4 space-y-3">
+                    <p className="text-[9px] uppercase text-sky-300 font-black">
+                      Materiales RF físicos
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      {resultadoCobertura.materialesRF.slice(0, 6).map((m: any, idx: number) => (
+                        <div key={`${m.nombre ?? m.material ?? "mat"}-${idx}`} className="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-1">
+                          <p className="text-[8px] uppercase text-slate-500 font-black">
+                            {m.rol ?? m.nombre ?? m.material ?? `Material ${idx + 1}`}
+                          </p>
+                          <p className="text-[10px] text-white uppercase">
+                            εr={(m.epsR ?? 0).toFixed?.(3) ?? m.epsR} · σ={(m.sigmaS_m ?? 0).toExponential?.(2) ?? m.sigmaS_m} S/m
+                          </p>
+                          <p className="text-[9px] text-cyan-300 uppercase">
+                            d={(m.espesorM ?? 0).toFixed?.(3) ?? m.espesorM} m · rug={(m.rugosidadM ?? 0).toFixed?.(4) ?? m.rugosidadM} m
+                          </p>
+                          <p className="text-[9px] text-orange-300 uppercase">
+                            loss={(m.perdidaTotalDb ?? m.perdidaSlabDb ?? 0).toFixed?.(2) ?? 0} dB
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <p className="text-[9px] text-slate-500 uppercase leading-relaxed">
+                      Ancho banda: {anchoBandaMhz} MHz · resolución temporal ≈ {(1000 / Math.max(anchoBandaMhz, 1)).toFixed(3)} ns · modelo con εr(f), σ(f), espesor y rugosidad.
+                    </p>
+                  </div>
+                ) : null}
 
                 {resultadoCobertura.columnaTermica && (
                   <div className="bg-black border border-orange-900 rounded-xl p-4 mt-4 space-y-3">
