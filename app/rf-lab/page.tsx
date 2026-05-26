@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { getJson } from "@/components/rf-lab/api";
-import { AntennaPanel } from "@/components/rf-lab/AntennaPanel";
-import { EnterprisePanel } from "@/components/rf-lab/EnterprisePanel";
-import { FullWavePanel } from "@/components/rf-lab/FullWavePanel";
-import { SionnaPanel } from "@/components/rf-lab/SionnaPanel";
-import { ValidationPanel } from "@/components/rf-lab/ValidationPanel";
-import { Button, Card, JsonBox, Metric, StatusPill, cx } from "@/components/rf-lab/ui";
+import { getJson } from "../../components/rf-lab/api";
+import { AntennaPanel } from "../../components/rf-lab/AntennaPanel";
+import { EnterprisePanel } from "../../components/rf-lab/EnterprisePanel";
+import { FullWavePanel } from "../../components/rf-lab/FullWavePanel";
+import { SionnaPanel } from "../../components/rf-lab/SionnaPanel";
+import { ValidationPanel } from "../../components/rf-lab/ValidationPanel";
+import { Button, Card, JsonBox, Metric, StatusPill, cx } from "../../components/rf-lab/ui";
 
 type Tab = "dashboard" | "antenna" | "fdtd" | "enterprise" | "sionna" | "validation" | "raw";
 
