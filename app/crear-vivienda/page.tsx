@@ -2675,6 +2675,7 @@ export default function CrearViviendaPage() {
               {resultadoCobertura && (
                 <CapaCobertura
                   resultado={resultadoCobertura}
+                  objetos={objetos}
                   mostrarHeatmap={mostrarHeatmap}
                   mostrarRayos={mostrarRayos}
                   mostrarRouterOptimo={mostrarRouterOptimo}
@@ -4603,6 +4604,7 @@ function CapaArraysMIMO({
 // ---------------------------------------------------------
 function CapaCobertura({
   resultado,
+  objetos,
   mostrarHeatmap,
   mostrarRayos,
   mostrarRouterOptimo,
@@ -4611,6 +4613,7 @@ function CapaCobertura({
   mostrarMesh,
 }: {
   resultado: ResultadoCobertura;
+  objetos: Objeto3D[];
   mostrarHeatmap: boolean;
   mostrarRayos: boolean;
   mostrarRouterOptimo: boolean;
@@ -4629,6 +4632,109 @@ function CapaCobertura({
 
   const heatmapMesh =
     resultado.heatmapConMesh ?? resultado.coberturaConMesh?.heatmap ?? [];
+
+  // -------------------------------------------------------
+  // Rayos visibles físicamente coherentes TX -> RX
+  // -------------------------------------------------------
+  // Con Sionna/difracción pueden llegar muchos candidatos geométricos.
+  // Para no pintar una "telaraña", el frontend solo dibuja rayos cuyo
+  // extremo final cae cerca de un receptor real de la escena. Si hay varios
+  // receptores, se permite maxRayos por receptor. Si no hay receptores
+  // reales colocados, se usa el comportamiento anterior como fallback.
+  const receptoresEscena = (objetos ?? []).filter((obj) => {
+    const tipo = (obj.tipo || "").toLowerCase().trim();
+    return ["receptor", "rx", "receiver", "cliente", "movil", "móvil", "portatil", "portátil"].includes(tipo);
+  });
+
+  const distancia3 = (a: { x: number; y: number; z: number }, b: { x: number; y: number; z: number }) => {
+    const dx = Number(a.x) - Number(b.x);
+    const dy = Number(a.y) - Number(b.y);
+    const dz = Number(a.z) - Number(b.z);
+    return Math.sqrt(dx * dx + dy * dy + dz * dz);
+  };
+
+  const puntoFinito = (p: any) =>
+    p &&
+    Number.isFinite(Number(p.x)) &&
+    Number.isFinite(Number(p.y)) &&
+    Number.isFinite(Number(p.z));
+
+  const receptorCercano = (p: any) => {
+    if (!puntoFinito(p) || receptoresEscena.length === 0) return null;
+
+    let mejor: Objeto3D | null = null;
+    let mejorD = Infinity;
+
+    for (const rx of receptoresEscena) {
+      const d = distancia3(
+        { x: Number(p.x), y: Number(p.y), z: Number(p.z) },
+        { x: Number(rx.x), y: Number(rx.y), z: Number(rx.z) },
+      );
+
+      if (d < mejorD) {
+        mejorD = d;
+        mejor = rx;
+      }
+    }
+
+    // Tolerancia suficiente para redondeos del backend y tamaño del icono RX.
+    return mejorD <= 0.85 ? mejor : null;
+  };
+
+  const normalizarPuntosRayo = (rayo: RayoCobertura) => {
+    const puntos = (rayo.puntos ?? []).filter(puntoFinito).map((p) => ({
+      x: Number(p.x),
+      y: Number(p.y),
+      z: Number(p.z),
+    }));
+
+    if (puntos.length < 2) return [];
+
+    if (receptoresEscena.length === 0) return puntos;
+
+    const primeroLlegaRx = receptorCercano(puntos[0]);
+    const ultimoLlegaRx = receptorCercano(puntos[puntos.length - 1]);
+
+    if (ultimoLlegaRx) return puntos;
+    if (primeroLlegaRx) return [...puntos].reverse();
+
+    return [];
+  };
+
+  const rayosVisibles = (resultado.rayos ?? [])
+    .map((rayo) => ({
+      ...rayo,
+      puntos: normalizarPuntosRayo(rayo),
+    }))
+    .filter((rayo) => {
+      if (!rayo.puntos || rayo.puntos.length < 2) return false;
+      if (!Number.isFinite(Number(rayo.potenciaDbm))) return false;
+
+      // Evitamos pintar caminos extremadamente débiles si hay muchos candidatos.
+      if (Number(rayo.potenciaDbm) < -115) return false;
+
+      // Si hay RX reales, obligatorio que el rayo termine cerca de alguno.
+      if (receptoresEscena.length > 0) {
+        return Boolean(receptorCercano(rayo.puntos[rayo.puntos.length - 1]));
+      }
+
+      return true;
+    })
+    .sort((a, b) => Number(b.potenciaDbm) - Number(a.potenciaDbm));
+
+  const firmasRayos = new Set<string>();
+  const limiteTotalRayos = Math.max(1, maxRayos) * Math.max(1, receptoresEscena.length);
+  const rayosVisiblesUnicos = rayosVisibles
+    .filter((rayo) => {
+      const firma = rayo.puntos
+        .map((p) => `${p.x.toFixed(2)},${p.y.toFixed(2)},${p.z.toFixed(2)}`)
+        .join("|");
+
+      if (firmasRayos.has(firma)) return false;
+      firmasRayos.add(firma);
+      return true;
+    })
+    .slice(0, limiteTotalRayos);
 
   return (
     <group>
@@ -4679,26 +4785,24 @@ function CapaCobertura({
         ))}
 
       {mostrarRayos &&
-        resultado.rayos
-          ?.slice()
-          .sort((a, b) => b.potenciaDbm - a.potenciaDbm)
-          .slice(0, maxRayos)
-          .map((rayo) => {
-            const puntos = rayo.puntos.map(
-              (p) => [p.x, p.y, p.z] as [number, number, number],
-            );
+        rayosVisiblesUnicos.map((rayo) => {
+          const puntos = rayo.puntos.map(
+            (p) => [p.x, p.y, p.z] as [number, number, number],
+          );
 
-            if (puntos.length < 2) return null;
+          if (puntos.length < 2) return null;
 
-            return (
-              <Line
-                key={rayo.id}
-                points={puntos}
-                color={colorRayo(rayo)}
-                lineWidth={grosorRayo(rayo)}
-              />
-            );
-          })}
+          return (
+            <Line
+              key={rayo.id}
+              points={puntos}
+              color={colorRayo(rayo)}
+              lineWidth={grosorRayo(rayo)}
+              transparent
+              opacity={Math.max(0.18, Math.min(1, (Number(rayo.potenciaDbm) + 115) / 55))}
+            />
+          );
+        })}
 
       {mostrarRouterOptimo && resultado.routerOptimo && (
         <group
