@@ -33,10 +33,20 @@ export function CurrentDistributionViewer({ result }: { result: any }) {
       <div className="rounded-3xl border border-zinc-800 bg-black p-4">
         <div className="mb-3 text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">Magnitud |I|</div>
         <div className="flex h-40 items-end gap-[2px]">
-          {mags.map((v, i) => {
-            const q = normalize01(v, min, max);
-            return <div key={i} className="flex-1 rounded-t bg-orange-500" style={{ height: `${8 + q * 92}%`, opacity: 0.25 + q * 0.75 }} title={`seg ${i}: ${v}`} />;
-          })}
+          {mags.map((v: number, i: number) => {
+  const q = normalize01(v, min, max);
+  return (
+    <div
+      key={i}
+      className="flex-1 rounded-t bg-orange-500"
+      style={{
+        height: `${8 + q * 92}%`,
+        opacity: 0.25 + q * 0.75,
+      }}
+      title={`seg ${i}: ${v}`}
+    />
+  );
+})}
         </div>
         <div className="mt-6 mb-3 text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">Fase</div>
         <div className="flex h-28 items-end gap-[2px]">
