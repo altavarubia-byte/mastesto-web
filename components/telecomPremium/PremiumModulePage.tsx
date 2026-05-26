@@ -11,6 +11,7 @@ import { Button, Card, CodeBox, Shell, Stat } from "./PremiumShell";
 import { AreaPro, BarPro, GaugePro, LinePro, PolarPro } from "./PremiumCharts";
 import { Mega3DScene, RFAntennaScene, Sionna3DScene } from "./ThreeScenes";
 import type { PremiumConfig } from "./configs";
+import { generateAIV1100Payload } from "@/lib/telecomPremium/aiV1100";
 
 function buildLocalPremiumAIPayload(moduleKey: ModuleKey, currentPayload: any, prompt: string) {
   const now = new Date().toISOString();
@@ -133,15 +134,14 @@ export default function PremiumModulePage({ config }: { config: PremiumConfig })
       setResult(data);
       if (autoExport) exportModule(config.key, generated);
     } catch (e: any) {
-      const generated = buildLocalPremiumAIPayload(config.key, payload, prompt);
+      const aiV1100 = generateAIV1100Payload(config.key, payload, prompt);
+      const generated = aiV1100.payload;
       setPayload(generated);
       setJsonText(JSON.stringify(generated, null, 2));
       setResult({
-        ok: true,
-        mode: "local-ai-fallback",
-        warning: "El endpoint IA del backend devolvió error. Se ha generado una configuración local premium para que no se rompa el frontend.",
+        ...aiV1100,
+        warning: "El endpoint IA del backend devolvió error. Se ha usado AI v1100 local para interpretar el prompt y generar el escenario.",
         backendError: e.message,
-        payload: generated,
       });
       if (autoExport) exportModule(config.key, generated);
     } finally {
@@ -153,15 +153,14 @@ export default function PremiumModulePage({ config }: { config: PremiumConfig })
     setLoading(true);
     try {
       if (endpoint.path.includes("/manual-ai/generate")) {
-        const generated = buildLocalPremiumAIPayload(config.key, payload, prompt);
+        const aiV1100 = generateAIV1100Payload(config.key, payload, prompt);
+        const generated = aiV1100.payload;
         setPayload(generated);
         setJsonText(JSON.stringify(generated, null, 2));
         setResult({
-          ok: true,
-          mode: "local-ai-fallback",
-          warning: "Este botón usaba un endpoint IA que no existe en el backend. Se ha aplicado IA local premium.",
+          ...aiV1100,
+          warning: "Este botón usaba un endpoint IA que no existe en el backend. Se ha aplicado AI v1100 local.",
           endpoint: endpoint.path,
-          payload: generated,
         });
         if (autoExport) exportModule(config.key, generated);
         return;
