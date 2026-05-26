@@ -1,5 +1,6 @@
 "use client";
 
+import { RFVisualDashboard } from "./RFVisualDashboard";
 import React from "react";
 import { Button, Card, Field, Metric, SelectField } from "./ui";
 import { postJson } from "./api";
@@ -192,6 +193,8 @@ export function AntennaPanel({
         </div>
       </Card>
 
+      
+
       <div className="grid gap-5">
         <div className="grid gap-4 md:grid-cols-4">
           <Metric
@@ -235,6 +238,13 @@ export function AntennaPanel({
         >
           <PatternPreview pattern={pattern} />
         </Card>
+
+        {state.rfResult && (
+  <RFVisualDashboard
+    result={state.rfResult}
+    fdtdResult={state.fdtdResult}
+  />
+)}
       </div>
     </div>
   );
