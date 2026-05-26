@@ -1,5 +1,5 @@
-import MegaTelecomLabPro from "@/components/mega/MegaTelecomLabPro";
+import ModuleLabPro from "@/components/telecom-pro/ModuleLabPro";
 
-export default function SionnaLabPage() {
-  return <MegaTelecomLabPro />;
+export default function Page() {
+  return <ModuleLabPro moduleKey="sionna" />;
 }

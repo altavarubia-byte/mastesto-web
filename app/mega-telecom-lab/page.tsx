@@ -1,5 +1,5 @@
-import MegaTelecomLabPro from "@/components/mega/MegaTelecomLabPro";
+import MegaProjectPro from "@/components/telecom-pro/MegaProjectPro";
 
 export default function Page() {
-  return <MegaTelecomLabPro />;
+  return <MegaProjectPro />;
 }
