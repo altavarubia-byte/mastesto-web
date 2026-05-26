@@ -46,6 +46,19 @@ type Habitacion = {
   rugosidadParedM?: number;
   rugosidadSueloM?: number;
   rugosidadTechoM?: number;
+  capasPared?: MaterialCapaRF[];
+  capasSuelo?: MaterialCapaRF[];
+  capasTecho?: MaterialCapaRF[];
+};
+
+type MaterialCapaRF = {
+  material: string;
+  espesorM: number;
+  rugosidadM?: number;
+  epsR?: number;
+  sigmaS_m?: number;
+  tanDelta?: number;
+  nombre?: string;
 };
 
 type Objeto3D = {
@@ -437,6 +450,20 @@ export default function CrearViviendaPage() {
   const [rugosidadParedM, setRugosidadParedM] = useState(0.0015);
   const [rugosidadSueloM, setRugosidadSueloM] = useState(0.002);
   const [rugosidadTechoM, setRugosidadTechoM] = useState(0.0005);
+
+  // Cerramiento multicapa global. Si está activo, el backend usa estas capas
+  // en lugar de una pared equivalente simple.
+  const [usarMulticapa, setUsarMulticapa] = useState(false);
+  const [presetMulticapa, setPresetMulticapa] = useState<"tabique" | "fachada1975" | "hormigon30" | "personalizado">("fachada1975");
+
+  // Sionna avanzado y FEKO automático.
+  const [diffractionEnabled, setDiffractionEnabled] = useState(false);
+  const [diffuseReflection, setDiffuseReflection] = useState(false);
+  const [maxDepthSionna, setMaxDepthSionna] = useState(5);
+  const [numSamplesSionna, setNumSamplesSionna] = useState(150000);
+  const [usarPatronFeko, setUsarPatronFeko] = useState(false);
+  const [fekoPatternTxContent, setFekoPatternTxContent] = useState("");
+  const [fekoPatternRxContent, setFekoPatternRxContent] = useState("");
 
   const [habitacionSeleccionada, setHabitacionSeleccionada] =
     useState("habitacion-1");
@@ -905,6 +932,49 @@ export default function CrearViviendaPage() {
     setResultadoCobertura(null);
   };
 
+  const capasParedMulticapa = (): MaterialCapaRF[] | undefined => {
+    if (!usarMulticapa) return undefined;
+
+    if (presetMulticapa === "tabique") {
+      return [
+        { nombre: "yeso interior", material: "pladur", espesorM: 0.015, rugosidadM: 0.0003 },
+        { nombre: "ladrillo hueco", material: "ladrillo", espesorM: 0.07, rugosidadM: 0.0015 },
+        { nombre: "yeso exterior", material: "pladur", espesorM: 0.015, rugosidadM: 0.0003 },
+      ];
+    }
+
+    if (presetMulticapa === "fachada1975") {
+      return [
+        { nombre: "yeso interior", material: "pladur", espesorM: 0.015, rugosidadM: 0.0003 },
+        { nombre: "tabique cerámico 7 cm", material: "ladrillo", espesorM: 0.07, rugosidadM: 0.0015 },
+        { nombre: "cámara de aire", material: "aire", espesorM: 0.08, rugosidadM: 0 },
+        { nombre: "panel hormigón", material: "hormigon", espesorM: 0.30, rugosidadM: 0.002 },
+      ];
+    }
+
+    if (presetMulticapa === "hormigon30") {
+      return [
+        { nombre: "hormigón estructural 30 cm", material: "hormigon", espesorM: 0.30, rugosidadM: rugosidadParedM },
+      ];
+    }
+
+    return [
+      { nombre: "capa equivalente", material: materialPared, espesorM: espesorParedM, rugosidadM: rugosidadParedM },
+    ];
+  };
+
+  const leerArchivoTexto = (file: File | undefined, setter: (txt: string) => void) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setter(String(reader.result || ""));
+      setResultadoCobertura(null);
+      setCir([]);
+      setCirResumen(null);
+    };
+    reader.readAsText(file);
+  };
+
   // ---------------------------------------------------------
   // PAYLOAD PARA BACKEND: SIONNA, CIR, MIMO Y ANTENAS
   // ---------------------------------------------------------
@@ -923,6 +993,7 @@ export default function CrearViviendaPage() {
       rugosidadParedM,
       rugosidadSueloM,
       rugosidadTechoM,
+      capasPared: capasParedMulticapa(),
       parametrosCIR: {
         anchoBandaMhz,
         numTaps: 128,
@@ -942,6 +1013,13 @@ export default function CrearViviendaPage() {
         polarizationTx,
         polarizationRx,
         noiseFigureDb,
+        diffractionEnabled,
+        diffuseReflection,
+        maxDepth: maxDepthSionna,
+        numSamples: numSamplesSionna,
+        usarPatronFeko,
+        fekoPatternTxContent,
+        fekoPatternRxContent,
         incluirHeatmapCanal: true,
       },
       columnaTermica: objetos
@@ -2182,6 +2260,72 @@ export default function CrearViviendaPage() {
                 permitividad compleja εc=ε′−jε″, rugosidad/lambda, ruido kTB y resolución temporal 1/B.
                 La rugosidad editable es la de cerramientos; la de objetos se asigna automáticamente en backend.
               </p>
+            </div>
+
+            <div className="mb-6 border-t border-cyan-900/50 pt-5 space-y-3">
+              <h2 className="text-xs font-black uppercase tracking-widest text-cyan-300">
+                Cerramiento multicapa
+              </h2>
+              <button
+                onClick={() => { setUsarMulticapa(!usarMulticapa); setResultadoCobertura(null); }}
+                className={`w-full py-3 rounded-xl text-[10px] font-black uppercase transition-all ${usarMulticapa ? "bg-cyan-400 text-black" : "bg-slate-800 text-slate-300"}`}
+              >
+                {usarMulticapa ? "Multicapa activado" : "Usar pared equivalente simple"}
+              </button>
+              {usarMulticapa && (
+                <>
+                  <select
+                    value={presetMulticapa}
+                    onChange={(e) => { setPresetMulticapa(e.target.value as any); setResultadoCobertura(null); }}
+                    className="w-full bg-black/70 border border-slate-700 rounded-xl p-3 text-xs text-white outline-none"
+                  >
+                    <option value="fachada1975">Fachada 1975: yeso + tabique + cámara + hormigón 30cm</option>
+                    <option value="tabique">Tabique interior: yeso + ladrillo 7cm + yeso</option>
+                    <option value="hormigon30">Hormigón macizo 30cm</option>
+                    <option value="personalizado">Personalizado equivalente</option>
+                  </select>
+                  <p className="text-[9px] text-slate-500 uppercase leading-relaxed">
+                    El backend calcula cada capa con εr(f), σ(f), permitividad compleja, espesor, interfaces Fresnel y rugosidad. La habitación puede sobrescribirlo si más adelante añades capas por sala.
+                  </p>
+                </>
+              )}
+            </div>
+
+            <div className="mb-6 border-t border-purple-900/50 pt-5 space-y-3">
+              <h2 className="text-xs font-black uppercase tracking-widest text-purple-300">
+                Sionna avanzado / FEKO
+              </h2>
+              <button
+                onClick={() => { setDiffractionEnabled(!diffractionEnabled); setResultadoCobertura(null); }}
+                className={`w-full py-3 rounded-xl text-[10px] font-black uppercase transition-all ${diffractionEnabled ? "bg-purple-400 text-black" : "bg-slate-800 text-slate-300"}`}
+              >
+                Difracción Sionna: {diffractionEnabled ? "ON" : "OFF"}
+              </button>
+              <button
+                onClick={() => { setDiffuseReflection(!diffuseReflection); setResultadoCobertura(null); }}
+                className={`w-full py-3 rounded-xl text-[10px] font-black uppercase transition-all ${diffuseReflection ? "bg-purple-400 text-black" : "bg-slate-800 text-slate-300"}`}
+              >
+                Reflexión difusa: {diffuseReflection ? "ON" : "OFF"}
+              </button>
+              <Control label="Profundidad Sionna" value={maxDepthSionna} min={1} max={12} step={1} onChange={(v) => { setMaxDepthSionna(v); setResultadoCobertura(null); }} />
+              <Control label="Samples Sionna" value={numSamplesSionna} min={50000} max={1000000} step={50000} onChange={(v) => { setNumSamplesSionna(v); setResultadoCobertura(null); }} />
+              <button
+                onClick={() => { setUsarPatronFeko(!usarPatronFeko); setResultadoCobertura(null); }}
+                className={`w-full py-3 rounded-xl text-[10px] font-black uppercase transition-all ${usarPatronFeko ? "bg-fuchsia-400 text-black" : "bg-slate-800 text-slate-300"}`}
+              >
+                Patrón FEKO automático: {usarPatronFeko ? "ON" : "OFF"}
+              </button>
+              {usarPatronFeko && (
+                <div className="space-y-2">
+                  <label className="block text-[9px] text-slate-400 uppercase">Archivo FEKO TX .ffe/.csv</label>
+                  <input type="file" accept=".ffe,.csv,.txt" onChange={(e) => leerArchivoTexto(e.target.files?.[0], setFekoPatternTxContent)} className="w-full text-[10px] text-slate-300" />
+                  <label className="block text-[9px] text-slate-400 uppercase">Archivo FEKO RX .ffe/.csv</label>
+                  <input type="file" accept=".ffe,.csv,.txt" onChange={(e) => leerArchivoTexto(e.target.files?.[0], setFekoPatternRxContent)} className="w-full text-[10px] text-slate-300" />
+                  <p className="text-[9px] text-slate-500 uppercase leading-relaxed">
+                    Se envía el contenido al backend. Si el parser reconoce theta/phi/gain, corrige la H geométrica con ganancia angular FEKO. Sionna mantiene arrays iso/dipole salvo integración nativa custom pattern.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="mb-6 border-t border-orange-900/50 pt-5">
