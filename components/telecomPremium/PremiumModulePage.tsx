@@ -12,6 +12,66 @@ import { AreaPro, BarPro, GaugePro, LinePro, PolarPro } from "./PremiumCharts";
 import { Mega3DScene, RFAntennaScene, Sionna3DScene } from "./ThreeScenes";
 import type { PremiumConfig } from "./configs";
 
+function buildLocalPremiumAIPayload(moduleKey: ModuleKey, currentPayload: any, prompt: string) {
+  const now = new Date().toISOString();
+
+  const upgrades: Record<string, any> = {
+    rf: {
+      aiPreset: "rf-premium-local",
+      sweep: { ...(currentPayload.sweep || {}), points: Math.max(201, Number(currentPayload.sweep?.points ?? 201)) },
+      validation: { ...(currentPayload.validation || {}), meshConvergence: true, chamberSynthetic: true },
+    },
+    sionna: {
+      aiPreset: "sionna-premium-local",
+      maxDepth: Math.max(6, Number(currentPayload.maxDepth ?? 6)),
+      samplesPerSrc: Math.max(1000000, Number(currentPayload.samplesPerSrc ?? 1000000)),
+      forceFallback: currentPayload.forceFallback ?? true,
+    },
+    optical: {
+      aiPreset: "optical-premium-local",
+      marginDb: Math.max(3, Number(currentPayload.marginDb ?? 3)),
+      wdm: { ...(currentPayload.wdm || {}), channels: Math.max(8, Number(currentPayload.wdm?.channels ?? 8)) },
+    },
+    dsp: {
+      aiPreset: "dsp-premium-local",
+      stft: { ...(currentPayload.stft || {}), nFft: Math.max(512, Number(currentPayload.stft?.nFft ?? 512)) },
+      vad: { ...(currentPayload.vad || {}), threshold: Number(currentPayload.vad?.threshold ?? 0.05) },
+    },
+    electronics: {
+      aiPreset: "electronics-premium-local",
+      pcb: { ...(currentPayload.pcb || {}), layers: Math.max(4, Number(currentPayload.pcb?.layers ?? 4)) },
+    },
+    energy: {
+      aiPreset: "energy-premium-local",
+      cost: { ...(currentPayload.cost || {}), eurKWh: Number(currentPayload.cost?.eurKWh ?? 0.18) },
+    },
+    iot: {
+      aiPreset: "iot-premium-local",
+      events: { motion: true, temperature: true, presence: true, ...(currentPayload.events || {}) },
+    },
+    transmissionLines: {
+      aiPreset: "transmission-lines-premium-local",
+      stub: { ...(currentPayload.stub || {}), enabled: true },
+    },
+    industrial: {
+      aiPreset: "industrial-premium-local",
+      quality: { ...(currentPayload.quality || {}), hasReports: true, hasValidation: true },
+    },
+  };
+
+  return {
+    ...currentPayload,
+    ...(upgrades[moduleKey] || {}),
+    ai: {
+      mode: "local-fallback",
+      reason: "El backend no tiene activo /telecom/v500000000/manual-ai/generate",
+      prompt,
+      generatedAt: now,
+    },
+  };
+}
+
+
 export default function PremiumModulePage({ config }: { config: PremiumConfig }) {
   const [payload, setPayload] = useState<any>(config.initialPayload);
   const [jsonText, setJsonText] = useState(JSON.stringify(config.initialPayload, null, 2));
@@ -73,7 +133,17 @@ export default function PremiumModulePage({ config }: { config: PremiumConfig })
       setResult(data);
       if (autoExport) exportModule(config.key, generated);
     } catch (e: any) {
-      setResult({ ok: false, error: e.message });
+      const generated = buildLocalPremiumAIPayload(config.key, payload, prompt);
+      setPayload(generated);
+      setJsonText(JSON.stringify(generated, null, 2));
+      setResult({
+        ok: true,
+        mode: "local-ai-fallback",
+        warning: "El endpoint IA del backend devolvió error. Se ha generado una configuración local premium para que no se rompa el frontend.",
+        backendError: e.message,
+        payload: generated,
+      });
+      if (autoExport) exportModule(config.key, generated);
     } finally {
       setLoading(false);
     }
@@ -82,6 +152,20 @@ export default function PremiumModulePage({ config }: { config: PremiumConfig })
   async function executeEndpoint(endpoint: EndpointDef) {
     setLoading(true);
     try {
+      if (endpoint.path.includes("/manual-ai/generate")) {
+        const generated = buildLocalPremiumAIPayload(config.key, payload, prompt);
+        setPayload(generated);
+        setJsonText(JSON.stringify(generated, null, 2));
+        setResult({
+          ok: true,
+          mode: "local-ai-fallback",
+          warning: "Este botón usaba un endpoint IA que no existe en el backend. Se ha aplicado IA local premium.",
+          endpoint: endpoint.path,
+          payload: generated,
+        });
+        if (autoExport) exportModule(config.key, generated);
+        return;
+      }
       setResult(await runEndpoint(endpoint, payload));
     } catch (e: any) {
       setResult({ ok: false, endpoint: endpoint.path, error: e.message });
