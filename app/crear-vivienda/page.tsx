@@ -128,6 +128,10 @@ type RayoCobertura = {
   dopplerPersonaHz?: number;
   perdidaPersonaDb?: number;
   modeloInteraccionPersona?: string;
+  esDifractado?: boolean;
+  tiposInteraccionSionna?: string[];
+  tipoVisual?: string;
+  objetosInteractuados?: number[];
   puntos: {
     x: number;
     y: number;
@@ -225,7 +229,11 @@ type ResultadoCobertura = {
     rayosTotales?: number;
     rayosDirectos?: number;
     rayosReflejados?: number;
+    rayosDifractados?: number;
     rayosOrigenSionna?: number;
+    diffractionEnabled?: boolean;
+    fekoPreparado?: boolean;
+    fekoUsado?: boolean;
   };
 
   heatmapConMesh?: PuntoHeatmap[];
@@ -411,6 +419,29 @@ type ResultadoCobertura = {
     sinAleatoriedadArtificial?: boolean;
     sionnaUsado?: boolean;
     advertencia?: string;
+  };
+  modeloAvanzado?: {
+    difraccion?: string;
+    rugosidad?: string;
+    multicapa?: string;
+    feko?: string;
+    polarizacion?: string;
+    [key: string]: any;
+  };
+  validacionFekoSionna?: {
+    ok?: boolean;
+    sionnaUsado?: boolean;
+    fekoPreparado?: boolean;
+    fekoTxImportado?: boolean;
+    fekoRxImportado?: boolean;
+    polarizacionTx?: string;
+    polarizacionRx?: string;
+    acoploPolarizacionDb?: number;
+    rayosDifractados?: number;
+    nota?: string;
+    fekoTxParse?: any;
+    fekoRxParse?: any;
+    [key: string]: any;
   };
 };
 
@@ -2317,12 +2348,12 @@ export default function CrearViviendaPage() {
               </button>
               {usarPatronFeko && (
                 <div className="space-y-2">
-                  <label className="block text-[9px] text-slate-400 uppercase">Archivo FEKO TX .ffe/.csv</label>
-                  <input type="file" accept=".ffe,.csv,.txt" onChange={(e) => leerArchivoTexto(e.target.files?.[0], setFekoPatternTxContent)} className="w-full text-[10px] text-slate-300" />
-                  <label className="block text-[9px] text-slate-400 uppercase">Archivo FEKO RX .ffe/.csv</label>
-                  <input type="file" accept=".ffe,.csv,.txt" onChange={(e) => leerArchivoTexto(e.target.files?.[0], setFekoPatternRxContent)} className="w-full text-[10px] text-slate-300" />
+                  <label className="block text-[9px] text-slate-400 uppercase">Archivo FEKO TX .ffe/.out/.farfield/.csv</label>
+                  <input type="file" accept=".ffe,.out,.farfield,.csv,.txt" onChange={(e) => leerArchivoTexto(e.target.files?.[0], setFekoPatternTxContent)} className="w-full text-[10px] text-slate-300" />
+                  <label className="block text-[9px] text-slate-400 uppercase">Archivo FEKO RX .ffe/.out/.farfield/.csv</label>
+                  <input type="file" accept=".ffe,.out,.farfield,.csv,.txt" onChange={(e) => leerArchivoTexto(e.target.files?.[0], setFekoPatternRxContent)} className="w-full text-[10px] text-slate-300" />
                   <p className="text-[9px] text-slate-500 uppercase leading-relaxed">
-                    Se envía el contenido al backend. Si el parser reconoce theta/phi/gain, corrige la H geométrica con ganancia angular FEKO. Sionna mantiene arrays iso/dipole salvo integración nativa custom pattern.
+                    Se envía el contenido al backend. Si el parser reconoce theta/phi/gain o Etheta/Ephi complejos, corrige la H geométrica con ganancia angular, polarización y RHCP/LHCP. Si no subes FEKO, queda preparado sin fingir antena real.
                   </p>
                 </div>
               )}
@@ -2553,7 +2584,7 @@ export default function CrearViviendaPage() {
                     resultadoCobertura.rayos?.length ??
                     0}{" "}
                   · Directos: {resultadoCobertura.modelo?.rayosDirectos ?? 0} ·
-                  Reflejados: {resultadoCobertura.modelo?.rayosReflejados ?? 0}{" "}
+                  Reflejados: {resultadoCobertura.modelo?.rayosReflejados ?? 0} · Difractados: {resultadoCobertura.modelo?.rayosDifractados ?? resultadoCobertura.validacionFekoSionna?.rayosDifractados ?? 0}{" "}
                   · RX: {resultadoCobertura.modelo?.receptoresDetectados ?? 0}
                 </p>
               </div>
@@ -3055,6 +3086,58 @@ export default function CrearViviendaPage() {
                     </p>
                   </div>
                 ) : null}
+
+                {resultadoCobertura.modeloAvanzado && (
+                  <div className="bg-black/70 border border-indigo-900 rounded-xl p-4 mt-4 space-y-3">
+                    <p className="text-[9px] uppercase text-indigo-300 font-black">
+                      Modelo avanzado Sionna / RF
+                    </p>
+                    <div className="space-y-2 text-[9px] text-slate-400 uppercase leading-relaxed">
+                      <p>Difracción: {resultadoCobertura.modeloAvanzado.difraccion ?? "activable"}</p>
+                      <p>Rugosidad: {resultadoCobertura.modeloAvanzado.rugosidad ?? "Rayleigh / Beckmann / Kirchhoff"}</p>
+                      <p>Multicapa: {resultadoCobertura.modeloAvanzado.multicapa ?? "slab + Fresnel + rugosidad por capa"}</p>
+                      <p>FEKO: {resultadoCobertura.modeloAvanzado.feko ?? "preparado"}</p>
+                      <p>Polarización: {resultadoCobertura.modeloAvanzado.polarizacion ?? "V/H/RHCP/LHCP"}</p>
+                    </div>
+                  </div>
+                )}
+
+                {resultadoCobertura.validacionFekoSionna && (
+                  <div className="bg-black/70 border border-fuchsia-900 rounded-xl p-4 mt-4 space-y-3">
+                    <p className="text-[9px] uppercase text-fuchsia-300 font-black">
+                      Estado FEKO ↔ Sionna
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                        <p className="text-[8px] text-slate-500 uppercase font-black">FEKO TX</p>
+                        <p className={`text-[10px] font-black uppercase ${resultadoCobertura.validacionFekoSionna.fekoTxImportado ? "text-emerald-300" : "text-slate-400"}`}>
+                          {resultadoCobertura.validacionFekoSionna.fekoTxImportado ? "Importado" : "Preparado"}
+                        </p>
+                      </div>
+                      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                        <p className="text-[8px] text-slate-500 uppercase font-black">FEKO RX</p>
+                        <p className={`text-[10px] font-black uppercase ${resultadoCobertura.validacionFekoSionna.fekoRxImportado ? "text-emerald-300" : "text-slate-400"}`}>
+                          {resultadoCobertura.validacionFekoSionna.fekoRxImportado ? "Importado" : "Preparado"}
+                        </p>
+                      </div>
+                      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                        <p className="text-[8px] text-slate-500 uppercase font-black">Polarización</p>
+                        <p className="text-[10px] text-white font-black uppercase">
+                          {resultadoCobertura.validacionFekoSionna.polarizacionTx ?? polarizationTx} → {resultadoCobertura.validacionFekoSionna.polarizacionRx ?? polarizationRx}
+                        </p>
+                      </div>
+                      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                        <p className="text-[8px] text-slate-500 uppercase font-black">Difracción</p>
+                        <p className="text-[10px] text-cyan-300 font-black uppercase">
+                          {resultadoCobertura.validacionFekoSionna.rayosDifractados ?? resultadoCobertura.modelo?.rayosDifractados ?? 0} rayos
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-[9px] text-slate-500 uppercase leading-relaxed">
+                      {resultadoCobertura.validacionFekoSionna.nota ?? "FEKO queda preparado: al subir .ffe/.out/.farfield se aplican ganancia angular y polarización. Sin archivo, no se finge patrón real."}
+                    </p>
+                  </div>
+                )}
 
                 {resultadoCobertura.columnaTermica && (
                   <div className="bg-black border border-orange-900 rounded-xl p-4 mt-4 space-y-3">
@@ -4920,6 +5003,18 @@ function colorRayo(rayo: any) {
     return "#ef4444";
   }
 
+  if (rayo.esDifractado || rayo.tipo === "difractado" || rayo.tipoVisual === "difractado") {
+    return "#00d4ff";
+  }
+
+  if (rayo.tipo === "difuso" || rayo.tipoVisual === "difuso") {
+    return "#60a5fa";
+  }
+
+  if (rayo.tipo === "refractado" || rayo.tipoVisual === "refractado") {
+    return "#14b8a6";
+  }
+
   if (rayo.tipo === "directo") {
     return "#22c55e";
   }
@@ -4942,6 +5037,10 @@ function grosorRayo(rayo: any) {
     rayo.tipoVisual === "afectado_persona"
   ) {
     return 5;
+  }
+
+  if (rayo.esDifractado || rayo.tipo === "difractado" || rayo.tipoVisual === "difractado") {
+    return 4;
   }
 
   const p = rayo.potenciaDbm ?? -90;
