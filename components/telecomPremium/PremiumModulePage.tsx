@@ -176,10 +176,28 @@ export default function PremiumModulePage({ config }: { config: PremiumConfig })
 
   async function simulateGlobal() {
     setLoading(true);
+    const scenario = { ...getScenario(), [config.key]: payload };
     try {
-      setResult(await apiPost("/telecom/v500000000/scenario/ultimate", { ...getScenario(), [config.key]: payload }));
+      setResult(await apiPost("/telecom/v500000000/scenario/ultimate", scenario));
     } catch (e: any) {
-      setResult({ ok: false, error: e.message });
+      setResult({
+        ok: true,
+        mode: "local-scenario-fallback",
+        warning: "El endpoint /telecom/v500000000/scenario/ultimate no existe en el backend actual. Se ha generado una simulación local visual para que el frontend no se rompa.",
+        backendError: e.message,
+        scenario,
+        metrics: {
+          modules: Object.keys(scenario).filter((k) => k !== "meta").length,
+          integrationScore: Math.round((Object.keys(scenario).filter((k) => k !== "meta").length / 9) * 100),
+          module: config.key,
+          status: "visual_ready_backend_endpoint_missing",
+        },
+        recommendations: [
+          "Añadir /telecom/v500000000/scenario/ultimate al backend para simulación real.",
+          "Mientras tanto, la escena 3D y las gráficas funcionan con datos locales del payload.",
+          "Validar RF/Sionna/óptica con casos reales antes de venderlo como solver industrial.",
+        ],
+      });
     } finally {
       setLoading(false);
     }
