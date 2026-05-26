@@ -50,10 +50,20 @@ export function CurrentDistributionViewer({ result }: { result: any }) {
         </div>
         <div className="mt-6 mb-3 text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">Fase</div>
         <div className="flex h-28 items-end gap-[2px]">
-          {phases.map((v, i) => {
-            const q = normalize01(v, pmin, pmax);
-            return <div key={i} className="flex-1 rounded-t bg-sky-400" style={{ height: `${8 + q * 92}%`, opacity: 0.25 + q * 0.75 }} title={`seg ${i}: ${v.toFixed(3)} rad`} />;
-          })}
+          {phases.map((v: number, i: number) => {
+  const q = normalize01(v, pmin, pmax);
+  return (
+    <div
+      key={i}
+      className="flex-1 rounded-t bg-sky-400"
+      style={{
+        height: `${8 + q * 92}%`,
+        opacity: 0.25 + q * 0.75,
+      }}
+      title={`seg ${i}: ${v.toFixed(3)} rad`}
+    />
+  );
+})}
         </div>
       </div>
     </Card>
