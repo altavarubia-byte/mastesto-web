@@ -68,6 +68,12 @@ type Objeto3D = {
   sigma_v_mps?: number;
   atenuacion_base_db?: number;
   delay_extra_base_ns?: number;
+
+  // Parámetros físicos avanzados de columna térmica
+  pressure_hpa?: number;
+  humidity_rel?: number;
+  turbulence_strength?: number;
+  absorcion_extra_db_m?: number;
 };
 
 type PuntoHeatmap = {
@@ -224,7 +230,12 @@ type ResultadoCobertura = {
     arraySpacingLambda: number;
     arraysConfiguradosEnSionna: boolean;
     nota?: string;
-    catalogoAntenas?: { id: string; nombre: string; sionnaPattern: string; fekoFuturo: boolean }[];
+    catalogoAntenas?: {
+      id: string;
+      nombre: string;
+      sionnaPattern: string;
+      fekoFuturo: boolean;
+    }[];
     antennaTypeTx?: string;
     antennaTypeRx?: string;
     polarizationTx?: string;
@@ -291,6 +302,18 @@ type ResultadoCobertura = {
     fdSigmaHz?: number;
     atenuacionDb?: number;
     delayExtraNs?: number;
+    longitudDentroColumnaM?: number;
+    TmediaK?: number;
+    nAmb?: number;
+    nHotMedio?: number;
+    deltaN?: number;
+    faseExtraRad?: number;
+    gradienteTermicoKPorM?: number;
+    perdidaTurbulenciaDb?: number;
+    perdidaAbsorcionDb?: number;
+    modeloFisico?: string;
+    pathsResumen?: any[];
+    columna?: any;
     nota?: string;
     motivo?: string;
     [key: string]: any;
@@ -380,19 +403,23 @@ export default function CrearViviendaPage() {
   const [calculandoCobertura, setCalculandoCobertura] = useState(false);
   const [generandoRender, setGenerandoRender] = useState(false);
   const [imagenRender, setImagenRender] = useState("");
-  const [modeloGlb,setModeloGlb]=useState("");
-  const [generandoGlb,setGenerandoGlb]=useState(false);
+  const [modeloGlb, setModeloGlb] = useState("");
+  const [generandoGlb, setGenerandoGlb] = useState(false);
   const [mostrarMesh, setMostrarMesh] = useState(true);
   const [mostrarHeatmap, setMostrarHeatmap] = useState(true);
   const [mostrarRayos, setMostrarRayos] = useState(true);
   const [mostrarRouterOptimo, setMostrarRouterOptimo] = useState(true);
-  const [modoHeatmap, setModoHeatmap] = useState<"potencia" | "delay" | "doppler">("potencia");
+  const [modoHeatmap, setModoHeatmap] = useState<
+    "potencia" | "delay" | "doppler"
+  >("potencia");
   const [txRows, setTxRows] = useState(1);
   const [txCols, setTxCols] = useState(1);
   const [rxRows, setRxRows] = useState(1);
   const [rxCols, setRxCols] = useState(1);
   const [arraySpacingLambda, setArraySpacingLambda] = useState(0.5);
-  const [mimoMode, setMimoMode] = useState<"siso" | "beamforming" | "multiplexing" | "diversity">("siso");
+  const [mimoMode, setMimoMode] = useState<
+    "siso" | "beamforming" | "multiplexing" | "diversity"
+  >("siso");
   const [antennaTypeTx, setAntennaTypeTx] = useState("omni");
   const [antennaTypeRx, setAntennaTypeRx] = useState("omni");
   const [polarizationTx, setPolarizationTx] = useState("V");
@@ -401,6 +428,10 @@ export default function CrearViviendaPage() {
   const [temperaturaColumnaC, setTemperaturaColumnaC] = useState(327);
   const [velocidadColumnaMps, setVelocidadColumnaMps] = useState(2);
   const [turbulenciaColumnaMps, setTurbulenciaColumnaMps] = useState(0.5);
+  const [presionColumnaHpa, setPresionColumnaHpa] = useState(1013.25);
+  const [humedadColumnaRel, setHumedadColumnaRel] = useState(0.45);
+  const [intensidadTurbulencia, setIntensidadTurbulencia] = useState(0.35);
+  const [absorcionExtraDbM, setAbsorcionExtraDbM] = useState(0.02);
 
   const habitacionActual = habitaciones.find(
     (h) => h.id === habitacionSeleccionada,
@@ -408,18 +439,43 @@ export default function CrearViviendaPage() {
 
   const objetoActual = objetos.find((o) => o.id === objetoSeleccionado);
 
-  const velocidadRxMps = unidadVelocidad === "kmh" ? velocidadRx / 3.6 : velocidadRx;
+  const velocidadRxMps =
+    unidadVelocidad === "kmh" ? velocidadRx / 3.6 : velocidadRx;
 
   const esReceptor = (tipo: string) =>
     tipo === "receptor" || tipo === "rx" || tipo === "receiver";
 
-  const esMovibleEnPlano = (tipo: string) => tipo === "router" || esReceptor(tipo);
+  const esMovibleEnPlano = (tipo: string) =>
+    tipo === "router" || esReceptor(tipo);
 
   const aplicarTipoObjeto = (tipo: string) => {
     const configs: Record<string, Partial<Objeto3D>> = {
-      router: { sx: 0.35, sy: 0.35, sz: 0.35, color: "#f97316", material: undefined },
-      receptor: { sx: 0.25, sy: 0.25, sz: 0.25, color: "#22c55e", material: "rx", y: 1.2 },
-      persona: { sx: 0.55, sy: 1.25, sz: 0.55, color: "#facc15", material: "persona", y: 0.9, velocidadMps: 0.8, recorridoM: 3, sentido: 1 },
+      router: {
+        sx: 0.35,
+        sy: 0.35,
+        sz: 0.35,
+        color: "#f97316",
+        material: undefined,
+      },
+      receptor: {
+        sx: 0.25,
+        sy: 0.25,
+        sz: 0.25,
+        color: "#22c55e",
+        material: "rx",
+        y: 1.2,
+      },
+      persona: {
+        sx: 0.55,
+        sy: 1.25,
+        sz: 0.55,
+        color: "#facc15",
+        material: "persona",
+        y: 0.9,
+        velocidadMps: 0.8,
+        recorridoM: 3,
+        sentido: 1,
+      },
       columna_termica: {
         sx: 1.2,
         sy: 3,
@@ -434,14 +490,67 @@ export default function CrearViviendaPage() {
         sigma_v_mps: turbulenciaColumnaMps,
         atenuacion_base_db: 1.5,
         delay_extra_base_ns: 2,
+        pressure_hpa: presionColumnaHpa,
+        humidity_rel: humedadColumnaRel,
+        turbulence_strength: intensidadTurbulencia,
+        absorcion_extra_db_m: absorcionExtraDbM,
       },
-      sofa: { sx: 1.8, sy: 0.6, sz: 0.8, color: "#7c2d12", material: "tejido", y: 0.4 },
-      mesa: { sx: 1.2, sy: 0.25, sz: 0.8, color: "#92400e", material: "madera", y: 0.4 },
-      silla: { sx: 0.5, sy: 0.8, sz: 0.5, color: "#57534e", material: "madera", y: 0.4 },
-      tv: { sx: 1.3, sy: 0.08, sz: 0.8, color: "#020617", material: "metal", y: 1.4 },
-      cama: { sx: 2, sy: 0.45, sz: 1.4, color: "#1e3a8a", material: "tejido", y: 0.4 },
-      armario: { sx: 1.2, sy: 2, sz: 0.5, color: "#44403c", material: "madera", y: 1 },
-      ventana: { sx: 1.8, sy: 1.1, sz: 0.08, color: "#7dd3fc", material: "cristal", y: 1.5 },
+      sofa: {
+        sx: 1.8,
+        sy: 0.6,
+        sz: 0.8,
+        color: "#7c2d12",
+        material: "tejido",
+        y: 0.4,
+      },
+      mesa: {
+        sx: 1.2,
+        sy: 0.25,
+        sz: 0.8,
+        color: "#92400e",
+        material: "madera",
+        y: 0.4,
+      },
+      silla: {
+        sx: 0.5,
+        sy: 0.8,
+        sz: 0.5,
+        color: "#57534e",
+        material: "madera",
+        y: 0.4,
+      },
+      tv: {
+        sx: 1.3,
+        sy: 0.08,
+        sz: 0.8,
+        color: "#020617",
+        material: "metal",
+        y: 1.4,
+      },
+      cama: {
+        sx: 2,
+        sy: 0.45,
+        sz: 1.4,
+        color: "#1e3a8a",
+        material: "tejido",
+        y: 0.4,
+      },
+      armario: {
+        sx: 1.2,
+        sy: 2,
+        sz: 0.5,
+        color: "#44403c",
+        material: "madera",
+        y: 1,
+      },
+      ventana: {
+        sx: 1.8,
+        sy: 1.1,
+        sz: 0.08,
+        color: "#7dd3fc",
+        material: "cristal",
+        y: 1.5,
+      },
     };
 
     const config = configs[tipo] || {};
@@ -463,8 +572,16 @@ export default function CrearViviendaPage() {
               T_hot_K: config.T_hot_K ?? o.T_hot_K,
               v_mean_mps: config.v_mean_mps ?? o.v_mean_mps,
               sigma_v_mps: config.sigma_v_mps ?? o.sigma_v_mps,
-              atenuacion_base_db: config.atenuacion_base_db ?? o.atenuacion_base_db,
-              delay_extra_base_ns: config.delay_extra_base_ns ?? o.delay_extra_base_ns,
+              atenuacion_base_db:
+                config.atenuacion_base_db ?? o.atenuacion_base_db,
+              delay_extra_base_ns:
+                config.delay_extra_base_ns ?? o.delay_extra_base_ns,
+              pressure_hpa: config.pressure_hpa ?? o.pressure_hpa,
+              humidity_rel: config.humidity_rel ?? o.humidity_rel,
+              turbulence_strength:
+                config.turbulence_strength ?? o.turbulence_strength,
+              absorcion_extra_db_m:
+                config.absorcion_extra_db_m ?? o.absorcion_extra_db_m,
             }
           : o,
       ),
@@ -530,14 +647,47 @@ export default function CrearViviendaPage() {
   const crearObjeto = (tipo: string) => {
     const base: Record<string, Partial<Objeto3D>> = {
       sofa: { sx: 1.8, sy: 0.6, sz: 0.8, color: "#7c2d12", material: "tejido" },
-      mesa: { sx: 1.2, sy: 0.25, sz: 0.8, color: "#92400e", material: "madera" },
-      silla: { sx: 0.5, sy: 0.8, sz: 0.5, color: "#57534e", material: "madera" },
+      mesa: {
+        sx: 1.2,
+        sy: 0.25,
+        sz: 0.8,
+        color: "#92400e",
+        material: "madera",
+      },
+      silla: {
+        sx: 0.5,
+        sy: 0.8,
+        sz: 0.5,
+        color: "#57534e",
+        material: "madera",
+      },
       tv: { sx: 1.3, sy: 0.08, sz: 0.8, color: "#020617", material: "metal" },
       cama: { sx: 2, sy: 0.45, sz: 1.4, color: "#1e3a8a", material: "tejido" },
       router: { sx: 0.35, sy: 0.35, sz: 0.35, color: "#f97316" },
-      armario: { sx: 1.2, sy: 2, sz: 0.5, color: "#44403c", material: "madera" },
-      receptor: { sx: 0.25, sy: 0.25, sz: 0.25, color: "#22c55e", material: "rx" },
-      persona: { sx: 0.55, sy: 1.25, sz: 0.55, color: "#facc15", material: "persona", velocidadMps: 0.8, recorridoM: 3, sentido: 1 },
+      armario: {
+        sx: 1.2,
+        sy: 2,
+        sz: 0.5,
+        color: "#44403c",
+        material: "madera",
+      },
+      receptor: {
+        sx: 0.25,
+        sy: 0.25,
+        sz: 0.25,
+        color: "#22c55e",
+        material: "rx",
+      },
+      persona: {
+        sx: 0.55,
+        sy: 1.25,
+        sz: 0.55,
+        color: "#facc15",
+        material: "persona",
+        velocidadMps: 0.8,
+        recorridoM: 3,
+        sentido: 1,
+      },
       columna_termica: {
         sx: 1.2,
         sy: 3,
@@ -551,8 +701,18 @@ export default function CrearViviendaPage() {
         sigma_v_mps: turbulenciaColumnaMps,
         atenuacion_base_db: 1.5,
         delay_extra_base_ns: 2,
+        pressure_hpa: presionColumnaHpa,
+        humidity_rel: humedadColumnaRel,
+        turbulence_strength: intensidadTurbulencia,
+        absorcion_extra_db_m: absorcionExtraDbM,
       },
-      ventana: { sx: 1.8, sy: 1.1, sz: 0.08, color: "#7dd3fc", material: "cristal" },
+      ventana: {
+        sx: 1.8,
+        sy: 1.1,
+        sz: 0.08,
+        color: "#7dd3fc",
+        material: "cristal",
+      },
     };
 
     const h = habitacionActual;
@@ -562,20 +722,40 @@ export default function CrearViviendaPage() {
       id: `${tipo}-${Date.now()}`,
       tipo,
       x: h ? h.x : 0,
-      y: tipo === "tv" ? 1.4 : tipo === "router" || tipo === "receptor" ? 1.2 : tipo === "persona" ? 0.9 : tipo === "columna_termica" ? 1.5 : tipo === "ventana" ? 1.5 : 0.4,
+      y:
+        tipo === "tv"
+          ? 1.4
+          : tipo === "router" || tipo === "receptor"
+            ? 1.2
+            : tipo === "persona"
+              ? 0.9
+              : tipo === "columna_termica"
+                ? 1.5
+                : tipo === "ventana"
+                  ? 1.5
+                  : 0.4,
       z: h ? h.z : 0,
       sx: config.sx || 1,
       sy: config.sy || 1,
       sz: config.sz || 1,
       color: config.color || "#ffffff",
       material: config.material,
-      temperaturaC: tipo === "columna_termica" ? temperaturaColumnaC : undefined,
+      temperaturaC:
+        tipo === "columna_termica" ? temperaturaColumnaC : undefined,
       T_amb_K: tipo === "columna_termica" ? 293.15 : undefined,
-      T_hot_K: tipo === "columna_termica" ? temperaturaColumnaC + 273.15 : undefined,
+      T_hot_K:
+        tipo === "columna_termica" ? temperaturaColumnaC + 273.15 : undefined,
       v_mean_mps: tipo === "columna_termica" ? velocidadColumnaMps : undefined,
-      sigma_v_mps: tipo === "columna_termica" ? turbulenciaColumnaMps : undefined,
+      sigma_v_mps:
+        tipo === "columna_termica" ? turbulenciaColumnaMps : undefined,
       atenuacion_base_db: tipo === "columna_termica" ? 1.5 : undefined,
       delay_extra_base_ns: tipo === "columna_termica" ? 2 : undefined,
+      pressure_hpa: tipo === "columna_termica" ? presionColumnaHpa : undefined,
+      humidity_rel: tipo === "columna_termica" ? humedadColumnaRel : undefined,
+      turbulence_strength:
+        tipo === "columna_termica" ? intensidadTurbulencia : undefined,
+      absorcion_extra_db_m:
+        tipo === "columna_termica" ? absorcionExtraDbM : undefined,
       direccionDeg: tipo === "persona" ? anguloMovimiento : undefined,
       sentido: tipo === "persona" ? 1 : undefined,
       velocidadMps: tipo === "persona" ? 0.8 : undefined,
@@ -597,6 +777,30 @@ export default function CrearViviendaPage() {
     );
 
     setResultadoCobertura(null);
+  };
+
+  const columnasTermicas = objetos.filter((o) => o.tipo === "columna_termica");
+  const hayColumnaTermica = columnasTermicas.length > 0;
+
+  const actualizarColumnasTermicas = (patch: Partial<Objeto3D>) => {
+    setObjetos((prev) =>
+      prev.map((o) =>
+        o.tipo === "columna_termica"
+          ? {
+              ...o,
+              ...patch,
+              T_hot_K:
+                typeof patch.temperaturaC === "number"
+                  ? patch.temperaturaC + 273.15
+                  : (patch.T_hot_K ?? o.T_hot_K),
+            }
+          : o,
+      ),
+    );
+
+    setResultadoCobertura(null);
+    setCir([]);
+    setCirResumen(null);
   };
 
   const eliminarSeleccionado = () => {
@@ -650,12 +854,17 @@ export default function CrearViviendaPage() {
           sy: o.sy,
           sz: o.sz,
           T_amb_K: o.T_amb_K ?? 293.15,
-          T_hot_K: o.T_hot_K ?? ((o.temperaturaC ?? temperaturaColumnaC) + 273.15),
+          T_hot_K:
+            o.T_hot_K ?? (o.temperaturaC ?? temperaturaColumnaC) + 273.15,
           temperaturaC: o.temperaturaC ?? temperaturaColumnaC,
           v_mean_mps: o.v_mean_mps ?? velocidadColumnaMps,
           sigma_v_mps: o.sigma_v_mps ?? turbulenciaColumnaMps,
           atenuacion_base_db: o.atenuacion_base_db ?? 1.5,
           delay_extra_base_ns: o.delay_extra_base_ns ?? 2,
+          pressure_hpa: o.pressure_hpa ?? presionColumnaHpa,
+          humidity_rel: o.humidity_rel ?? humedadColumnaRel,
+          turbulence_strength: o.turbulence_strength ?? intensidadTurbulencia,
+          absorcion_extra_db_m: o.absorcion_extra_db_m ?? absorcionExtraDbM,
         })),
       habitaciones,
       objetos,
@@ -672,9 +881,10 @@ export default function CrearViviendaPage() {
       return taps;
     }
 
-    const dominante = dopplers.reduce((max, v) =>
-      Math.abs(v) > Math.abs(max) ? v : max,
-    dopplers[0]);
+    const dominante = dopplers.reduce(
+      (max, v) => (Math.abs(v) > Math.abs(max) ? v : max),
+      dopplers[0],
+    );
 
     setDopplerActual(dominante);
 
@@ -691,29 +901,33 @@ export default function CrearViviendaPage() {
         : Array.isArray(resultado?.taps)
           ? resultado.taps
           : Array.isArray(resultado?.cir?.canales)
-            ? resultado.cir.canales.flatMap((canal: any) => canal.componentes ?? [])
+            ? resultado.cir.canales.flatMap(
+                (canal: any) => canal.componentes ?? [],
+              )
             : Array.isArray(resultado?.cir?.componentes)
               ? resultado.cir.componentes
               : Array.isArray(resultado?.cir?.taps)
                 ? resultado.cir.taps
                 : Array.isArray(resultado?.canales)
-                  ? resultado.canales.flatMap((canal: any) => canal.componentes ?? [])
+                  ? resultado.canales.flatMap(
+                      (canal: any) => canal.componentes ?? [],
+                    )
                   : [];
 
     return bruto
       .map((c: any, index: number) => {
         const delayNs = Number(
-  c.delayNs ??
-    c.retardoNs ??
-    c.tauNs ??
-    c.tau_ns ??
-    c.delay_ns ??
-    (typeof c.tauS === "number"
-      ? c.tauS * 1e9
-      : typeof c.tau_s === "number"
-        ? c.tau_s * 1e9
-        : 0),
-);
+          c.delayNs ??
+            c.retardoNs ??
+            c.tauNs ??
+            c.tau_ns ??
+            c.delay_ns ??
+            (typeof c.tauS === "number"
+              ? c.tauS * 1e9
+              : typeof c.tau_s === "number"
+                ? c.tau_s * 1e9
+                : 0),
+        );
 
         const potenciaDbm = Number(
           c.potenciaDbm ??
@@ -736,7 +950,10 @@ export default function CrearViviendaPage() {
           tap: c.tap ?? index,
         };
       })
-      .filter((c: MuestraCIR) => Number.isFinite(c.delayNs) && Number.isFinite(c.potenciaDbm))
+      .filter(
+        (c: MuestraCIR) =>
+          Number.isFinite(c.delayNs) && Number.isFinite(c.potenciaDbm),
+      )
       .sort((a: MuestraCIR, b: MuestraCIR) => a.delayNs - b.delayNs);
   };
 
@@ -757,18 +974,24 @@ export default function CrearViviendaPage() {
     const potenciasLineales = taps.map((tap) =>
       Math.pow(10, (tap.potenciaDbm ?? -120) / 10),
     );
-    const potenciaTotalLineal = potenciasLineales.reduce((acc, p) => acc + p, 0);
+    const potenciaTotalLineal = potenciasLineales.reduce(
+      (acc, p) => acc + p,
+      0,
+    );
 
     if (potenciaTotalLineal <= 0) return null;
 
     const retardoMedioNs =
-      taps.reduce((acc, tap, index) => acc + tap.delayNs * potenciasLineales[index], 0) /
-      potenciaTotalLineal;
+      taps.reduce(
+        (acc, tap, index) => acc + tap.delayNs * potenciasLineales[index],
+        0,
+      ) / potenciaTotalLineal;
 
     const delaySpreadRmsNs = Math.sqrt(
       taps.reduce(
         (acc, tap, index) =>
-          acc + Math.pow(tap.delayNs - retardoMedioNs, 2) * potenciasLineales[index],
+          acc +
+          Math.pow(tap.delayNs - retardoMedioNs, 2) * potenciasLineales[index],
         0,
       ) / potenciaTotalLineal,
     );
@@ -800,7 +1023,10 @@ export default function CrearViviendaPage() {
 
     const dopplerDominante =
       dopplers.length > 0
-        ? dopplers.reduce((max, v) => (Math.abs(v) > Math.abs(max) ? v : max), dopplers[0])
+        ? dopplers.reduce(
+            (max, v) => (Math.abs(v) > Math.abs(max) ? v : max),
+            dopplers[0],
+          )
         : dopplerActual;
 
     const delayBase =
@@ -810,9 +1036,7 @@ export default function CrearViviendaPage() {
       0;
 
     const retardoBase =
-      resumen?.retardoMedioNs ??
-      resultado.cirResumen?.retardoMedioNs ??
-      0;
+      resumen?.retardoMedioNs ?? resultado.cirResumen?.retardoMedioNs ?? 0;
 
     const minPot = Math.min(...resultado.heatmap.map((p) => p.potenciaDbm));
     const maxPot = Math.max(...resultado.heatmap.map((p) => p.potenciaDbm));
@@ -834,11 +1058,11 @@ export default function CrearViviendaPage() {
         dopplerHz:
           typeof p.dopplerHz === "number"
             ? p.dopplerHz
-            : Number((dopplerDominante * (0.35 + degradacion * 0.65)).toFixed(3)),
+            : Number(
+                (dopplerDominante * (0.35 + degradacion * 0.65)).toFixed(3),
+              ),
         numComponentes:
-          typeof p.numComponentes === "number"
-            ? p.numComponentes
-            : taps.length,
+          typeof p.numComponentes === "number" ? p.numComponentes : taps.length,
         modelo:
           p.modelo ??
           (resultado.modelo?.sionnaUsado
@@ -848,7 +1072,9 @@ export default function CrearViviendaPage() {
     });
   };
 
-  const prepararResultadoVisual = (resultado: ResultadoCobertura): ResultadoCobertura => {
+  const prepararResultadoVisual = (
+    resultado: ResultadoCobertura,
+  ): ResultadoCobertura => {
     const taps = actualizarDopplerDesdeBackend(normalizarCIR(resultado));
     const resumenBackend = extraerResumenCIR(resultado);
     const resumen = resumenBackend ?? calcularResumenDesdeTaps(taps);
@@ -860,7 +1086,11 @@ export default function CrearViviendaPage() {
 
     return {
       ...resultadoConResumen,
-      heatmapCanal: crearHeatmapCanalFallback(resultadoConResumen, taps, resumen),
+      heatmapCanal: crearHeatmapCanalFallback(
+        resultadoConResumen,
+        taps,
+        resumen,
+      ),
     };
   };
 
@@ -873,8 +1103,6 @@ export default function CrearViviendaPage() {
     });
 
     const enlace = document.createElement("a");
-
-    
 
     enlace.href = URL.createObjectURL(archivo);
     enlace.download = "vivienda-mastesto.json";
@@ -933,7 +1161,9 @@ export default function CrearViviendaPage() {
 
       const cirNormalizado = normalizarCIR(resultadoVisual);
       setCir(cirNormalizado);
-      setCirResumen(resultadoVisual.cirResumen ?? extraerResumenCIR(resultadoVisual));
+      setCirResumen(
+        resultadoVisual.cirResumen ?? extraerResumenCIR(resultadoVisual),
+      );
 
       if (cirNormalizado.length === 0 && modoCalculo === "sionna") {
         try {
@@ -950,7 +1180,9 @@ export default function CrearViviendaPage() {
           console.log("Resultado CIR:", resultadoCir);
 
           if (resCir.ok && resultadoCir?.ok) {
-            const cirEndpoint = actualizarDopplerDesdeBackend(normalizarCIR(resultadoCir));
+            const cirEndpoint = actualizarDopplerDesdeBackend(
+              normalizarCIR(resultadoCir),
+            );
             setCir(cirEndpoint);
             setCirResumen(extraerResumenCIR(resultadoCir));
           }
@@ -1005,7 +1237,9 @@ export default function CrearViviendaPage() {
 
       const cirNormalizado = normalizarCIR(resultadoVisual);
       setCir(cirNormalizado);
-      setCirResumen(resultadoVisual.cirResumen ?? extraerResumenCIR(resultadoVisual));
+      setCirResumen(
+        resultadoVisual.cirResumen ?? extraerResumenCIR(resultadoVisual),
+      );
     } catch (e) {
       console.error("Error en Sionna dinámico:", e);
     } finally {
@@ -1056,8 +1290,7 @@ export default function CrearViviendaPage() {
             let nuevoZ = obj.z + dirZ * velocidadPersona * dt * sentidoActual;
 
             const proyeccion =
-              (nuevoX - origenX) * dirX +
-              (nuevoZ - origenZ) * dirZ;
+              (nuevoX - origenX) * dirX + (nuevoZ - origenZ) * dirZ;
 
             let nuevoSentido: 1 | -1 = sentidoActual;
 
@@ -1107,73 +1340,72 @@ export default function CrearViviendaPage() {
   // EXPORTACIÓN: RENDER, GLB Y PDF
   // ---------------------------------------------------------
   const generarRenderPremium = async () => {
-  try {
-    setGenerandoRender(true);
-    setImagenRender("");
+    try {
+      setGenerandoRender(true);
+      setImagenRender("");
 
-    const datos = crearDatosVivienda();
+      const datos = crearDatosVivienda();
 
-    const res = await fetch(`${SIONNA_API_URL}/generar-render`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(datos),
-    });
+      const res = await fetch(`${SIONNA_API_URL}/generar-render`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(datos),
+      });
 
-    if (!res.ok) {
-      const error = await res.text();
+      if (!res.ok) {
+        const error = await res.text();
+        console.error(error);
+        alert("No se pudo generar el render premium.");
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+
+      setImagenRender(url);
+    } catch (error) {
       console.error(error);
-      alert("No se pudo generar el render premium.");
-      return;
+      alert("Error conectando con Blender render.");
+    } finally {
+      setGenerandoRender(false);
     }
-
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-
-    setImagenRender(url);
-  } catch (error) {
-    console.error(error);
-    alert("Error conectando con Blender render.");
-  } finally {
-    setGenerandoRender(false);
-  }
-};
+  };
 
   const generarModeloGLB = async () => {
-  try {
-    setGenerandoGlb(true);
-    setModeloGlb("");
+    try {
+      setGenerandoGlb(true);
+      setModeloGlb("");
 
-    const datos = crearDatosVivienda();
+      const datos = crearDatosVivienda();
 
-    const res = await fetch(`${SIONNA_API_URL}/generar-glb`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(datos),
-    });
+      const res = await fetch(`${SIONNA_API_URL}/generar-glb`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(datos),
+      });
 
-    if (!res.ok) {
-      const error = await res.text();
+      if (!res.ok) {
+        const error = await res.text();
+        console.error(error);
+        alert("No se pudo generar el modelo GLB.");
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+
+      setModeloGlb(url);
+    } catch (error) {
       console.error(error);
-      alert("No se pudo generar el modelo GLB.");
-      return;
+      alert("Error conectando con Blender GLB.");
+    } finally {
+      setGenerandoGlb(false);
     }
-
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-
-    setModeloGlb(url);
-  } catch (error) {
-    console.error(error);
-    alert("Error conectando con Blender GLB.");
-  } finally {
-    setGenerandoGlb(false);
-  }
-};
-
+  };
 
   const generarInformePDF = async () => {
     if (!resultadoCobertura) {
@@ -1202,7 +1434,11 @@ export default function CrearViviendaPage() {
     y += 9;
     pdf.setTextColor(180, 180, 180);
     pdf.setFontSize(10);
-    pdf.text("Ray tracing indoor · CIR · MIMO · Doppler · Columna térmica · FEKO-ready", 18, y);
+    pdf.text(
+      "Ray tracing indoor · CIR · MIMO · Doppler · Columna térmica · FEKO-ready",
+      18,
+      y,
+    );
 
     y += 8;
     pdf.text(`Fecha: ${fecha}`, 18, y);
@@ -1226,8 +1462,8 @@ export default function CrearViviendaPage() {
       `Zonas muertas: ${resultadoCobertura.estadisticas.porcentajeZonasMuertas}%`,
       `Puntos analizados: ${resultadoCobertura.estadisticas.puntosAnalizados}`,
       `Rayos totales: ${resultadoCobertura.rayos?.length ?? 0}`,
-      `Rayos directos: ${resultadoCobertura.modelo?.rayosDirectos ?? resultadoCobertura.rayos?.filter((r:any)=>r.tipo === "directo").length ?? 0}`,
-      `Rayos reflejados: ${resultadoCobertura.modelo?.rayosReflejados ?? resultadoCobertura.rayos?.filter((r:any)=>r.tipo === "reflejado").length ?? 0}`,
+      `Rayos directos: ${resultadoCobertura.modelo?.rayosDirectos ?? resultadoCobertura.rayos?.filter((r: any) => r.tipo === "directo").length ?? 0}`,
+      `Rayos reflejados: ${resultadoCobertura.modelo?.rayosReflejados ?? resultadoCobertura.rayos?.filter((r: any) => r.tipo === "reflejado").length ?? 0}`,
     ];
 
     resumen.forEach((linea) => {
@@ -1256,7 +1492,13 @@ export default function CrearViviendaPage() {
         `Doppler térmico medio: ${(ct.fdMeanHz ?? 0).toFixed(3)} Hz`,
         `Ensanchamiento Doppler: ${(ct.fdSigmaHz ?? 0).toFixed(3)} Hz`,
         `Atenuación adicional: ${(ct.atenuacionDb ?? 0).toFixed(2)} dB`,
-        `Retardo extra: ${(ct.delayExtraNs ?? 0).toFixed(3)} ns`,
+        `Retardo extra: ${(ct.delayExtraNs ?? 0).toFixed(6)} ns`,
+        `Presión: ${presionColumnaHpa.toFixed(0)} hPa`,
+        `Humedad relativa: ${(humedadColumnaRel * 100).toFixed(0)}%`,
+        `Índice n ambiente: ${(ct.nAmb ?? 0).toFixed(9)}`,
+        `Índice n caliente medio: ${(ct.nHotMedio ?? 0).toFixed(9)}`,
+        `Longitud dentro columna: ${(ct.longitudDentroColumnaM ?? 0).toFixed(4)} m`,
+        `Fase extra: ${(ct.faseExtraRad ?? 0).toFixed(6)} rad`,
       ];
 
       lineasColumna.forEach((linea) => {
@@ -1298,7 +1540,6 @@ export default function CrearViviendaPage() {
       y += lineas.length * 5 + 2;
     });
 
-
     y += 8;
     nuevaPaginaSiHaceFalta(65);
     pdf.setTextColor(255, 255, 255);
@@ -1314,7 +1555,7 @@ export default function CrearViviendaPage() {
       "El heatmap de delay spread RMS muestra la dispersión temporal del canal. Valores altos significan más multitrayecto y mayor riesgo de interferencia entre símbolos.",
       "El heatmap de Doppler muestra la variación de frecuencia causada por movimiento de receptor/personas. Si la simulación dinámica está activa, se actualiza con cada recálculo.",
       "Los rayos verdes son trayectorias directas o fuertes; los naranjas/morados suelen representar caminos reflejados o NLOS; los rojos indican interacción con personas u obstáculos móviles.",
-      "El router óptimo se calcula buscando una posición que mejore la potencia media y reduzca el porcentaje de zonas muertas."
+      "El router óptimo se calcula buscando una posición que mejore la potencia media y reduzca el porcentaje de zonas muertas.",
     ];
 
     explicacionTecnica.forEach((texto) => {
@@ -1390,7 +1631,7 @@ export default function CrearViviendaPage() {
     const heatmapParaPdf =
       modoHeatmap === "potencia"
         ? resultadoCobertura.heatmap
-        : resultadoCobertura.heatmapCanal ?? resultadoCobertura.heatmap;
+        : (resultadoCobertura.heatmapCanal ?? resultadoCobertura.heatmap);
 
     if (heatmapParaPdf?.length) {
       y += 6;
@@ -1430,9 +1671,9 @@ export default function CrearViviendaPage() {
 
     resultadoCobertura.rayos
       .slice()
-      .sort((a:any,b:any)=>b.potenciaDbm-a.potenciaDbm)
+      .sort((a: any, b: any) => b.potenciaDbm - a.potenciaDbm)
       .slice(0, 12)
-      .forEach((rayo:any, index:number) => {
+      .forEach((rayo: any, index: number) => {
         nuevaPaginaSiHaceFalta(7);
         pdf.text(
           `R${index + 1} · ${rayo.tipo} · ${rayo.potenciaDbm} dBm · rebotes: ${rayo.numRebotes ?? Math.max(0, (rayo.puntos?.length ?? 2) - 2)}`,
@@ -1481,6 +1722,22 @@ export default function CrearViviendaPage() {
     setResultadoCobertura(null);
   };
 
+  const primerRayoConH = resultadoCobertura?.rayos?.find(
+    (r: any) =>
+      r?.mimoRealSionna || r?.mimoTermicoSionna || r?.mimoRealTermicoSionna,
+  ) as any;
+
+  const hSionnaBase = primerRayoConH?.mimoRealSionna;
+  const hSionnaTermica =
+    primerRayoConH?.mimoTermicoSionna ??
+    primerRayoConH?.mimoRealTermicoSionna ??
+    primerRayoConH?.mimoRealSionnaTermica;
+
+  const columnaBackend = resultadoCobertura?.columnaTermica as any;
+  const primerPathTermico = Array.isArray(columnaBackend?.pathsResumen)
+    ? columnaBackend.pathsResumen[0]
+    : null;
+
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#0f172a_0,#020617_36%,#000_100%)] text-slate-100 p-3 md:p-5 font-mono">
       <section className="max-w-[1800px] mx-auto">
@@ -1496,27 +1753,49 @@ export default function CrearViviendaPage() {
               </h1>
 
               <p className="text-slate-400 mt-3 max-w-4xl text-xs md:text-sm leading-relaxed">
-                Consola de ingeniería para modelar viviendas 3D, ejecutar ray tracing con Sionna,
-                visualizar cobertura, rayos, CIR, Doppler, delay spread, MIMO y exportar informes RF.
+                Consola de ingeniería para modelar viviendas 3D, ejecutar ray
+                tracing con Sionna, visualizar cobertura, rayos, CIR, Doppler,
+                delay spread, MIMO y exportar informes RF.
               </p>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 min-w-[360px]">
               <div className="rounded-xl border border-cyan-900/50 bg-black/50 p-3">
-                <p className="text-[8px] uppercase text-slate-500 font-black">Motor</p>
-                <p className="text-xs font-black text-cyan-300">{modoCalculo === "sionna" || resultadoCobertura?.modelo?.sionnaUsado ? "Sionna RT" : "Rápido"}</p>
+                <p className="text-[8px] uppercase text-slate-500 font-black">
+                  Motor
+                </p>
+                <p className="text-xs font-black text-cyan-300">
+                  {modoCalculo === "sionna" ||
+                  resultadoCobertura?.modelo?.sionnaUsado
+                    ? "Sionna RT"
+                    : "Rápido"}
+                </p>
               </div>
               <div className="rounded-xl border border-cyan-900/50 bg-black/50 p-3">
-                <p className="text-[8px] uppercase text-slate-500 font-black">Frecuencia</p>
-                <p className="text-xs font-black text-white">{(frecuenciaMhz / 1000).toFixed(1)} GHz</p>
+                <p className="text-[8px] uppercase text-slate-500 font-black">
+                  Frecuencia
+                </p>
+                <p className="text-xs font-black text-white">
+                  {(frecuenciaMhz / 1000).toFixed(1)} GHz
+                </p>
               </div>
               <div className="rounded-xl border border-cyan-900/50 bg-black/50 p-3">
-                <p className="text-[8px] uppercase text-slate-500 font-black">Escena</p>
-                <p className="text-xs font-black text-white">{habitaciones.length} salas · {objetos.length} obj.</p>
+                <p className="text-[8px] uppercase text-slate-500 font-black">
+                  Escena
+                </p>
+                <p className="text-xs font-black text-white">
+                  {habitaciones.length} salas · {objetos.length} obj.
+                </p>
               </div>
               <div className="rounded-xl border border-cyan-900/50 bg-black/50 p-3">
-                <p className="text-[8px] uppercase text-slate-500 font-black">Estado</p>
-                <p className={`text-xs font-black ${simulando ? "text-emerald-300" : "text-slate-300"}`}>{simulando ? "Live" : "Standby"}</p>
+                <p className="text-[8px] uppercase text-slate-500 font-black">
+                  Estado
+                </p>
+                <p
+                  className={`text-xs font-black ${simulando ? "text-emerald-300" : "text-slate-300"}`}
+                >
+                  {simulando ? "Live" : "Standby"}
+                </p>
               </div>
             </div>
           </div>
@@ -1721,6 +2000,128 @@ export default function CrearViviendaPage() {
               </p>
             </div>
 
+            <div className="mb-6 border-t border-orange-900/50 pt-5">
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <h2 className="text-xs font-black uppercase tracking-widest text-orange-300">
+                  Columna térmica física
+                </h2>
+                <span
+                  className={`text-[8px] uppercase font-black px-2 py-1 rounded-lg border ${
+                    hayColumnaTermica
+                      ? "text-orange-300 border-orange-700 bg-orange-950/40"
+                      : "text-slate-400 border-slate-700 bg-black/40"
+                  }`}
+                >
+                  {hayColumnaTermica
+                    ? `${columnasTermicas.length} activa(s)`
+                    : "Sin columna"}
+                </span>
+              </div>
+
+              {!hayColumnaTermica && (
+                <button
+                  onClick={() => crearObjeto("columna_termica")}
+                  className="w-full py-3 mb-4 rounded-xl bg-orange-500 text-black text-[10px] font-black uppercase hover:bg-white transition-all"
+                >
+                  Crear columna térmica
+                </button>
+              )}
+
+              <div className="space-y-4">
+                <Control
+                  label="Temperatura núcleo °C"
+                  value={temperaturaColumnaC}
+                  min={20}
+                  max={900}
+                  step={10}
+                  onChange={(v) => {
+                    setTemperaturaColumnaC(v);
+                    actualizarColumnasTermicas({
+                      temperaturaC: v,
+                      T_hot_K: v + 273.15,
+                    });
+                  }}
+                />
+
+                <Control
+                  label="Velocidad aire caliente m/s"
+                  value={velocidadColumnaMps}
+                  min={0}
+                  max={12}
+                  step={0.1}
+                  onChange={(v) => {
+                    setVelocidadColumnaMps(v);
+                    actualizarColumnasTermicas({ v_mean_mps: v });
+                  }}
+                />
+
+                <Control
+                  label="Turbulencia σv m/s"
+                  value={turbulenciaColumnaMps}
+                  min={0}
+                  max={5}
+                  step={0.1}
+                  onChange={(v) => {
+                    setTurbulenciaColumnaMps(v);
+                    actualizarColumnasTermicas({ sigma_v_mps: v });
+                  }}
+                />
+
+                <Control
+                  label="Presión hPa"
+                  value={presionColumnaHpa}
+                  min={850}
+                  max={1050}
+                  step={1}
+                  onChange={(v) => {
+                    setPresionColumnaHpa(v);
+                    actualizarColumnasTermicas({ pressure_hpa: v });
+                  }}
+                />
+
+                <Control
+                  label="Humedad relativa"
+                  value={humedadColumnaRel}
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  onChange={(v) => {
+                    setHumedadColumnaRel(v);
+                    actualizarColumnasTermicas({ humidity_rel: v });
+                  }}
+                />
+
+                <Control
+                  label="Intensidad turbulencia"
+                  value={intensidadTurbulencia}
+                  min={0}
+                  max={2}
+                  step={0.05}
+                  onChange={(v) => {
+                    setIntensidadTurbulencia(v);
+                    actualizarColumnasTermicas({ turbulence_strength: v });
+                  }}
+                />
+
+                <Control
+                  label="Absorción extra dB/m"
+                  value={absorcionExtraDbM}
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  onChange={(v) => {
+                    setAbsorcionExtraDbM(v);
+                    actualizarColumnasTermicas({ absorcion_extra_db_m: v });
+                  }}
+                />
+              </div>
+
+              <p className="mt-3 text-[9px] text-orange-200/70 uppercase leading-relaxed">
+                Dinámico: estos valores se guardan dentro del objeto
+                columna_termica y viajan al backend en cada /raytrace.
+              </p>
+            </div>
+
             <h2 className="text-xs font-black uppercase tracking-widest text-cyan-300 mb-5">
               Añadir objetos
             </h2>
@@ -1734,7 +2135,10 @@ export default function CrearViviendaPage() {
               <Boton texto="Router" onClick={() => crearObjeto("router")} />
               <Boton texto="Receptor" onClick={() => crearObjeto("receptor")} />
               <Boton texto="Persona" onClick={() => crearObjeto("persona")} />
-              <Boton texto="Columna térmica" onClick={() => crearObjeto("columna_termica")} />
+              <Boton
+                texto="Columna térmica"
+                onClick={() => crearObjeto("columna_termica")}
+              />
               <Boton texto="Armario" onClick={() => crearObjeto("armario")} />
               <Boton texto="Ventana" onClick={() => crearObjeto("ventana")} />
             </div>
@@ -1765,20 +2169,22 @@ export default function CrearViviendaPage() {
             </button>
 
             <button
-  onClick={generarRenderPremium}
-  disabled={generandoRender}
-  className="mt-3 w-full py-4 rounded-xl bg-purple-600 text-white text-[10px] font-black uppercase hover:bg-purple-500 transition-all disabled:opacity-40"
->
-  {generandoRender ? "Generando render..." : "✨ Generar vivienda premium"}
-</button>
+              onClick={generarRenderPremium}
+              disabled={generandoRender}
+              className="mt-3 w-full py-4 rounded-xl bg-purple-600 text-white text-[10px] font-black uppercase hover:bg-purple-500 transition-all disabled:opacity-40"
+            >
+              {generandoRender
+                ? "Generando render..."
+                : "✨ Generar vivienda premium"}
+            </button>
 
             <button
-  onClick={generarModeloGLB}
-  disabled={generandoGlb}
-  className="mt-3 w-full py-4 rounded-xl bg-cyan-500 text-black text-[10px] font-black uppercase hover:bg-white transition-all disabled:opacity-40"
->
-  {generandoGlb ? "Generando 3D..." : "🧊 Generar modelo 3D"}
-</button>
+              onClick={generarModeloGLB}
+              disabled={generandoGlb}
+              className="mt-3 w-full py-4 rounded-xl bg-cyan-500 text-black text-[10px] font-black uppercase hover:bg-white transition-all disabled:opacity-40"
+            >
+              {generandoGlb ? "Generando 3D..." : "🧊 Generar modelo 3D"}
+            </button>
 
             <button
               onClick={generarInformePDF}
@@ -1807,10 +2213,20 @@ export default function CrearViviendaPage() {
                     "Modelo de cobertura aproximado"}
                 </p>
                 <p className="text-[9px] text-slate-500 uppercase leading-relaxed mt-2">
-                  Sionna usado: {resultadoCobertura.modelo?.sionnaUsado ? "Sí" : "No"} · XML: {resultadoCobertura.modelo?.sionnaXmlCargado ? "Cargado" : "No cargado"}
+                  Sionna usado:{" "}
+                  {resultadoCobertura.modelo?.sionnaUsado ? "Sí" : "No"} · XML:{" "}
+                  {resultadoCobertura.modelo?.sionnaXmlCargado
+                    ? "Cargado"
+                    : "No cargado"}
                 </p>
                 <p className="text-[9px] text-slate-500 uppercase leading-relaxed">
-                  Rayos: {resultadoCobertura.modelo?.rayosTotales ?? resultadoCobertura.rayos?.length ?? 0} · Directos: {resultadoCobertura.modelo?.rayosDirectos ?? 0} · Reflejados: {resultadoCobertura.modelo?.rayosReflejados ?? 0} · RX: {resultadoCobertura.modelo?.receptoresDetectados ?? 0}
+                  Rayos:{" "}
+                  {resultadoCobertura.modelo?.rayosTotales ??
+                    resultadoCobertura.rayos?.length ??
+                    0}{" "}
+                  · Directos: {resultadoCobertura.modelo?.rayosDirectos ?? 0} ·
+                  Reflejados: {resultadoCobertura.modelo?.rayosReflejados ?? 0}{" "}
+                  · RX: {resultadoCobertura.modelo?.receptoresDetectados ?? 0}
                 </p>
               </div>
             ) : null}
@@ -1824,8 +2240,12 @@ export default function CrearViviendaPage() {
                   {resultadoCobertura.modeloFisico.principio}
                 </p>
                 <p className="text-[9px] text-slate-500 uppercase leading-relaxed mt-2">
-                  Fórmulas: {resultadoCobertura.modeloFisico.calculadoPorFormula?.length ?? 0} ·
-                  Empírico declarado: {resultadoCobertura.modeloFisico.empiricoDeclarado?.length ?? 0}
+                  Fórmulas:{" "}
+                  {resultadoCobertura.modeloFisico.calculadoPorFormula
+                    ?.length ?? 0}{" "}
+                  · Empírico declarado:{" "}
+                  {resultadoCobertura.modeloFisico.empiricoDeclarado?.length ??
+                    0}
                 </p>
               </div>
             ) : null}
@@ -1833,9 +2253,17 @@ export default function CrearViviendaPage() {
 
           <section className="relative lg:col-span-6 bg-slate-950 border border-cyan-900/60 rounded-2xl overflow-hidden min-h-[720px] shadow-[0_0_60px_rgba(8,145,178,0.12)]">
             <div className="absolute top-3 left-3 z-40 flex gap-2 text-[9px] uppercase font-black tracking-widest">
-              <span className="px-3 py-2 rounded-lg bg-black/75 border border-cyan-900/60 text-cyan-300">3D Scene</span>
-              <span className="px-3 py-2 rounded-lg bg-black/75 border border-emerald-900/60 text-emerald-300">{resultadoCobertura?.modelo?.sionnaUsado ? "Sionna ON" : "Sionna OFF"}</span>
-              <span className="px-3 py-2 rounded-lg bg-black/75 border border-slate-800 text-slate-300">Heatmap: {modoHeatmap}</span>
+              <span className="px-3 py-2 rounded-lg bg-black/75 border border-cyan-900/60 text-cyan-300">
+                3D Scene
+              </span>
+              <span className="px-3 py-2 rounded-lg bg-black/75 border border-emerald-900/60 text-emerald-300">
+                {resultadoCobertura?.modelo?.sionnaUsado
+                  ? "Sionna ON"
+                  : "Sionna OFF"}
+              </span>
+              <span className="px-3 py-2 rounded-lg bg-black/75 border border-slate-800 text-slate-300">
+                Heatmap: {modoHeatmap}
+              </span>
             </div>
             <Canvas
               shadows
@@ -1918,14 +2346,14 @@ export default function CrearViviendaPage() {
 
               {resultadoCobertura && (
                 <CapaCobertura
-  resultado={resultadoCobertura}
-  mostrarHeatmap={mostrarHeatmap}
-  mostrarRayos={mostrarRayos}
-  mostrarRouterOptimo={mostrarRouterOptimo}
-  maxRayos={maxRayos}
-  modoHeatmap={modoHeatmap}
-  mostrarMesh={mostrarMesh}
-/>
+                  resultado={resultadoCobertura}
+                  mostrarHeatmap={mostrarHeatmap}
+                  mostrarRayos={mostrarRayos}
+                  mostrarRouterOptimo={mostrarRouterOptimo}
+                  maxRayos={maxRayos}
+                  modoHeatmap={modoHeatmap}
+                  mostrarMesh={mostrarMesh}
+                />
               )}
 
               <axesHelper args={[4]} />
@@ -1947,39 +2375,37 @@ export default function CrearViviendaPage() {
               />
             </Canvas>
             {imagenRender && (
-  <div className="absolute top-4 right-4 w-[420px] bg-slate-950/95 border border-purple-900 rounded-2xl p-3 z-50">
+              <div className="absolute top-4 right-4 w-[420px] bg-slate-950/95 border border-purple-900 rounded-2xl p-3 z-50">
+                <p className="text-[10px] uppercase text-purple-400 font-black mb-3">
+                  ✨ Render premium Blender
+                </p>
 
-    <p className="text-[10px] uppercase text-purple-400 font-black mb-3">
-      ✨ Render premium Blender
-    </p>
-
-    <img
-      src={imagenRender}
-      alt="Render premium"
-      className="w-full rounded-xl border border-slate-700"
-    />
-
-  </div>
-)}
+                <img
+                  src={imagenRender}
+                  alt="Render premium"
+                  className="w-full rounded-xl border border-slate-700"
+                />
+              </div>
+            )}
 
             {modeloGlb && (
-  <div className="absolute bottom-4 right-4 w-[520px] h-[360px] bg-slate-950/95 border border-cyan-900 rounded-2xl p-3 z-50">
-    <p className="text-[10px] uppercase text-cyan-400 font-black mb-3">
-      🧊 Modelo 3D Blender
-    </p>
+              <div className="absolute bottom-4 right-4 w-[520px] h-[360px] bg-slate-950/95 border border-cyan-900 rounded-2xl p-3 z-50">
+                <p className="text-[10px] uppercase text-cyan-400 font-black mb-3">
+                  🧊 Modelo 3D Blender
+                </p>
 
-    <Canvas camera={{ position: [8, 6, 8], fov: 45 }}>
-      <ambientLight intensity={0.8} />
-      <directionalLight position={[5, 8, 5]} intensity={2} />
+                <Canvas camera={{ position: [8, 6, 8], fov: 45 }}>
+                  <ambientLight intensity={0.8} />
+                  <directionalLight position={[5, 8, 5]} intensity={2} />
 
-      <Suspense fallback={null}>
-        <ModeloGLB url={modeloGlb} />
-      </Suspense>
+                  <Suspense fallback={null}>
+                    <ModeloGLB url={modeloGlb} />
+                  </Suspense>
 
-      <OrbitControls enablePan enableZoom enableRotate />
-    </Canvas>
-  </div>
-)}
+                  <OrbitControls enablePan enableZoom enableRotate />
+                </Canvas>
+              </div>
+            )}
           </section>
 
           <aside className="lg:col-span-3 bg-slate-950/95 border border-cyan-900/50 rounded-2xl p-4 h-fit shadow-[0_0_35px_rgba(8,145,178,0.08)]">
@@ -2125,8 +2551,62 @@ export default function CrearViviendaPage() {
                       }}
                     />
 
+                    <Control
+                      label="Presión hPa"
+                      value={objetoActual.pressure_hpa ?? presionColumnaHpa}
+                      min={850}
+                      max={1050}
+                      step={1}
+                      onChange={(v) => {
+                        setPresionColumnaHpa(v);
+                        actualizarObjeto("pressure_hpa", v);
+                      }}
+                    />
+
+                    <Control
+                      label="Humedad relativa"
+                      value={objetoActual.humidity_rel ?? humedadColumnaRel}
+                      min={0}
+                      max={1}
+                      step={0.01}
+                      onChange={(v) => {
+                        setHumedadColumnaRel(v);
+                        actualizarObjeto("humidity_rel", v);
+                      }}
+                    />
+
+                    <Control
+                      label="Intensidad turbulencia"
+                      value={
+                        objetoActual.turbulence_strength ??
+                        intensidadTurbulencia
+                      }
+                      min={0}
+                      max={2}
+                      step={0.05}
+                      onChange={(v) => {
+                        setIntensidadTurbulencia(v);
+                        actualizarObjeto("turbulence_strength", v);
+                      }}
+                    />
+
+                    <Control
+                      label="Absorción extra dB/m"
+                      value={
+                        objetoActual.absorcion_extra_db_m ?? absorcionExtraDbM
+                      }
+                      min={0}
+                      max={1}
+                      step={0.01}
+                      onChange={(v) => {
+                        setAbsorcionExtraDbM(v);
+                        actualizarObjeto("absorcion_extra_db_m", v);
+                      }}
+                    />
+
                     <p className="text-[9px] text-orange-200/80 uppercase leading-relaxed">
-                      Esta temperatura se manda al backend para modificar los rayos/CIR afectados.
+                      Modelo físico dinámico: n(T), longitud atravesada, fase,
+                      retardo, Doppler y turbulencia se recalculan en backend.
                     </p>
                   </div>
                 )}
@@ -2182,7 +2662,11 @@ export default function CrearViviendaPage() {
                   </p>
                   <select
                     value={modoHeatmap}
-                    onChange={(e) => setModoHeatmap(e.target.value as "potencia" | "delay" | "doppler")}
+                    onChange={(e) =>
+                      setModoHeatmap(
+                        e.target.value as "potencia" | "delay" | "doppler",
+                      )
+                    }
                     className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none"
                   >
                     <option value="potencia">Potencia recibida dBm</option>
@@ -2190,7 +2674,8 @@ export default function CrearViviendaPage() {
                     <option value="doppler">Doppler dominante Hz</option>
                   </select>
                   <p className="text-[9px] text-slate-500 uppercase leading-relaxed">
-                    Potencia usa malla base. Delay/Doppler usan heatmapCanal calculado en main.py desde rayos/CIR.
+                    Potencia usa malla base. Delay/Doppler usan heatmapCanal
+                    calculado en main.py desde rayos/CIR.
                   </p>
                 </div>
 
@@ -2200,48 +2685,142 @@ export default function CrearViviendaPage() {
                       <p className="text-[9px] uppercase text-orange-400 font-black">
                         Columna térmica dinámica
                       </p>
-                      <span className={`text-[8px] uppercase font-black px-2 py-1 rounded-lg border ${
-                        resultadoCobertura.columnaTermica.columnaActiva
-                          ? "text-orange-300 border-orange-700 bg-orange-950/40"
-                          : "text-slate-400 border-slate-700 bg-slate-950"
-                      }`}>
-                        {resultadoCobertura.columnaTermica.columnaActiva ? "Activa" : "Inactiva"}
+                      <span
+                        className={`text-[8px] uppercase font-black px-2 py-1 rounded-lg border ${
+                          resultadoCobertura.columnaTermica.columnaActiva
+                            ? "text-orange-300 border-orange-700 bg-orange-950/40"
+                            : "text-slate-400 border-slate-700 bg-slate-950"
+                        }`}
+                      >
+                        {resultadoCobertura.columnaTermica.columnaActiva
+                          ? "Activa"
+                          : "Inactiva"}
                       </span>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
                       <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
-                        <p className="text-[8px] uppercase text-slate-500 font-black">Paths afectados</p>
+                        <p className="text-[8px] uppercase text-slate-500 font-black">
+                          Paths afectados
+                        </p>
                         <p className="text-sm font-black text-orange-300">
-                          {resultadoCobertura.columnaTermica.pathsAfectados ?? 0}
+                          {resultadoCobertura.columnaTermica.pathsAfectados ??
+                            0}
                         </p>
                       </div>
 
                       <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
-                        <p className="text-[8px] uppercase text-slate-500 font-black">Afección</p>
+                        <p className="text-[8px] uppercase text-slate-500 font-black">
+                          Afección
+                        </p>
                         <p className="text-sm font-black text-orange-300">
-                          {(resultadoCobertura.columnaTermica.porcentajePathsAfectados ?? 0).toFixed(2)}%
+                          {(
+                            resultadoCobertura.columnaTermica
+                              .porcentajePathsAfectados ?? 0
+                          ).toFixed(2)}
+                          %
                         </p>
                       </div>
 
                       <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
-                        <p className="text-[8px] uppercase text-slate-500 font-black">Doppler térmico</p>
+                        <p className="text-[8px] uppercase text-slate-500 font-black">
+                          Doppler térmico
+                        </p>
                         <p className="text-sm font-black text-cyan-300">
-                          {(resultadoCobertura.columnaTermica.fdMeanHz ?? 0).toFixed(2)} Hz
+                          {(
+                            resultadoCobertura.columnaTermica.fdMeanHz ?? 0
+                          ).toFixed(2)}{" "}
+                          Hz
                         </p>
                       </div>
 
                       <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
-                        <p className="text-[8px] uppercase text-slate-500 font-black">Delay extra</p>
+                        <p className="text-[8px] uppercase text-slate-500 font-black">
+                          Delay extra
+                        </p>
                         <p className="text-sm font-black text-cyan-300">
-                          {(resultadoCobertura.columnaTermica.delayExtraNs ?? 0).toFixed(2)} ns
+                          {(
+                            resultadoCobertura.columnaTermica.delayExtraNs ??
+                            primerPathTermico?.delayExtraNs ??
+                            0
+                          ).toFixed(4)}{" "}
+                          ns
+                        </p>
+                      </div>
+
+                      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                        <p className="text-[8px] uppercase text-slate-500 font-black">
+                          Longitud dentro
+                        </p>
+                        <p className="text-sm font-black text-orange-300">
+                          {(
+                            resultadoCobertura.columnaTermica
+                              .longitudDentroColumnaM ??
+                            primerPathTermico?.longitudDentroColumnaM ??
+                            0
+                          ).toFixed(3)}{" "}
+                          m
+                        </p>
+                      </div>
+
+                      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                        <p className="text-[8px] uppercase text-slate-500 font-black">
+                          Fase extra
+                        </p>
+                        <p className="text-sm font-black text-purple-300">
+                          {(
+                            resultadoCobertura.columnaTermica.faseExtraRad ??
+                            primerPathTermico?.faseExtraRad ??
+                            0
+                          ).toFixed(3)}{" "}
+                          rad
                         </p>
                       </div>
                     </div>
 
+                    <div className="bg-slate-950 border border-orange-950 rounded-xl p-3 space-y-1">
+                      <p className="text-[8px] uppercase text-orange-300 font-black">
+                        Modelo físico backend
+                      </p>
+                      <p className="text-[9px] text-slate-400 uppercase leading-relaxed">
+                        nAmb=
+                        {(resultadoCobertura.columnaTermica.nAmb ?? 0).toFixed(
+                          8,
+                        )}{" "}
+                        · nHot=
+                        {(
+                          resultadoCobertura.columnaTermica.nHotMedio ?? 0
+                        ).toFixed(8)}{" "}
+                        · Δn=
+                        {(
+                          resultadoCobertura.columnaTermica.deltaN ?? 0
+                        ).toExponential(3)}
+                      </p>
+                      <p className="text-[9px] text-slate-400 uppercase leading-relaxed">
+                        Gradiente=
+                        {(
+                          resultadoCobertura.columnaTermica
+                            .gradienteTermicoKPorM ?? 0
+                        ).toFixed(1)}{" "}
+                        K/m · Pérdida turb=
+                        {(
+                          resultadoCobertura.columnaTermica
+                            .perdidaTurbulenciaDb ??
+                          primerPathTermico?.atenuacionDb ??
+                          0
+                        ).toFixed(4)}{" "}
+                        dB
+                      </p>
+                    </div>
+
                     <p className="text-[9px] text-slate-500 uppercase leading-relaxed">
-                      Temperatura enviada: {temperaturaColumnaC.toFixed(0)} °C · ΔT backend:
-                      {(resultadoCobertura.columnaTermica.deltaT_K ?? 0).toFixed(1)} K.
+                      Temperatura enviada: {temperaturaColumnaC.toFixed(0)} °C ·
+                      Presión: {presionColumnaHpa.toFixed(0)} hPa · Humedad:{" "}
+                      {(humedadColumnaRel * 100).toFixed(0)}% · ΔT backend:
+                      {(
+                        resultadoCobertura.columnaTermica.deltaT_K ?? 0
+                      ).toFixed(1)}{" "}
+                      K.
                     </p>
                   </div>
                 )}
@@ -2252,10 +2831,16 @@ export default function CrearViviendaPage() {
                       MIMO / Arrays Sionna
                     </p>
                     <p className="text-[10px] text-slate-300 uppercase leading-relaxed">
-                      TX: {resultadoCobertura.mimoArrays.txRows}x{resultadoCobertura.mimoArrays.txCols} · RX: {resultadoCobertura.mimoArrays.rxRows}x{resultadoCobertura.mimoArrays.rxCols}
+                      TX: {resultadoCobertura.mimoArrays.txRows}x
+                      {resultadoCobertura.mimoArrays.txCols} · RX:{" "}
+                      {resultadoCobertura.mimoArrays.rxRows}x
+                      {resultadoCobertura.mimoArrays.rxCols}
                     </p>
                     <p className="text-[9px] text-slate-500 uppercase leading-relaxed">
-                      Canales teóricos: {resultadoCobertura.mimoArrays.canalesMimoTeoricos} · Spacing: {resultadoCobertura.mimoArrays.arraySpacingLambda}λ
+                      Canales teóricos:{" "}
+                      {resultadoCobertura.mimoArrays.canalesMimoTeoricos} ·
+                      Spacing:{" "}
+                      {resultadoCobertura.mimoArrays.arraySpacingLambda}λ
                     </p>
                   </div>
                 )}
@@ -2268,28 +2853,40 @@ export default function CrearViviendaPage() {
 
                     <div className="grid grid-cols-2 gap-2">
                       <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
-                        <p className="text-[8px] uppercase text-slate-500 font-black">SNR</p>
+                        <p className="text-[8px] uppercase text-slate-500 font-black">
+                          SNR
+                        </p>
                         <p className="text-sm font-black text-white">
                           {resultadoCobertura.mimoMetricas.snrDb.toFixed(2)} dB
                         </p>
                       </div>
 
                       <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
-                        <p className="text-[8px] uppercase text-slate-500 font-black">Ganancia array ideal</p>
+                        <p className="text-[8px] uppercase text-slate-500 font-black">
+                          Ganancia array ideal
+                        </p>
                         <p className="text-sm font-black text-emerald-400">
-                          +{resultadoCobertura.mimoMetricas.arrayGainBeamformingDbIdeal.toFixed(2)} dB
+                          +
+                          {resultadoCobertura.mimoMetricas.arrayGainBeamformingDbIdeal.toFixed(
+                            2,
+                          )}{" "}
+                          dB
                         </p>
                       </div>
 
                       <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
-                        <p className="text-[8px] uppercase text-slate-500 font-black">Rank máximo teórico</p>
+                        <p className="text-[8px] uppercase text-slate-500 font-black">
+                          Rank máximo teórico
+                        </p>
                         <p className="text-sm font-black text-cyan-400">
                           {resultadoCobertura.mimoMetricas.rankMaxTeorico}
                         </p>
                       </div>
 
                       <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
-                        <p className="text-[8px] uppercase text-slate-500 font-black">Streams máximos</p>
+                        <p className="text-[8px] uppercase text-slate-500 font-black">
+                          Streams máximos
+                        </p>
                         <p className="text-sm font-black text-cyan-400">
                           {resultadoCobertura.mimoMetricas.streamsMaxTeoricos}
                         </p>
@@ -2297,45 +2894,114 @@ export default function CrearViviendaPage() {
                     </div>
 
                     <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-1">
-                      <p className="text-[8px] uppercase text-slate-500 font-black">Capacidad Shannon</p>
-                      <p className="text-[10px] text-slate-300 uppercase leading-relaxed">
-                        SISO: {resultadoCobertura.mimoMetricas.capacidadSisoMbps.toFixed(2)} Mbps
+                      <p className="text-[8px] uppercase text-slate-500 font-black">
+                        Capacidad Shannon
                       </p>
                       <p className="text-[10px] text-slate-300 uppercase leading-relaxed">
-                        Beamforming ideal: {resultadoCobertura.mimoMetricas.capacidadBeamformingIdealMbps.toFixed(2)} Mbps
+                        SISO:{" "}
+                        {resultadoCobertura.mimoMetricas.capacidadSisoMbps.toFixed(
+                          2,
+                        )}{" "}
+                        Mbps
                       </p>
                       <p className="text-[10px] text-slate-300 uppercase leading-relaxed">
-                        Multiplexing ideal: {resultadoCobertura.mimoMetricas.capacidadMultiplexingIdealMbps.toFixed(2)} Mbps
+                        Beamforming ideal:{" "}
+                        {resultadoCobertura.mimoMetricas.capacidadBeamformingIdealMbps.toFixed(
+                          2,
+                        )}{" "}
+                        Mbps
+                      </p>
+                      <p className="text-[10px] text-slate-300 uppercase leading-relaxed">
+                        Multiplexing ideal:{" "}
+                        {resultadoCobertura.mimoMetricas.capacidadMultiplexingIdealMbps.toFixed(
+                          2,
+                        )}{" "}
+                        Mbps
                       </p>
                       <p className="text-[9px] text-green-400 uppercase leading-relaxed">
-                        MIMO geométrico H: {(resultadoCobertura.mimoMetricas.capacidadMimoRealGeomMbps ?? 0).toFixed(2)} Mbps · Rank real: {resultadoCobertura.mimoMetricas.rankReal ?? "N/D"}
+                        MIMO geométrico H:{" "}
+                        {(
+                          resultadoCobertura.mimoMetricas
+                            .capacidadMimoRealGeomMbps ?? 0
+                        ).toFixed(2)}{" "}
+                        Mbps · Rank real:{" "}
+                        {resultadoCobertura.mimoMetricas.rankReal ?? "N/D"}
                       </p>
                     </div>
 
                     <p className="text-[9px] text-slate-500 uppercase leading-relaxed">
-                      {resultadoCobertura.mimoMetricas.modelo?.nota ?? "La capacidad MIMO real completa requiere matriz H por elemento."}
+                      {resultadoCobertura.mimoMetricas.modelo?.nota ??
+                        "La capacidad MIMO real completa requiere matriz H por elemento."}
                     </p>
                   </div>
                 )}
 
+                {(hSionnaBase || hSionnaTermica) && (
+                  <div className="bg-black/70 border border-purple-900 rounded-xl p-4 mt-4 space-y-3">
+                    <p className="text-[9px] uppercase text-purple-300 font-black">
+                      Matriz H real Sionna
+                    </p>
+
+                    {hSionnaBase && (
+                      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-1">
+                        <p className="text-[8px] uppercase text-slate-500 font-black">
+                          H base
+                        </p>
+                        <p className="text-[10px] text-slate-300 uppercase">
+                          Shape: {hSionnaBase.HShape?.join("×") ?? "N/D"} ·
+                          Rank: {hSionnaBase.rankReal ?? "N/D"} · Paths:{" "}
+                          {hSionnaBase.numPaths ?? "N/D"}
+                        </p>
+                        <p className="text-[10px] text-emerald-300 uppercase">
+                          Capacidad:{" "}
+                          {(hSionnaBase.capacidadMimoRealMbps ?? 0).toFixed(2)}{" "}
+                          Mbps · SNR rel:{" "}
+                          {(hSionnaBase.snrDbRel ?? 0).toFixed(2)} dB
+                        </p>
+                      </div>
+                    )}
+
+                    {hSionnaTermica && (
+                      <div className="bg-slate-950 border border-orange-900 rounded-xl p-3 space-y-1">
+                        <p className="text-[8px] uppercase text-orange-300 font-black">
+                          H térmica
+                        </p>
+                        <p className="text-[10px] text-slate-300 uppercase">
+                          Shape: {hSionnaTermica.HShape?.join("×") ?? "N/D"} ·
+                          Rank: {hSionnaTermica.rankReal ?? "N/D"} · Paths:{" "}
+                          {hSionnaTermica.numPaths ?? "N/D"}
+                        </p>
+                        <p className="text-[10px] text-orange-300 uppercase">
+                          Capacidad:{" "}
+                          {(hSionnaTermica.capacidadMimoRealMbps ?? 0).toFixed(
+                            2,
+                          )}{" "}
+                          Mbps · SNR rel:{" "}
+                          {(hSionnaTermica.snrDbRel ?? 0).toFixed(2)} dB
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="bg-black/70 border border-slate-800 rounded-xl p-4 mt-4">
-  <p className="text-[9px] uppercase text-slate-500 font-black mb-2">
-    Límite rayos Sionna
-  </p>
+                  <p className="text-[9px] uppercase text-slate-500 font-black mb-2">
+                    Límite rayos Sionna
+                  </p>
 
-  <input
-    type="range"
-    min={1}
-    max={100}
-    value={maxRayos}
-    onChange={(e) => setMaxRayos(Number(e.target.value))}
-    className="w-full accent-cyan-400"
-  />
+                  <input
+                    type="range"
+                    min={1}
+                    max={100}
+                    value={maxRayos}
+                    onChange={(e) => setMaxRayos(Number(e.target.value))}
+                    className="w-full accent-cyan-400"
+                  />
 
-  <p className="text-cyan-300 text-sm font-black mt-2">
-    {maxRayos} rayos visibles
-  </p>
-</div>
+                  <p className="text-cyan-300 text-sm font-black mt-2">
+                    {maxRayos} rayos visibles
+                  </p>
+                </div>
 
                 <div className="bg-black/70 border border-purple-900 rounded-xl p-4 mt-4 space-y-3">
                   <p className="text-[9px] uppercase text-slate-500 font-black mb-2">
@@ -2378,13 +3044,18 @@ export default function CrearViviendaPage() {
                       Estado dinámico
                     </p>
                     <p className="text-[9px] text-slate-400 uppercase leading-relaxed mt-1">
-                      {moverReceptor ? "RX móvil" : "RX fijo"} · {moverPersonas ? "personas móviles" : "personas fijas"}
+                      {moverReceptor ? "RX móvil" : "RX fijo"} ·{" "}
+                      {moverPersonas ? "personas móviles" : "personas fijas"}
                     </p>
                   </div>
 
                   <div className="space-y-2 border-t border-slate-800 pt-3">
                     <p className="text-[10px] text-slate-400">Modo MIMO</p>
-                    <select value={mimoMode} onChange={(e)=>setMimoMode(e.target.value as any)} className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none">
+                    <select
+                      value={mimoMode}
+                      onChange={(e) => setMimoMode(e.target.value as any)}
+                      className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none"
+                    >
                       <option value="siso">SISO / referencia</option>
                       <option value="beamforming">Beamforming</option>
                       <option value="multiplexing">Spatial multiplexing</option>
@@ -2394,30 +3065,46 @@ export default function CrearViviendaPage() {
 
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <p className="text-[9px] text-slate-400 mb-1">Antena TX</p>
-                      <select value={antennaTypeTx} onChange={(e)=>setAntennaTypeTx(e.target.value)} className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none">
+                      <p className="text-[9px] text-slate-400 mb-1">
+                        Antena TX
+                      </p>
+                      <select
+                        value={antennaTypeTx}
+                        onChange={(e) => setAntennaTypeTx(e.target.value)}
+                        className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none"
+                      >
                         <option value="omni">Omni / isotrópica</option>
                         <option value="dipolo">Dipolo λ/2</option>
                         <option value="monopolo">Monopolo λ/4</option>
                         <option value="patch">Patch microstrip</option>
                         <option value="panel">Panel directiva</option>
                         <option value="yagi">Yagi-Uda</option>
-                        <option value="helicoidal_axial">Helicoidal axial</option>
+                        <option value="helicoidal_axial">
+                          Helicoidal axial
+                        </option>
                         <option value="array_dipolos">Array dipolos</option>
                         <option value="array_patch">Array patch</option>
                         <option value="feko_import">Importar FEKO</option>
                       </select>
                     </div>
                     <div>
-                      <p className="text-[9px] text-slate-400 mb-1">Antena RX</p>
-                      <select value={antennaTypeRx} onChange={(e)=>setAntennaTypeRx(e.target.value)} className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none">
+                      <p className="text-[9px] text-slate-400 mb-1">
+                        Antena RX
+                      </p>
+                      <select
+                        value={antennaTypeRx}
+                        onChange={(e) => setAntennaTypeRx(e.target.value)}
+                        className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none"
+                      >
                         <option value="omni">Omni / isotrópica</option>
                         <option value="dipolo">Dipolo λ/2</option>
                         <option value="monopolo">Monopolo λ/4</option>
                         <option value="patch">Patch microstrip</option>
                         <option value="panel">Panel directiva</option>
                         <option value="yagi">Yagi-Uda</option>
-                        <option value="helicoidal_axial">Helicoidal axial</option>
+                        <option value="helicoidal_axial">
+                          Helicoidal axial
+                        </option>
                         <option value="array_dipolos">Array dipolos</option>
                         <option value="array_patch">Array patch</option>
                         <option value="feko_import">Importar FEKO</option>
@@ -2425,7 +3112,11 @@ export default function CrearViviendaPage() {
                     </div>
                     <div>
                       <p className="text-[9px] text-slate-400 mb-1">Pol. TX</p>
-                      <select value={polarizationTx} onChange={(e)=>setPolarizationTx(e.target.value)} className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none">
+                      <select
+                        value={polarizationTx}
+                        onChange={(e) => setPolarizationTx(e.target.value)}
+                        className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none"
+                      >
                         <option value="V">Vertical</option>
                         <option value="H">Horizontal</option>
                         <option value="RHCP">RHCP FEKO</option>
@@ -2434,7 +3125,11 @@ export default function CrearViviendaPage() {
                     </div>
                     <div>
                       <p className="text-[9px] text-slate-400 mb-1">Pol. RX</p>
-                      <select value={polarizationRx} onChange={(e)=>setPolarizationRx(e.target.value)} className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none">
+                      <select
+                        value={polarizationRx}
+                        onChange={(e) => setPolarizationRx(e.target.value)}
+                        className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none"
+                      >
                         <option value="V">Vertical</option>
                         <option value="H">Horizontal</option>
                         <option value="RHCP">RHCP FEKO</option>
@@ -2442,31 +3137,95 @@ export default function CrearViviendaPage() {
                       </select>
                     </div>
                     <div className="col-span-2">
-                      <p className="text-[9px] text-slate-400 mb-1">Figura ruido RX (dB)</p>
-                      <input type="number" min={0} step={0.5} value={noiseFigureDb} onChange={(e)=>setNoiseFigureDb(Math.max(0, Number(e.target.value)))} className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none" />
+                      <p className="text-[9px] text-slate-400 mb-1">
+                        Figura ruido RX (dB)
+                      </p>
+                      <input
+                        type="number"
+                        min={0}
+                        step={0.5}
+                        value={noiseFigureDb}
+                        onChange={(e) =>
+                          setNoiseFigureDb(Math.max(0, Number(e.target.value)))
+                        }
+                        className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none"
+                      />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <p className="text-[9px] text-slate-400 mb-1">TX filas</p>
-                      <input type="number" min={1} max={8} value={txRows} onChange={(e)=>setTxRows(Math.max(1, Number(e.target.value)))} className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none" />
+                      <input
+                        type="number"
+                        min={1}
+                        max={8}
+                        value={txRows}
+                        onChange={(e) =>
+                          setTxRows(Math.max(1, Number(e.target.value)))
+                        }
+                        className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none"
+                      />
                     </div>
                     <div>
-                      <p className="text-[9px] text-slate-400 mb-1">TX columnas</p>
-                      <input type="number" min={1} max={8} value={txCols} onChange={(e)=>setTxCols(Math.max(1, Number(e.target.value)))} className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none" />
+                      <p className="text-[9px] text-slate-400 mb-1">
+                        TX columnas
+                      </p>
+                      <input
+                        type="number"
+                        min={1}
+                        max={8}
+                        value={txCols}
+                        onChange={(e) =>
+                          setTxCols(Math.max(1, Number(e.target.value)))
+                        }
+                        className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none"
+                      />
                     </div>
                     <div>
                       <p className="text-[9px] text-slate-400 mb-1">RX filas</p>
-                      <input type="number" min={1} max={8} value={rxRows} onChange={(e)=>setRxRows(Math.max(1, Number(e.target.value)))} className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none" />
+                      <input
+                        type="number"
+                        min={1}
+                        max={8}
+                        value={rxRows}
+                        onChange={(e) =>
+                          setRxRows(Math.max(1, Number(e.target.value)))
+                        }
+                        className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none"
+                      />
                     </div>
                     <div>
-                      <p className="text-[9px] text-slate-400 mb-1">RX columnas</p>
-                      <input type="number" min={1} max={8} value={rxCols} onChange={(e)=>setRxCols(Math.max(1, Number(e.target.value)))} className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none" />
+                      <p className="text-[9px] text-slate-400 mb-1">
+                        RX columnas
+                      </p>
+                      <input
+                        type="number"
+                        min={1}
+                        max={8}
+                        value={rxCols}
+                        onChange={(e) =>
+                          setRxCols(Math.max(1, Number(e.target.value)))
+                        }
+                        className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none"
+                      />
                     </div>
                     <div className="col-span-2">
-                      <p className="text-[9px] text-slate-400 mb-1">Separación array (λ)</p>
-                      <input type="number" min={0.05} step={0.05} value={arraySpacingLambda} onChange={(e)=>setArraySpacingLambda(Math.max(0.05, Number(e.target.value)))} className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none" />
+                      <p className="text-[9px] text-slate-400 mb-1">
+                        Separación array (λ)
+                      </p>
+                      <input
+                        type="number"
+                        min={0.05}
+                        step={0.05}
+                        value={arraySpacingLambda}
+                        onChange={(e) =>
+                          setArraySpacingLambda(
+                            Math.max(0.05, Number(e.target.value)),
+                          )
+                        }
+                        className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none"
+                      />
                     </div>
                   </div>
 
@@ -2485,7 +3244,9 @@ export default function CrearViviendaPage() {
 
                     <select
                       value={unidadVelocidad}
-                      onChange={(e) => setUnidadVelocidad(e.target.value as "ms" | "kmh")}
+                      onChange={(e) =>
+                        setUnidadVelocidad(e.target.value as "ms" | "kmh")
+                      }
                       className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none"
                     >
                       <option value="ms">m/s</option>
@@ -2503,12 +3264,17 @@ export default function CrearViviendaPage() {
                       value={intervaloSionna}
                       step={0.1}
                       min={0.1}
-                      onChange={(e) => setIntervaloSionna(Math.max(0.1, Number(e.target.value)))}
+                      onChange={(e) =>
+                        setIntervaloSionna(
+                          Math.max(0.1, Number(e.target.value)),
+                        )
+                      }
                       className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-white text-xs outline-none"
                     />
 
                     <p className="text-[9px] text-slate-500 uppercase">
-                      {Math.max(0.1, intervaloSionna).toFixed(1)} s entre cálculos
+                      {Math.max(0.1, intervaloSionna).toFixed(1)} s entre
+                      cálculos
                     </p>
                   </div>
 
@@ -2523,7 +3289,9 @@ export default function CrearViviendaPage() {
                       max={360}
                       step={1}
                       value={anguloMovimiento}
-                      onChange={(e) => setAnguloMovimiento(Number(e.target.value))}
+                      onChange={(e) =>
+                        setAnguloMovimiento(Number(e.target.value))
+                      }
                       className="w-full accent-purple-500"
                     />
                   </div>
@@ -2549,7 +3317,10 @@ export default function CrearViviendaPage() {
                   </div>
 
                   <p className="text-[9px] text-slate-500 uppercase leading-relaxed mt-2">
-                    Al iniciar, puedes elegir si se mueve el receptor, las personas o ambos. El frontend solo mueve geometría y visualiza; el Doppler viene calculado desde main.py por camino.
+                    Al iniciar, puedes elegir si se mueve el receptor, las
+                    personas o ambos. El frontend solo mueve geometría y
+                    visualiza; el Doppler viene calculado desde main.py por
+                    camino.
                   </p>
                 </div>
 
@@ -2582,9 +3353,14 @@ export default function CrearViviendaPage() {
                     </p>
 
                     <p className="text-[9px] text-slate-500 uppercase leading-relaxed">
-                      Mejora media: {resultadoCobertura.estadisticasMesh.mejoraMediaDb} dB ·
-                      Zonas muertas: {" "}
-                      {resultadoCobertura.estadisticasMesh.porcentajeZonasMuertas}%
+                      Mejora media:{" "}
+                      {resultadoCobertura.estadisticasMesh.mejoraMediaDb} dB ·
+                      Zonas muertas:{" "}
+                      {
+                        resultadoCobertura.estadisticasMesh
+                          .porcentajeZonasMuertas
+                      }
+                      %
                     </p>
                   </div>
                 )}
@@ -2594,8 +3370,8 @@ export default function CrearViviendaPage() {
                     Router recomendado
                   </p>
                   <p className="text-xs text-slate-300 leading-relaxed">
-                    X: {resultadoCobertura.routerOptimo.x.toFixed(2)} · Z: {" "}
-                    {resultadoCobertura.routerOptimo.z.toFixed(2)} · Altura: {" "}
+                    X: {resultadoCobertura.routerOptimo.x.toFixed(2)} · Z:{" "}
+                    {resultadoCobertura.routerOptimo.z.toFixed(2)} · Altura:{" "}
                     {resultadoCobertura.routerOptimo.y.toFixed(2)} m
                   </p>
                 </div>
@@ -2616,8 +3392,9 @@ export default function CrearViviendaPage() {
                         </p>
 
                         <p className="text-[9px] text-slate-500 uppercase leading-relaxed">
-                          X: {o.x.toFixed(2)} · Z: {o.z.toFixed(2)} · Media: {" "}
-                          {o.potenciaMediaDbm} dBm · Zonas muertas: {o.zonasMuertas}
+                          X: {o.x.toFixed(2)} · Z: {o.z.toFixed(2)} · Media:{" "}
+                          {o.potenciaMediaDbm} dBm · Zonas muertas:{" "}
+                          {o.zonasMuertas}
                         </p>
                       </div>
                     ))}
@@ -2661,8 +3438,8 @@ export default function CrearViviendaPage() {
                           </p>
 
                           <p className="text-[9px] text-slate-500 uppercase leading-relaxed">
-                            X: {rep.x.toFixed(2)} · Z: {rep.z.toFixed(2)} · Altura: {" "}
-                            {rep.y.toFixed(2)} m
+                            X: {rep.x.toFixed(2)} · Z: {rep.z.toFixed(2)} ·
+                            Altura: {rep.y.toFixed(2)} m
                           </p>
                         </div>
                       ))}
@@ -2685,7 +3462,8 @@ export default function CrearViviendaPage() {
                             {rx.habitacion}
                           </p>
                           <p className="text-[9px] text-slate-500 uppercase leading-relaxed">
-                            X: {rx.x.toFixed(2)} · Z: {rx.z.toFixed(2)} · Potencia: {rx.potenciaDbm} dBm
+                            X: {rx.x.toFixed(2)} · Z: {rx.z.toFixed(2)} ·
+                            Potencia: {rx.potenciaDbm} dBm
                           </p>
                         </div>
                       ))}
@@ -2758,7 +3536,8 @@ export default function CrearViviendaPage() {
                               cirResumen.delaySpreadRmsNs ??
                                 cirResumen.delaySpreadNs ??
                                 0,
-                            ).toFixed(2)} ns
+                            ).toFixed(2)}{" "}
+                            ns
                           </p>
                         </div>
 
@@ -2772,7 +3551,8 @@ export default function CrearViviendaPage() {
                                 cirResumen.potenciaTotal ??
                                 cir[0]?.potenciaDbm ??
                                 0,
-                            ).toFixed(2)} dBm
+                            ).toFixed(2)}{" "}
+                            dBm
                           </p>
                         </div>
                       </div>
@@ -2788,7 +3568,8 @@ export default function CrearViviendaPage() {
                             Tap {index + 1} · {tap.tipo ?? "multipath"}
                           </p>
                           <p className="text-[9px] text-slate-500 uppercase">
-                            {tap.delayNs.toFixed(2)} ns · {tap.potenciaDbm.toFixed(2)} dBm
+                            {tap.delayNs.toFixed(2)} ns ·{" "}
+                            {tap.potenciaDbm.toFixed(2)} dBm
                             {typeof tap.dopplerHz === "number"
                               ? ` · Doppler ${tap.dopplerHz.toFixed(2)} Hz`
                               : ""}
@@ -2803,126 +3584,96 @@ export default function CrearViviendaPage() {
                   <p className="text-[9px] uppercase text-slate-500 font-black">
                     Recomendaciones
                   </p>
-{resultadoCobertura.recomendaciones.map((r, i) => (
-  <p
-    key={i}
-    className="text-[10px] text-slate-400 leading-relaxed bg-black/70 border border-slate-800 rounded-xl p-3"
-  >
-    {r}
-  </p>
-))}
-</div>
+                  {resultadoCobertura.recomendaciones.map((r, i) => (
+                    <p
+                      key={i}
+                      className="text-[10px] text-slate-400 leading-relaxed bg-black/70 border border-slate-800 rounded-xl p-3"
+                    >
+                      {r}
+                    </p>
+                  ))}
+                </div>
 
-{/* ANALISIS RAYOS SIONNA */}
+                {/* ANALISIS RAYOS SIONNA */}
 
-{resultadoCobertura.rayos &&
-resultadoCobertura.rayos.length > 0 && (
+                {resultadoCobertura.rayos &&
+                  resultadoCobertura.rayos.length > 0 && (
+                    <div className="space-y-3 border-t border-slate-800 pt-5">
+                      <p className="text-[9px] uppercase text-slate-500 font-black">
+                        Análisis rayos Sionna
+                      </p>
 
-<div className="space-y-3 border-t border-slate-800 pt-5">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-black/70 border border-slate-800 rounded-xl p-3">
+                          <p className="text-[8px] uppercase text-slate-500 font-black">
+                            Total rayos
+                          </p>
 
-<p className="text-[9px] uppercase text-slate-500 font-black">
-Análisis rayos Sionna
-</p>
+                          <p className="text-xl font-black text-white">
+                            {resultadoCobertura.rayos.length}
+                          </p>
+                        </div>
 
-<div className="grid grid-cols-2 gap-3">
+                        <div className="bg-black/70 border border-slate-800 rounded-xl p-3">
+                          <p className="text-[8px] uppercase text-slate-500 font-black">
+                            Mejor potencia
+                          </p>
 
-<div className="bg-black/70 border border-slate-800 rounded-xl p-3">
+                          <p className="text-xl font-black text-green-400">
+                            {Math.max(
+                              ...resultadoCobertura.rayos.map(
+                                (r: any) => r.potenciaDbm,
+                              ),
+                            )}{" "}
+                            dBm
+                          </p>
+                        </div>
+                      </div>
 
-<p className="text-[8px] uppercase text-slate-500 font-black">
-Total rayos
-</p>
+                      <div className="max-h-64 overflow-y-auto space-y-2">
+                        {resultadoCobertura.rayos
 
-<p className="text-xl font-black text-white">
-{resultadoCobertura.rayos.length}
-</p>
+                          .slice()
 
-</div>
+                          .sort(
+                            (a: any, b: any) => b.potenciaDbm - a.potenciaDbm,
+                          )
 
-<div className="bg-black/70 border border-slate-800 rounded-xl p-3">
+                          .slice(0, maxRayos)
 
-<p className="text-[8px] uppercase text-slate-500 font-black">
-Mejor potencia
-</p>
+                          .map((rayo: any, index: number) => (
+                            <div
+                              key={rayo.id}
+                              className="bg-black/70 border border-slate-800 rounded-xl p-3"
+                            >
+                              <p className="text-[10px] font-black uppercase text-white">
+                                Rayo {index + 1}
+                              </p>
 
-<p className="text-xl font-black text-green-400">
-{
-Math.max(
-...resultadoCobertura.rayos.map(
-(r:any)=>r.potenciaDbm
-)
-)
-} dBm
-</p>
-
-</div>
-
-</div>
-
-<div className="max-h-64 overflow-y-auto space-y-2">
-
-{resultadoCobertura.rayos
-
-.slice()
-
-.sort(
-(a:any,b:any)=>
-b.potenciaDbm-a.potenciaDbm
-)
-
-.slice(
-0,
-maxRayos
-)
-
-.map((rayo:any,index:number)=>(
-
-<div
-key={rayo.id}
-className="bg-black/70 border border-slate-800 rounded-xl p-3"
->
-
-<p className="text-[10px] font-black uppercase text-white">
-Rayo {index+1}
-</p>
-
-<p className="text-[9px] text-slate-500 uppercase">
-
-{rayo.afectadoPorPersona || rayo.tipo==="afectado_persona" || rayo.tipoVisual==="afectado_persona"
-? "AFECTADO POR PERSONA"
-: rayo.tipo}
-
-·
-
-{rayo.potenciaDbm} dBm
-
-·
-
-Rebotes:
-
-{rayo.numRebotes ?? 0}
-
-{typeof rayo.perdidaPersonaDb === "number" && rayo.perdidaPersonaDb > 0
-? ` · Pérdida persona ${rayo.perdidaPersonaDb.toFixed(2)} dB`
-: ""}
-
-{typeof rayo.dopplerPersonaHz === "number" && Math.abs(rayo.dopplerPersonaHz) > 0
-? ` · Doppler persona ${rayo.dopplerPersonaHz.toFixed(2)} Hz`
-: ""}
-
-</p>
-
-</div>
-
-))}
-
-</div>
-
-</div>
-
-)}
-
-</div>
-)}
+                              <p className="text-[9px] text-slate-500 uppercase">
+                                {rayo.afectadoPorPersona ||
+                                rayo.tipo === "afectado_persona" ||
+                                rayo.tipoVisual === "afectado_persona"
+                                  ? "AFECTADO POR PERSONA"
+                                  : rayo.tipo}
+                                ·{rayo.potenciaDbm} dBm · Rebotes:
+                                {rayo.numRebotes ?? 0}
+                                {typeof rayo.perdidaPersonaDb === "number" &&
+                                rayo.perdidaPersonaDb > 0
+                                  ? ` · Pérdida persona ${rayo.perdidaPersonaDb.toFixed(2)} dB`
+                                  : ""}
+                                {typeof rayo.dopplerPersonaHz === "number" &&
+                                Math.abs(rayo.dopplerPersonaHz) > 0
+                                  ? ` · Doppler persona ${rayo.dopplerPersonaHz.toFixed(2)} Hz`
+                                  : ""}
+                              </p>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+              </div>
+            )}
 
             <div className="mt-6 border-t border-slate-800 pt-5">
               <p className="text-[9px] text-slate-500 uppercase font-bold leading-relaxed">
@@ -3143,7 +3894,10 @@ function ObjetoMovible({
         </mesh>
       )}
 
-      {(tipo === "router" || tipo === "receptor" || tipo === "persona" || tipo === "columna_termica") && (
+      {(tipo === "router" ||
+        tipo === "receptor" ||
+        tipo === "persona" ||
+        tipo === "columna_termica") && (
         <mesh position={[0, -obj.y + 0.06, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <ringGeometry args={[0.45, 0.7, 32]} />
           <meshBasicMaterial
@@ -3157,12 +3911,12 @@ function ObjetoMovible({
                     ? "#facc15"
                     : "#fde68a"
                   : tipo === "receptor"
-                  ? seleccionado
-                    ? "#22c55e"
-                    : "#86efac"
-                  : seleccionado
-                    ? "#f97316"
-                    : "#fb923c"
+                    ? seleccionado
+                      ? "#22c55e"
+                      : "#86efac"
+                    : seleccionado
+                      ? "#f97316"
+                      : "#fb923c"
             }
             transparent
             opacity={seleccionado ? 0.55 : 0.25}
@@ -3181,7 +3935,7 @@ function ColumnaTermica3D({
   seleccionado: boolean;
 }) {
   const ref = useRef<THREE.Group>(null);
-  const temperaturaC = obj.temperaturaC ?? ((obj.T_hot_K ?? 600) - 273.15);
+  const temperaturaC = obj.temperaturaC ?? (obj.T_hot_K ?? 600) - 273.15;
   const intensidad = Math.max(0.15, Math.min(1, temperaturaC / 900));
 
   useFrame((_, delta) => {
@@ -3214,9 +3968,16 @@ function ColumnaTermica3D({
         />
       </mesh>
 
-      <mesh position={[0, obj.sy * 0.55, 0]} scale={[obj.sx * 0.45, obj.sx * 0.45, obj.sx * 0.45]}>
+      <mesh
+        position={[0, obj.sy * 0.55, 0]}
+        scale={[obj.sx * 0.45, obj.sx * 0.45, obj.sx * 0.45]}
+      >
         <sphereGeometry args={[1, 32, 32]} />
-        <meshBasicMaterial color="#fed7aa" transparent opacity={0.18 + intensidad * 0.25} />
+        <meshBasicMaterial
+          color="#fed7aa"
+          transparent
+          opacity={0.18 + intensidad * 0.25}
+        />
       </mesh>
 
       <Line
@@ -3282,7 +4043,11 @@ function PersonajeMovil({
         <meshStandardMaterial color="#020617" />
       </mesh>
 
-      <mesh castShadow position={[-0.18, 0.05, 0.04]} scale={[0.16, 0.12, 0.23]}>
+      <mesh
+        castShadow
+        position={[-0.18, 0.05, 0.04]}
+        scale={[0.16, 0.12, 0.23]}
+      >
         <sphereGeometry args={[1, 16, 16]} />
         <meshStandardMaterial color="#111827" />
       </mesh>
@@ -3299,7 +4064,6 @@ function PersonajeMovil({
     </group>
   );
 }
-
 
 function SimulacionDinamica({
   activa,
@@ -3360,7 +4124,6 @@ function SimulacionDinamica({
   );
 }
 
-
 // ---------------------------------------------------------
 // VISUALIZACIÓN DE ARRAYS MIMO / ANTENAS FEKO-READY
 // ---------------------------------------------------------
@@ -3389,7 +4152,12 @@ function CapaArraysMIMO({
   const lambda = c / Math.max(1, frecuenciaMhz * 1e6);
   const spacingM = Math.max(0.02, spacingLambda * lambda);
 
-  const pintarArray = (obj: Objeto3D, rows: number, cols: number, esTx: boolean) => {
+  const pintarArray = (
+    obj: Objeto3D,
+    rows: number,
+    cols: number,
+    esTx: boolean,
+  ) => {
     const elementos = [];
     const rMax = Math.max(1, Math.min(8, rows));
     const cMax = Math.max(1, Math.min(8, cols));
@@ -3401,10 +4169,17 @@ function CapaArraysMIMO({
         const ox = (cIdx - (cMax - 1) / 2) * spacingM;
         const oy = (r - (rMax - 1) / 2) * spacingM;
         elementos.push(
-          <group key={`${obj.id}-${r}-${cIdx}`} position={[obj.x + ox, obj.y + oy, obj.z]}>
+          <group
+            key={`${obj.id}-${r}-${cIdx}`}
+            position={[obj.x + ox, obj.y + oy, obj.z]}
+          >
             <mesh>
               <sphereGeometry args={[0.045, 12, 12]} />
-              <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.35} />
+              <meshStandardMaterial
+                color={color}
+                emissive={color}
+                emissiveIntensity={0.35}
+              />
             </mesh>
             {antena.includes("dipolo") && (
               <mesh rotation={[0, 0, Math.PI / 2]}>
@@ -3504,7 +4279,9 @@ function CapaCobertura({
             position={[p.x, 0.05, p.z]}
             rotation={[-Math.PI / 2, 0, 0]}
           >
-            <circleGeometry args={[modoHeatmap === "potencia" ? 0.22 : 0.3, 24]} />
+            <circleGeometry
+              args={[modoHeatmap === "potencia" ? 0.22 : 0.3, 24]}
+            />
             <meshBasicMaterial
               color={colorHeatmapModo(p, modoHeatmap)}
               transparent
@@ -3585,10 +4362,7 @@ function CapaCobertura({
             />
           </mesh>
 
-          <mesh
-            position={[0, -rx.y + 0.07, 0]}
-            rotation={[-Math.PI / 2, 0, 0]}
-          >
+          <mesh position={[0, -rx.y + 0.07, 0]} rotation={[-Math.PI / 2, 0, 0]}>
             <ringGeometry args={[0.22, 0.36, 24]} />
             <meshBasicMaterial color="#22c55e" transparent opacity={0.6} />
           </mesh>
@@ -3619,7 +4393,10 @@ function CapaCobertura({
   );
 }
 
-function colorHeatmapModo(p: PuntoHeatmap, modo: "potencia" | "delay" | "doppler") {
+function colorHeatmapModo(
+  p: PuntoHeatmap,
+  modo: "potencia" | "delay" | "doppler",
+) {
   if (modo === "delay") {
     const d = Math.abs(p.delaySpreadRmsNs ?? 0);
     if (d < 5) return "#22c55e";
@@ -3654,45 +4431,42 @@ function colorHeatmapMesh(potenciaDbm: number) {
   return "#0c4a6e";
 }
 
-function colorRayo(rayo:any){
-
-  if(rayo.afectadoPorPersona || rayo.tipo==="afectado_persona" || rayo.tipoVisual==="afectado_persona"){
+function colorRayo(rayo: any) {
+  if (
+    rayo.afectadoPorPersona ||
+    rayo.tipo === "afectado_persona" ||
+    rayo.tipoVisual === "afectado_persona"
+  ) {
     return "#ef4444";
   }
 
-  if(rayo.tipo==="directo"){
+  if (rayo.tipo === "directo") {
     return "#22c55e";
   }
 
-  if(rayo.tipo==="reflejado"){
+  if (rayo.tipo === "reflejado") {
     return "#f59e0b";
   }
 
-  if(rayo.nlos){
+  if (rayo.nlos) {
     return "#a855f7";
   }
 
   return "#38bdf8";
 }
 
-
-
-function grosorRayo(rayo:any){
-
-  if(rayo.afectadoPorPersona || rayo.tipo==="afectado_persona" || rayo.tipoVisual==="afectado_persona"){
+function grosorRayo(rayo: any) {
+  if (
+    rayo.afectadoPorPersona ||
+    rayo.tipo === "afectado_persona" ||
+    rayo.tipoVisual === "afectado_persona"
+  ) {
     return 5;
   }
 
   const p = rayo.potenciaDbm ?? -90;
 
-  return Math.max(
-    1,
-    Math.min(
-      8,
-      (p+100)/10
-    )
-  );
-
+  return Math.max(1, Math.min(8, (p + 100) / 10));
 }
 
 function MaterialSelect({
