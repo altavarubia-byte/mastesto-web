@@ -121,7 +121,7 @@ function generateRF(current: any, text: string, common: any) {
       ...(current.matching || {}),
       targetOhm,
       network: boolHas(text, ["stub"]) ? "stub" : current.matching?.network ?? "quarter_wave",
-      stubEnabled: boolHas(text, ["stub"]) || current.matching?.stubEnabled ?? true,
+      stubEnabled: boolHas(text, ["stub"]) || (current.matching?.stubEnabled ?? true),
     },
     sweep: {
       ...(current.sweep || {}),
@@ -195,7 +195,7 @@ function generateOptical(current: any, text: string, common: any) {
     lengthKm: common.km ?? current.lengthKm ?? 10,
     marginDb: margin,
     wdm: { ...(current.wdm || {}), channels, spacingGHz: current.wdm?.spacingGHz ?? 100 },
-    fso: { ...(current.fso || {}), enabled: boolHas(text, ["fso", "espacio libre"]) || current.fso?.enabled ?? false },
+    fso: { ...(current.fso || {}), enabled: boolHas(text, ["fso", "espacio libre"]) || (current.fso?.enabled ?? false) },
     validation: { note: "AI v1100 optical scenario; verify OSNR/BER with real model." },
   };
 }
@@ -209,7 +209,7 @@ function generateDSP(current: any, text: string) {
   const fs = firstNumberAfter(text, [/fs\s*(?:de|=|:)?\s*(\d+(?:\.\d+)?)/, /(\d+(?:\.\d+)?)\s*hz/]) ?? current.signal?.fs ?? 16000;
   return {
     ...current,
-    signal: { ...(current.signal || {}), fs, kind: boolHas(text, ["audio"]) ? "audio" : current.signal?.kind ?? "chirp" },
+    signal: { ...(current.signal || {}), fs, kind: boolHas(text, ["audio"]) ? "audio" : (current.signal?.kind ?? "chirp") },
     stft: { ...(current.stft || {}), nFft: Math.max(512, Number(current.stft?.nFft ?? 512)), hopLength: current.stft?.hopLength ?? 160 },
     modulation: { ...(current.modulation || {}), scheme, snrDb: snr },
     validation: { note: "AI v1100 DSP scenario; browser visuals are synthetic unless audio is uploaded." },
@@ -250,7 +250,7 @@ function generateTransmissionLines(current: any, text: string, common: any) {
     microstrip: { ...(current.microstrip || {}), epsR: eps },
     reflection: { ...(current.reflection || {}), z0Ohm: z0, loadOhm: load },
     input: { ...(current.input || {}), z0Ohm: z0, loadOhm: load, frecuenciaGHz: common.frecuenciaGHz ?? current.input?.frecuenciaGHz ?? 2.45 },
-    stub: { ...(current.stub || {}), enabled: boolHas(text, ["stub"]) || current.stub?.enabled ?? true },
+    stub: { ...(current.stub || {}), enabled: boolHas(text, ["stub"]) || (current.stub?.enabled ?? true) },
     validation: { note: "AI v1100 transmission line scenario; use exact TL equations/backend for final values." },
   };
 }
@@ -273,8 +273,8 @@ function generateIndustrial(current: any, text: string) {
     },
     commercial: {
       ...(current.commercial || {}),
-      billing: boolHas(text, ["billing", "pago", "suscripcion"]) || current.commercial?.billing ?? false,
-      dataPersistence: boolHas(text, ["base de datos", "supabase", "persistencia"]) || current.commercial?.dataPersistence ?? false,
+      billing: boolHas(text, ["billing", "pago", "suscripcion"]) || (current.commercial?.billing ?? false),
+      dataPersistence: boolHas(text, ["base de datos", "supabase", "persistencia"]) || (current.commercial?.dataPersistence ?? false),
     },
   };
 }
