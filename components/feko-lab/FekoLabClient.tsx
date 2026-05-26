@@ -499,8 +499,41 @@ export default function FekoLabClient() {
               <button onClick={reportDownload} className={buttonClass("primary")}>Generar/descargar informe MD</button>
               <button onClick={exportJson} className={buttonClass("secondary")}>Descargar JSON resultado</button>
               <button onClick={exportSionna} className={buttonClass("secondary")}>Exportar a Sionna</button>
-              <button onClick={() => runAction("Touchstone S1P", "/rf/v100/export/s1p", { samples, z0Ohm: 50 })} className={buttonClass("secondary")}>Generar S1P</button>
-              <button onClick={() => runAction("CSV", "/rf/v100/export/csv", { rows: samples })} className={buttonClass("secondary")}>Generar CSV</button>
+              <button
+                onClick={() =>
+                  runAction("Touchstone S1P", "/rf/v100/export/s1p", {
+                    samples: samples.map((s) => ({
+                      label: s.label,
+                      x: s.x,
+                      s11Db: s.s11Db ?? null,
+                      vswr: s.vswr ?? null,
+                      value: s.value ?? null,
+                      frequencyHz: s.x > 1e6 ? s.x : undefined,
+                      frecuenciaGHz: s.x <= 1000 ? s.x : undefined,
+                    })),
+                    z0Ohm: 50,
+                  })
+                }
+                className={buttonClass("secondary")}
+              >
+                Generar S1P
+              </button>
+              <button
+                onClick={() =>
+                  runAction("CSV", "/rf/v100/export/csv", {
+                    rows: samples.map((s) => ({
+                      label: s.label,
+                      x: s.x,
+                      s11Db: s.s11Db ?? null,
+                      vswr: s.vswr ?? null,
+                      value: s.value ?? null,
+                    })),
+                  })
+                }
+                className={buttonClass("secondary")}
+              >
+                Generar CSV
+              </button>
               <button onClick={() => runAction("Pattern JSON", "/rf/v100/export/pattern", { result: asJsonObject(lastResult) })} className={buttonClass("secondary")}>Pattern JSON</button>
             </div>
             <JsonViewer title="Export result" value={lastResult} />
