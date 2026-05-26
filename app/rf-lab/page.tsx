@@ -79,10 +79,21 @@ export default function RFLabPage() {
     });
 
   const checkEnterprise = () =>
-    run("enterprise-health", async () => {
+  run("enterprise-health", async () => {
+    try {
       const h = await getJson("/enterprise/health");
       setState({ enterpriseHealth: h });
-    });
+    } catch (e) {
+      setState({
+        enterpriseHealth: {
+          ok: false,
+          disabled: true,
+          message:
+            "Enterprise no está activo todavía. El motor RF principal sí puede resolver antenas.",
+        },
+      });
+    }
+  });
 
   const tabs: Array<{ id: Tab; label: string }> = [
     { id: "dashboard", label: "Centro" },
