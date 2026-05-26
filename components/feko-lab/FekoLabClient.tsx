@@ -508,8 +508,8 @@ export default function FekoLabClient() {
                       s11Db: s.s11Db ?? null,
                       vswr: s.vswr ?? null,
                       value: s.value ?? null,
-                      frequencyHz: s.x > 1e6 ? s.x : undefined,
-                      frecuenciaGHz: s.x <= 1000 ? s.x : undefined,
+                      frequencyHz: s.x > 1e6 ? s.x : null,
+                      frecuenciaGHz: s.x <= 1000 ? s.x : null,
                     })),
                     z0Ohm: 50,
                   })
