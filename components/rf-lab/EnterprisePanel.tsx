@@ -13,8 +13,9 @@ export function EnterprisePanel({
   setState: (patch: any) => void;
   run: (key: string, fn: () => Promise<void>) => void;
 }) {
-  const runSurface = () =>
-    run("enterprise-surface", async () => {
+ const runSurface = () =>
+  run("enterprise-surface", async () => {
+    try {
       const data = await postJson("/enterprise/surface/rwg-report", {
         widthM: state.surfaceW,
         heightM: state.surfaceH,
@@ -23,8 +24,25 @@ export function EnterprisePanel({
         frequencyHz: state.freqGHz * 1e9,
         polarization: "x",
       });
-      setState({ enterpriseResult: data });
-    });
+
+      setState({
+        enterpriseResult: data,
+        error: null,
+      });
+    } catch (e: any) {
+      setState({
+        enterpriseResult: {
+          ok: false,
+          module: "Enterprise RWG",
+          error: e?.message || String(e),
+          explanation:
+            "El frontend está bien, pero el backend activo no tiene todavía /enterprise/surface/rwg-report. Ahora mismo probablemente solo está arrancando rf_engine.main_rf.",
+        },
+        error:
+          "Enterprise todavía no está activo en el backend. RF Engine sí funciona.",
+      });
+    }
+  });
 
   const runEfie = () =>
     run("enterprise-efie", async () => {
