@@ -1,6 +1,6 @@
-import ModuleProductPage from "@/components/telecomFinal/ModuleProductPage";
-import { DSP_CONFIG } from "@/components/telecomFinal/configs";
+import PremiumModulePage from "@/components/telecomPremium/PremiumModulePage";
+import { CONFIGS } from "@/components/telecomPremium/configs";
 
 export default function Page() {
-  return <ModuleProductPage config={DSP_CONFIG} />;
+  return <PremiumModulePage config={CONFIGS.dsp} />;
 }

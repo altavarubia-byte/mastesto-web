@@ -1,6 +1,6 @@
-import ModuleProductPage from "@/components/telecomFinal/ModuleProductPage";
-import { TL_CONFIG } from "@/components/telecomFinal/configs";
+import PremiumModulePage from "@/components/telecomPremium/PremiumModulePage";
+import { CONFIGS } from "@/components/telecomPremium/configs";
 
 export default function Page() {
-  return <ModuleProductPage config={TL_CONFIG} />;
+  return <PremiumModulePage config={CONFIGS.transmissionLines} />;
 }

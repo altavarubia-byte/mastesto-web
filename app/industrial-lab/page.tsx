@@ -1,6 +1,6 @@
-import ModuleProductPage from "@/components/telecomFinal/ModuleProductPage";
-import { INDUSTRIAL_CONFIG } from "@/components/telecomFinal/configs";
+import PremiumModulePage from "@/components/telecomPremium/PremiumModulePage";
+import { CONFIGS } from "@/components/telecomPremium/configs";
 
 export default function Page() {
-  return <ModuleProductPage config={INDUSTRIAL_CONFIG} />;
+  return <PremiumModulePage config={CONFIGS.industrial} />;
 }
