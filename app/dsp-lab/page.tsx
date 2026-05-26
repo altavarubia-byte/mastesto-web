@@ -1,5 +1,5 @@
 import MegaTelecomLabPro from "@/components/mega/MegaTelecomLabPro";
 
-export default function RFLabPage() {
+export default function DSPLabPage() {
   return <MegaTelecomLabPro />;
 }
