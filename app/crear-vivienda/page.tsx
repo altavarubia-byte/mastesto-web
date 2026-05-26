@@ -150,20 +150,47 @@ type MaterialRF = {
   frecuenciaHz?: number;
   frecuenciaGhz?: number;
   epsR?: number;
+  eps_r?: number;
   sigmaS_m?: number;
+  sigma_s_m?: number;
   tanDelta?: number;
+  tan_delta?: number;
   epsComplejaReal?: number;
+  eps_compleja_real?: number;
   epsComplejaImag?: number;
+  eps_compleja_imag?: number;
   espesorM?: number;
+  espesor_m?: number;
   rugosidadM?: number;
+  rugosidad_m?: number;
   perdidaSlabDb?: number;
+  perdida_slab_db?: number;
   perdidaRugosidadDb?: number;
+  perdida_rugosidad_db?: number;
   perdidaTotalDb?: number;
+  perdida_total_db?: number;
   coefReflexionAbs?: number;
+  coef_reflexion_normal_abs?: number;
   perdidaReflexionDb?: number;
+  perdida_reflexion_db?: number;
+  lambda_m?: number;
   modelo?: string;
   [key: string]: any;
 };
+
+
+const nrf = (value: unknown, fallback = 0): number => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+};
+
+const materialRfValue = (m: any, camel: string, snake: string, fallback = 0): number => {
+  return nrf(m?.[camel] ?? m?.[snake], fallback);
+};
+
+const fmtFixed = (value: unknown, digits = 3): string => nrf(value).toFixed(digits);
+
+const fmtExp = (value: unknown, digits = 2): string => nrf(value).toExponential(digits);
 
 type ResultadoCobertura = {
   ok: boolean;
@@ -393,12 +420,6 @@ export default function CrearViviendaPage() {
       materialPared: "ladrillo",
       materialSuelo: "hormigon",
       materialTecho: "pladur",
-      espesorParedM: 0.115,
-      espesorSueloM: 0.2,
-      espesorTechoM: 0.013,
-      rugosidadParedM: 0.0015,
-      rugosidadSueloM: 0.002,
-      rugosidadTechoM: 0.0005,
     },
   ]);
 
@@ -949,12 +970,14 @@ export default function CrearViviendaPage() {
         })),
       habitaciones: habitaciones.map((h) => ({
         ...h,
-        espesorParedM: h.espesorParedM ?? espesorParedM,
-        espesorSueloM: h.espesorSueloM ?? espesorSueloM,
-        espesorTechoM: h.espesorTechoM ?? espesorTechoM,
-        rugosidadParedM: h.rugosidadParedM ?? rugosidadParedM,
-        rugosidadSueloM: h.rugosidadSueloM ?? rugosidadSueloM,
-        rugosidadTechoM: h.rugosidadTechoM ?? rugosidadTechoM,
+        // Usamos los valores globales actuales para que los sliders cambien siempre el cálculo.
+        // Si en el futuro quieres rugosidad/espesor por habitación, se puede reactivar como modo avanzado.
+        espesorParedM,
+        espesorSueloM,
+        espesorTechoM,
+        rugosidadParedM,
+        rugosidadSueloM,
+        rugosidadTechoM,
       })),
       objetos,
     };
@@ -2018,16 +2041,10 @@ export default function CrearViviendaPage() {
                   onChange={(v) => actualizarHabitacion("materialTecho", v)}
                 />
 
-                <div className="border-t border-slate-800 pt-4 space-y-4">
-                  <p className="text-[9px] uppercase text-cyan-300 font-black">
-                    Propiedades RF habitación
+                <div className="border-t border-slate-800 pt-4">
+                  <p className="text-[9px] text-slate-500 uppercase leading-relaxed">
+                    Las propiedades RF físicas se editan una sola vez en el panel “Ancho de banda y materiales RF” para evitar duplicidades. Esos valores se aplican a todas las habitaciones en el payload.
                   </p>
-                  <Control label="Espesor pared m" value={habitacionActual.espesorParedM ?? espesorParedM} min={0.005} max={0.6} step={0.005} onChange={(v) => actualizarHabitacion("espesorParedM", v)} />
-                  <Control label="Rugosidad pared m" value={habitacionActual.rugosidadParedM ?? rugosidadParedM} min={0} max={0.02} step={0.0005} onChange={(v) => actualizarHabitacion("rugosidadParedM", v)} />
-                  <Control label="Espesor suelo m" value={habitacionActual.espesorSueloM ?? espesorSueloM} min={0.005} max={0.6} step={0.005} onChange={(v) => actualizarHabitacion("espesorSueloM", v)} />
-                  <Control label="Rugosidad suelo m" value={habitacionActual.rugosidadSueloM ?? rugosidadSueloM} min={0} max={0.02} step={0.0005} onChange={(v) => actualizarHabitacion("rugosidadSueloM", v)} />
-                  <Control label="Espesor techo m" value={habitacionActual.espesorTechoM ?? espesorTechoM} min={0.005} max={0.6} step={0.005} onChange={(v) => actualizarHabitacion("espesorTechoM", v)} />
-                  <Control label="Rugosidad techo m" value={habitacionActual.rugosidadTechoM ?? rugosidadTechoM} min={0} max={0.02} step={0.0005} onChange={(v) => actualizarHabitacion("rugosidadTechoM", v)} />
                 </div>
 
                 <button
@@ -2153,16 +2170,16 @@ export default function CrearViviendaPage() {
                 <option value={320}>320 MHz WiFi 7</option>
               </select>
 
-              <Control label="Espesor pared m" value={espesorParedM} min={0.005} max={0.6} step={0.005} onChange={(v) => { setEspesorParedM(v); setResultadoCobertura(null); }} />
-              <Control label="Rugosidad pared m" value={rugosidadParedM} min={0} max={0.02} step={0.0005} onChange={(v) => { setRugosidadParedM(v); setResultadoCobertura(null); }} />
-              <Control label="Espesor suelo m" value={espesorSueloM} min={0.005} max={0.6} step={0.005} onChange={(v) => { setEspesorSueloM(v); setResultadoCobertura(null); }} />
-              <Control label="Rugosidad suelo m" value={rugosidadSueloM} min={0} max={0.02} step={0.0005} onChange={(v) => { setRugosidadSueloM(v); setResultadoCobertura(null); }} />
-              <Control label="Espesor techo m" value={espesorTechoM} min={0.005} max={0.6} step={0.005} onChange={(v) => { setEspesorTechoM(v); setResultadoCobertura(null); }} />
-              <Control label="Rugosidad techo m" value={rugosidadTechoM} min={0} max={0.02} step={0.0005} onChange={(v) => { setRugosidadTechoM(v); setResultadoCobertura(null); }} />
+              <Control label="Espesor pared m" value={espesorParedM} min={0.005} max={0.6} step={0.005} onChange={(v) => { setEspesorParedM(v); setResultadoCobertura(null); setCir([]); setCirResumen(null); }} />
+              <Control label="Rugosidad pared m" value={rugosidadParedM} min={0} max={0.02} step={0.0005} onChange={(v) => { setRugosidadParedM(v); setResultadoCobertura(null); setCir([]); setCirResumen(null); }} />
+              <Control label="Espesor suelo m" value={espesorSueloM} min={0.005} max={0.6} step={0.005} onChange={(v) => { setEspesorSueloM(v); setResultadoCobertura(null); setCir([]); setCirResumen(null); }} />
+              <Control label="Rugosidad suelo m" value={rugosidadSueloM} min={0} max={0.02} step={0.0005} onChange={(v) => { setRugosidadSueloM(v); setResultadoCobertura(null); setCir([]); setCirResumen(null); }} />
+              <Control label="Espesor techo m" value={espesorTechoM} min={0.005} max={0.6} step={0.005} onChange={(v) => { setEspesorTechoM(v); setResultadoCobertura(null); setCir([]); setCirResumen(null); }} />
+              <Control label="Rugosidad techo m" value={rugosidadTechoM} min={0} max={0.02} step={0.0005} onChange={(v) => { setRugosidadTechoM(v); setResultadoCobertura(null); setCir([]); setCirResumen(null); }} />
 
               <p className="mt-3 text-[9px] text-slate-500 uppercase leading-relaxed">
                 Backend: εr(f), σ(f), tanδ, permitividad compleja, slab loss,
-                rugosidad/lambda, ruido kTB y resolución temporal 1/B.
+                permitividad compleja εc=ε′−jε″, rugosidad/lambda, ruido kTB y resolución temporal 1/B.
               </p>
             </div>
 
@@ -2903,13 +2920,16 @@ export default function CrearViviendaPage() {
                             {m.rol ?? m.nombre ?? m.material ?? `Material ${idx + 1}`}
                           </p>
                           <p className="text-[10px] text-white uppercase">
-                            εr={(m.epsR ?? 0).toFixed?.(3) ?? m.epsR} · σ={(m.sigmaS_m ?? 0).toExponential?.(2) ?? m.sigmaS_m} S/m
+                            ε′={fmtFixed(materialRfValue(m, "epsR", "eps_r"), 3)} · ε″={fmtFixed(materialRfValue(m, "epsComplejaImag", "eps_compleja_imag"), 3)}
+                          </p>
+                          <p className="text-[9px] text-sky-300 uppercase">
+                            εc = ε′ − jε″ · σ={fmtExp(materialRfValue(m, "sigmaS_m", "sigma_s_m"), 2)} S/m · tanδ={fmtFixed(materialRfValue(m, "tanDelta", "tan_delta"), 4)}
                           </p>
                           <p className="text-[9px] text-cyan-300 uppercase">
-                            d={(m.espesorM ?? 0).toFixed?.(3) ?? m.espesorM} m · rug={(m.rugosidadM ?? 0).toFixed?.(4) ?? m.rugosidadM} m
+                            d={fmtFixed(materialRfValue(m, "espesorM", "espesor_m"), 3)} m · rug={fmtFixed(materialRfValue(m, "rugosidadM", "rugosidad_m"), 4)} m
                           </p>
                           <p className="text-[9px] text-orange-300 uppercase">
-                            loss={(m.perdidaTotalDb ?? m.perdidaSlabDb ?? 0).toFixed?.(2) ?? 0} dB
+                            loss={fmtFixed(materialRfValue(m, "perdidaTotalDb", "perdida_total_db", materialRfValue(m, "perdidaSlabDb", "perdida_slab_db")), 2)} dB · |Γ|={fmtFixed(materialRfValue(m, "coefReflexionAbs", "coef_reflexion_normal_abs"), 3)}
                           </p>
                         </div>
                       ))}
