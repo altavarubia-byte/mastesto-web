@@ -2180,6 +2180,7 @@ export default function CrearViviendaPage() {
               <p className="mt-3 text-[9px] text-slate-500 uppercase leading-relaxed">
                 Backend: εr(f), σ(f), tanδ, permitividad compleja, slab loss,
                 permitividad compleja εc=ε′−jε″, rugosidad/lambda, ruido kTB y resolución temporal 1/B.
+                La rugosidad editable es la de cerramientos; la de objetos se asigna automáticamente en backend.
               </p>
             </div>
 
@@ -2694,44 +2695,13 @@ export default function CrearViviendaPage() {
                 {objetoActual.tipo !== "router" &&
                   !esReceptor(objetoActual.tipo) &&
                   objetoActual.tipo !== "columna_termica" && (
-                    <div className="border border-cyan-900/40 bg-cyan-950/10 rounded-xl p-4 space-y-4">
+                    <div className="border border-cyan-900/40 bg-cyan-950/10 rounded-xl p-4 space-y-2">
                       <p className="text-[9px] uppercase text-cyan-300 font-black">
-                        Propiedades RF del objeto
+                        RF del objeto automático
                       </p>
-                      <Control
-                        label="Espesor objeto m"
-                        value={objetoActual.espesorM ?? Math.max(0.01, Math.min(objetoActual.sx, objetoActual.sy, objetoActual.sz))}
-                        min={0.001}
-                        max={1}
-                        step={0.001}
-                        onChange={(v) => actualizarObjeto("espesorM", v)}
-                      />
-                      <Control
-                        label="Rugosidad objeto m"
-                        value={objetoActual.rugosidadM ?? 0.001}
-                        min={0}
-                        max={0.02}
-                        step={0.0005}
-                        onChange={(v) => actualizarObjeto("rugosidadM", v)}
-                      />
-                      <Control
-                        label="εr override opcional"
-                        value={objetoActual.epsR ?? 0}
-                        min={0}
-                        max={20}
-                        step={0.1}
-                        onChange={(v) => actualizarObjeto("epsR", v === 0 ? null : v)}
-                      />
-                      <Control
-                        label="σ override S/m opcional"
-                        value={objetoActual.sigmaS_m ?? 0}
-                        min={0}
-                        max={10}
-                        step={0.001}
-                        onChange={(v) => actualizarObjeto("sigmaS_m", v === 0 ? null : v)}
-                      />
                       <p className="text-[9px] text-slate-500 uppercase leading-relaxed">
-                        Si dejas εr/σ a 0, main.py calcula valores por material y frecuencia.
+                        La rugosidad, εr y σ del objeto se calculan en main.py según su material y la frecuencia.
+                        Así evitas duplicar controles y cada mueble/obstáculo usa valores físicos por defecto.
                       </p>
                     </div>
                   )}
@@ -4803,27 +4773,42 @@ function Control({
   step: number;
   onChange: (v: number) => void;
 }) {
+  const decimals = step < 0.001 ? 5 : step < 0.01 ? 4 : step < 0.1 ? 3 : 1;
+  const safeValue = Number.isFinite(value) ? value : min;
+
   return (
     <div>
-      <div className="flex justify-between mb-1">
+      <div className="flex justify-between mb-1 gap-2">
         <label className="text-[8px] uppercase text-slate-500 font-black">
           {label}
         </label>
 
         <span className="text-[8px] text-cyan-300 font-mono">
-          {value.toFixed(1)}
+          {safeValue.toFixed(decimals)}
         </span>
       </div>
 
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full accent-cyan-400"
-      />
+      <div className="grid grid-cols-[1fr_96px] gap-2 items-center">
+        <input
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={safeValue}
+          onChange={(e) => onChange(Number(e.target.value))}
+          className="w-full accent-cyan-400"
+        />
+
+        <input
+          type="number"
+          min={min}
+          max={max}
+          step={step}
+          value={safeValue}
+          onChange={(e) => onChange(Number(e.target.value))}
+          className="w-full bg-black/70 border border-slate-700 rounded-lg px-2 py-1 text-[10px] text-white outline-none"
+        />
+      </div>
     </div>
   );
 }
