@@ -1,5 +1,6 @@
-import ModuleLabPro from "@/components/telecom-pro/ModuleLabPro";
+import ModuleProductPage from "@/components/telecomFinal/ModuleProductPage";
+import { TL_CONFIG } from "@/components/telecomFinal/configs";
 
 export default function Page() {
-  return <ModuleLabPro moduleKey="transmissionLines" />;
+  return <ModuleProductPage config={TL_CONFIG} />;
 }

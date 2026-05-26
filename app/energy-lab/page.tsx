@@ -1,5 +1,6 @@
-import ModuleLabPro from "@/components/telecom-pro/ModuleLabPro";
+import ModuleProductPage from "@/components/telecomFinal/ModuleProductPage";
+import { ENERGY_CONFIG } from "@/components/telecomFinal/configs";
 
 export default function Page() {
-  return <ModuleLabPro moduleKey="energy" />;
+  return <ModuleProductPage config={ENERGY_CONFIG} />;
 }

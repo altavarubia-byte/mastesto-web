@@ -1,5 +1,6 @@
-import ModuleLabPro from "@/components/telecom-pro/ModuleLabPro";
+import ModuleProductPage from "@/components/telecomFinal/ModuleProductPage";
+import { IOT_CONFIG } from "@/components/telecomFinal/configs";
 
 export default function Page() {
-  return <ModuleLabPro moduleKey="iot" />;
+  return <ModuleProductPage config={IOT_CONFIG} />;
 }
