@@ -9,8 +9,8 @@ export default function Page() {
       subtitle="Antena helicoidal, ganancia, S11, VSWR y modulación."
       initialPayload={defaults.rf}
       nextLabel="Cámara/Sionna"
-      guide=["Calcula métricas de antena helicoidal axial-mode semiempírica.", "Entrega ganancia, HPBW, S11, VSWR y AR conceptual.", "No sustituye FEKO/HFSS/CST."]
-      charts=[]
+      guide={["Calcula métricas de antena helicoidal axial-mode semiempírica.", "Entrega ganancia, HPBW, S11, VSWR y AR conceptual.", "No sustituye FEKO/HFSS/CST."]}
+      charts={[]}
     />
   );
 }

@@ -9,8 +9,8 @@ export default function Page() {
       subtitle="Generación inteligente de escenario completo conectado."
       initialPayload={defaults.ai}
       nextLabel="Pipeline"
-      guide=["Genera un escenario completo y lo previsualiza con pipeline.", "Extrae frecuencia, espiras, km, Gbps, habitaciones, receptores y temperatura.", "Nivel 2: coherencia técnica; nivel 3 requiere medición real."]
-      charts=[]
+      guide={["Genera un escenario completo y lo previsualiza con pipeline.", "Extrae frecuencia, espiras, km, Gbps, habitaciones, receptores y temperatura.", "Nivel 2: coherencia técnica; nivel 3 requiere medición real."]}
+      charts={[]}
     />
   );
 }

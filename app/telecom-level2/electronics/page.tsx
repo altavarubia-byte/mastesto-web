@@ -9,8 +9,8 @@ export default function Page() {
       subtitle="LNA, ADC, ganancia, ruido, consumo y conclusiones para DSP/Energía."
       initialPayload={defaults.electronics}
       nextLabel="DSP/Energía"
-      guide=["Predimensiona LNA, ganancia analógica, ADC, rango dinámico y consumo.", "Entrega SNR efectivo y parámetros de muestreo a DSP.", "Entrega consumo a energía."]
-      charts=[]
+      guide={["Predimensiona LNA, ganancia analógica, ADC, rango dinámico y consumo.", "Entrega SNR efectivo y parámetros de muestreo a DSP.", "Entrega consumo a energía."]}
+      charts={[]}
     />
   );
 }

@@ -9,8 +9,8 @@ export default function Page() {
       subtitle="SNR, BER, EVM, throughput y modulación."
       initialPayload={defaults.dsp}
       nextLabel="Energía"
-      guide=["Calcula BER, EVM y throughput según modulación y SNR.", "Decide si el enlace es usable.", "Entrega consumo DSP a energía."]
-      charts=[]
+      guide={["Calcula BER, EVM y throughput según modulación y SNR.", "Decide si el enlace es usable.", "Entrega consumo DSP a energía."]}
+      charts={[]}
     />
   );
 }

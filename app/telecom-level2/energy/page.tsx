@@ -9,8 +9,8 @@ export default function Page() {
       subtitle="Consumo total, batería, solar y autonomía."
       initialPayload={defaults.energy}
       nextLabel="Informe"
-      guide=["Calcula consumo total, autonomía, energía diaria y solar.", "Evalúa si batería y solar sostienen el sistema.", "Recibe consumos desde electrónica y DSP."]
-      charts=[]
+      guide={["Calcula consumo total, autonomía, energía diaria y solar.", "Evalúa si batería y solar sostienen el sistema.", "Recibe consumos desde electrónica y DSP."]}
+      charts={[]}
     />
   );
 }
