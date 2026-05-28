@@ -72,13 +72,125 @@ function ThermalColumn({ o }: any) {
   );
 }
 
+
+function wallsFromRooms(payload: any) {
+  const rooms = Array.isArray(payload?.rooms) ? payload.rooms : [];
+  const out: any[] = [];
+
+  for (let i = 0; i < rooms.length; i++) {
+    const r = rooms[i];
+    const x = n(r.x, 0);
+    const z = n(r.z, 0);
+    const w = n(r.width ?? r.ancho, 6);
+    const d = n(r.length ?? r.largo, 5);
+    const h = n(r.height ?? r.alto, 2.8);
+    const t = n(r.wallThicknessM ?? payload?.wallThicknessM, 0.2);
+    const material = r.material || payload?.defaultWallMaterial || "concrete";
+    const roughness = n(r.roughness ?? payload?.roughness, 0.35);
+
+    out.push(
+      { id: `room${i+1}_north_payload`, x, y: h/2, z: z-d/2, w, h, d: t, material, thicknessM: t, roughness },
+      { id: `room${i+1}_south_payload`, x, y: h/2, z: z+d/2, w, h, d: t, material, thicknessM: t, roughness },
+      { id: `room${i+1}_west_payload`, x: x-w/2, y: h/2, z, w: t, h, d, material, thicknessM: t, roughness },
+      { id: `room${i+1}_east_payload`, x: x+w/2, y: h/2, z, w: t, h, d, material, thicknessM: t, roughness }
+    );
+  }
+
+  if (Array.isArray(payload?.walls)) {
+    for (const w of payload.walls) {
+      out.push({
+        id: w.id || `custom_wall_${out.length+1}`,
+        x: n(w.x, 0),
+        y: n(w.y, 1.4),
+        z: n(w.z, 0),
+        w: n(w.w ?? w.width, 2),
+        h: n(w.h ?? w.height, 2.8),
+        d: n(w.d ?? w.depth, 0.2),
+        material: w.material || "concrete",
+        thicknessM: n(w.thicknessM ?? w.d, 0.2),
+        roughness: n(w.roughness, 0.35)
+      });
+    }
+  }
+
+  return out;
+}
+
+function txFromPayload(payload: any) {
+  const tx = Array.isArray(payload?.tx) ? payload.tx[0] : payload?.tx;
+  if (!tx) return { x: -3, y: 1.2, z: 0, id: "tx1" };
+  if (Array.isArray(tx.position)) {
+    return { x: tx.position[0], y: tx.position[1], z: tx.position[2], id: tx.id || tx.name || "tx1" };
+  }
+  return tx;
+}
+
+function rxFromPayload(payload: any) {
+  const rx = payload?.rx || payload?.receivers || [];
+  if (!Array.isArray(rx)) return [];
+  return rx.map((r: any, i: number) => {
+    if (Array.isArray(r.position)) {
+      return { x: r.position[0], y: r.position[1], z: r.position[2], id: r.id || r.name || `rx${i+1}` };
+    }
+    return { ...r, id: r.id || r.name || `rx${i+1}` };
+  });
+}
+
+function previewRaysFromPayload(payload: any) {
+  const tx = txFromPayload(payload);
+  const rx = rxFromPayload(payload);
+
+  const rays: any[] = [];
+
+  for (let i = 0; i < rx.length; i++) {
+    const r = rx[i];
+
+    rays.push({
+      id: `preview_los_${r.id || i}`,
+      type: "los",
+      points: [
+        [n(tx.x), n(tx.y), n(tx.z)],
+        [n(r.x), n(r.y), n(r.z)]
+      ]
+    });
+
+    const bounceZ = i % 2 === 0 ? -n(payload?.floor?.depth, 12)/2 + 0.5 : n(payload?.floor?.depth, 12)/2 - 0.5;
+    const midX = (n(tx.x) + n(r.x)) / 2;
+
+    rays.push({
+      id: `preview_ref_${r.id || i}`,
+      type: "reflection",
+      points: [
+        [n(tx.x), n(tx.y), n(tx.z)],
+        [midX, n(tx.y), bounceZ],
+        [n(r.x), n(r.y), n(r.z)]
+      ]
+    });
+
+    const thermal = (payload?.obstacles || []).find((o: any) => o.type === "thermal_column" || o.kind === "thermal_column");
+    if (thermal) {
+      rays.push({
+        id: `preview_thermal_${r.id || i}`,
+        type: "thermal",
+        points: [
+          [n(tx.x), n(tx.y), n(tx.z)],
+          [n(thermal.x), n(tx.y), n(thermal.z)],
+          [n(r.x), n(r.y), n(r.z)]
+        ]
+      });
+    }
+  }
+
+  return rays;
+}
+
 function SionnaScene({ payload, result }: any) {
   const scene = result?.scene;
-  const tx = result?.tx || payload?.tx || { x: -3, y: 1.2, z: 0, id: "tx1" };
-  const receivers = result?.receivers || payload?.rx || [];
-  const rays = Array.isArray(result?.rays) ? result.rays : [];
+  const tx = result?.tx || txFromPayload(payload);
+  const receivers = result?.receivers || rxFromPayload(payload);
+  const rays = Array.isArray(result?.rays) && result.rays.length > 0 ? result.rays : previewRaysFromPayload(payload);
   const floor = scene?.floor || payload?.floor || { width: 16, depth: 12, material: "concrete" };
-  const walls = scene?.walls || [];
+  const walls = scene?.walls || wallsFromRooms(payload);
   const obstacles = scene?.obstacles || payload?.obstacles || payload?.objects || [];
 
   const txObj = Array.isArray(tx) ? tx[0] : tx;
