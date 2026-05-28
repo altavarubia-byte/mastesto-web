@@ -1027,6 +1027,7 @@ export default function CrearViviendaPage() {
       materialSuelo,
       materialTecho,
       frecuenciaMhz,
+      maxRayos,
       espesorParedM,
       espesorSueloM,
       espesorTechoM,
@@ -1061,6 +1062,11 @@ export default function CrearViviendaPage() {
         fekoPatternTxContent,
         fekoPatternRxContent,
         incluirHeatmapCanal: true,
+        maxRayos,
+        incluirRayosDebiles: true,
+        anclarRouterOptimoAlTx: true,
+        movimientoTiempoReal: true,
+        tiempoEscenaS: Date.now() / 1000,
       },
       columnaTermica: objetos
         .filter((o) => o.tipo === "columna_termica")
@@ -1690,39 +1696,72 @@ const url = `${BASE_URL}/raytrace`;
     }
   };
 
+  const validarBlobGLB = async (blob: Blob): Promise<Blob> => {
+    if (!blob || blob.size < 20) {
+      throw new Error(`GLB vacío o demasiado pequeño (${blob?.size ?? 0} bytes).`);
+    }
+
+    const header = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
+    const magic = String.fromCharCode(...header);
+
+    if (magic !== "glTF") {
+      const texto = await blob.text().catch(() => "");
+      throw new Error(
+        `La respuesta no es un GLB válido. Magic=${magic}. Respuesta=${texto.slice(0, 500)}`,
+      );
+    }
+
+    return new Blob([blob], { type: "model/gltf-binary" });
+  };
+
+  const cargarBlobGLBEnVisor = async (blobOriginal: Blob) => {
+    const blob = await validarBlobGLB(blobOriginal);
+
+    if (modeloGlb?.startsWith("blob:")) {
+      URL.revokeObjectURL(modeloGlb);
+    }
+
+    const url = URL.createObjectURL(blob);
+    setModeloGlb(url);
+  };
+
   const generarModeloGLB = async () => {
     try {
       setGenerandoGlb(true);
       setModeloGlb("");
 
       const datos = crearDatosVivienda();
+      const urlGlb = `${SIONNA_API_URL}/generar-glb`;
 
-      const res = await fetch(`${SIONNA_API_URL}/generar-glb`, {
+      console.log("URL usada GLB:", urlGlb);
+      console.log("Payload GLB:", datos);
+
+      const res = await fetch(urlGlb, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Accept": "model/gltf-binary, application/octet-stream, application/json",
         },
         body: JSON.stringify(datos),
       });
 
+      const contentType = res.headers.get("content-type") || "";
+      console.log("Status GLB:", res.status, "Content-Type:", contentType);
+
       if (!res.ok) {
         const error = await res.text();
         console.error("Error /generar-glb:", error);
-        alert("No se pudo generar el modelo GLB.");
+        alert("No se pudo generar el modelo GLB. Revisa los logs de Hugging Face.");
         return;
       }
 
-      const contentType = res.headers.get("content-type") || "";
-
-      // Compatibilidad doble:
-      // 1) Backend nuevo: devuelve directamente el binario .glb.
-      // 2) Backend antiguo: devuelve JSON {ok, archivo} y luego se descarga /descargar/{archivo}.
+      // Backend antiguo: JSON con archivo/url. Backend nuevo: GLB binario directo.
       if (contentType.includes("application/json")) {
         const payload = await res.json();
+        console.log("Respuesta JSON /generar-glb:", payload);
 
-        if (!payload?.ok) {
-          console.error("Respuesta /generar-glb no OK:", payload);
-          alert(payload?.mensaje || "No se pudo generar el modelo GLB.");
+        if (!payload?.ok && !payload?.archivo && !payload?.url) {
+          alert(payload?.mensaje || "El backend no devolvió un GLB descargable.");
           return;
         }
 
@@ -1730,7 +1769,7 @@ const url = `${BASE_URL}/raytrace`;
         const urlDescarga = payload.url
           ? String(payload.url)
           : archivo
-            ? `${SIONNA_API_URL}/descargar/${archivo}`
+            ? `${SIONNA_API_URL}/descargar/${archivo}?t=${Date.now()}`
             : "";
 
         if (!urlDescarga) {
@@ -1739,7 +1778,9 @@ const url = `${BASE_URL}/raytrace`;
           return;
         }
 
-        const resGlb = await fetch(urlDescarga);
+        const resGlb = await fetch(urlDescarga, {
+          headers: { "Accept": "model/gltf-binary, application/octet-stream" },
+        });
 
         if (!resGlb.ok) {
           const error = await resGlb.text();
@@ -1748,18 +1789,18 @@ const url = `${BASE_URL}/raytrace`;
           return;
         }
 
-        const blob = await resGlb.blob();
-        const url = URL.createObjectURL(blob);
-        setModeloGlb(url);
+        await cargarBlobGLBEnVisor(await resGlb.blob());
         return;
       }
 
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      setModeloGlb(url);
+      await cargarBlobGLBEnVisor(await res.blob());
     } catch (error) {
-      console.error(error);
-      alert("Error conectando con Blender GLB.");
+      console.error("Error Blender GLB:", error);
+      alert(
+        error instanceof Error
+          ? `Error conectando con Blender GLB: ${error.message}`
+          : "Error conectando con Blender GLB.",
+      );
     } finally {
       setGenerandoGlb(false);
     }
@@ -2896,7 +2937,7 @@ const url = `${BASE_URL}/raytrace`;
                   <directionalLight position={[5, 8, 5]} intensity={2} />
 
                   <Suspense fallback={null}>
-                    <ModeloGLB url={modeloGlb} />
+                    <ModeloGLB key={modeloGlb} url={modeloGlb} />
                   </Suspense>
 
                   <OrbitControls enablePan enableZoom enableRotate />
@@ -5195,10 +5236,11 @@ function MaterialSelect({
 
 function ModeloGLB({ url }: { url: string }) {
   const gltf = useGLTF(url) as any;
+  const scene = gltf.scene?.clone?.(true) ?? gltf.scene;
 
   return (
     <group scale={1} position={[0, 0, 0]}>
-      <primitive object={gltf.scene} />
+      <primitive object={scene} />
     </group>
   );
 }
