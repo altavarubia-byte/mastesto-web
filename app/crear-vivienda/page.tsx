@@ -1,4 +1,5 @@
 "use client";
+// FRONTEND RF V4 INTEGRADO: preparado para materialesRF, anchoBanda, modeloAvanzado y validacionFekoSionna.
 import ModelObjeto from "@/components/ModelObjeto";
 import { Canvas, useThree, useFrame } from "@react-three/fiber";
 import { OrbitControls, Grid, Line, useGLTF } from "@react-three/drei";
