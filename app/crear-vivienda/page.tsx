@@ -1302,14 +1302,99 @@ export default function CrearViviendaPage() {
     });
   };
 
+  const normalizarMimoMetricas = (resultado: any): any => {
+    const mm: any = resultado?.mimoMetricas ?? null;
+    if (!mm) return undefined;
+
+    const nt = nrf(mm.nt ?? mm.txElementos ?? txRows * txCols, txRows * txCols || 1);
+    const nr = nrf(mm.nr ?? mm.rxElementos ?? rxRows * rxCols, rxRows * rxCols || 1);
+    const capacidadReal = nrf(
+      mm.capacidadMimoRealGeomMbps ??
+        mm.capacidadMimoRealMbps ??
+        mm.capacidadRealMbps,
+      0,
+    );
+    const snrNormalizado = nrf(mm.snrDb ?? mm.snrDbRel ?? mm.snr_db, 0);
+
+    return {
+      ...mm,
+      nt,
+      nr,
+      streamsMaxTeoricos: nrf(
+        mm.streamsMaxTeoricos ?? Math.min(nt, nr),
+        Math.min(nt, nr),
+      ),
+      rankMaxTeorico: nrf(mm.rankMaxTeorico ?? Math.min(nt, nr), Math.min(nt, nr)),
+      rankRealDisponible: Boolean(
+        mm.rankRealDisponible ?? mm.matrizHDisponible ?? mm.rankReal,
+      ),
+      potenciaRxDbmUsada: nrf(
+        mm.potenciaRxDbmUsada ??
+          resultado?.estadisticas?.potenciaMediaDbm ??
+          resultado?.estadisticas?.potencia_media_dbm,
+        0,
+      ),
+      anchoBandaMhz: nrf(mm.anchoBandaMhz ?? anchoBandaMhz, anchoBandaMhz),
+      noiseFloorDbm: nrf(mm.noiseFloorDbm, -100),
+      noiseFigureDb: nrf(mm.noiseFigureDb ?? noiseFigureDb, noiseFigureDb),
+      snrDb: snrNormalizado,
+      arrayGainTxDbIdeal: nrf(
+        mm.arrayGainTxDbIdeal,
+        10 * Math.log10(Math.max(1, nt)),
+      ),
+      arrayGainRxDbIdeal: nrf(
+        mm.arrayGainRxDbIdeal,
+        10 * Math.log10(Math.max(1, nr)),
+      ),
+      arrayGainBeamformingDbIdeal: nrf(
+        mm.arrayGainBeamformingDbIdeal,
+        10 * Math.log10(Math.max(1, nt * nr)),
+      ),
+      snrBeamformingDbIdeal: nrf(
+        mm.snrBeamformingDbIdeal,
+        snrNormalizado + 10 * Math.log10(Math.max(1, nt * nr)),
+      ),
+      capacidadSisoMbps: nrf(
+        mm.capacidadSisoMbps ?? capacidadReal,
+        capacidadReal,
+      ),
+      capacidadBeamformingIdealMbps: nrf(
+        mm.capacidadBeamformingIdealMbps ?? capacidadReal,
+        capacidadReal,
+      ),
+      capacidadMultiplexingIdealMbps: nrf(
+        mm.capacidadMultiplexingIdealMbps ?? capacidadReal,
+        capacidadReal,
+      ),
+      capacidadMimoRealGeomMbps: capacidadReal,
+      rankReal:
+        typeof mm.rankReal === "number"
+          ? mm.rankReal
+          : typeof mm.rank === "number"
+            ? mm.rank
+            : null,
+      matrizHDisponible: Boolean(mm.matrizHDisponible ?? mm.HShape ?? mm.H_real),
+      singularValues: Array.isArray(mm.singularValues) ? mm.singularValues : [],
+      mimoMode: mm.mimoMode ?? mimoMode,
+      modelo: mm.modelo ?? {
+        nota:
+          mm.modeloH ??
+          "Métricas MIMO normalizadas desde la respuesta del backend para compatibilidad visual.",
+      },
+    };
+  };
+
   const prepararResultadoVisual = (
     resultado: ResultadoCobertura,
   ): ResultadoCobertura => {
     const taps = actualizarDopplerDesdeBackend(normalizarCIR(resultado));
     const resumenBackend = extraerResumenCIR(resultado);
     const resumen = resumenBackend ?? calcularResumenDesdeTaps(taps);
+    const mimoMetricasNormalizadas = normalizarMimoMetricas(resultado);
+
     const resultadoConResumen: ResultadoCobertura = {
       ...resultado,
+      mimoMetricas: mimoMetricasNormalizadas,
       cir: resultado.cir ?? taps,
       cirResumen: resultado.cirResumen ?? resumen ?? undefined,
     };
