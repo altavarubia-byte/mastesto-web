@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Button, Card, Code, MiniBars, Shell, Stat } from "./Shell";
 import { Lab3DViewer } from "./Lab3DViewer";
 import { downloadJson, endpoints, postApi, writeBus } from "@/lib/telecomLevel2/api";
+import { universalEndpoints } from "@/lib/telecomLevel2/universalEndpoints";
 
 type Field = { path: string; value: any; type: "number" | "string" | "boolean" | "object" };
 
@@ -89,7 +90,7 @@ export function Lab({ moduleKey, title, subtitle, initialPayload, charts = [], n
   const [sweepStart, setSweepStart] = useState(1);
   const [sweepStop, setSweepStop] = useState(20);
   const [sweepSteps, setSweepSteps] = useState(10);
-  const endpoint = endpoints[moduleKey] || endpoints.pipeline;
+  const endpoint = universalEndpoints[moduleKey] || endpoints[moduleKey] || endpoints.pipeline;
 
   function sync(next: any) { setPayload(next); setText(JSON.stringify(next, null, 2)); }
   function parseJson() { try { const p = JSON.parse(text); setPayload(p); return p; } catch (e: any) { setResult({ ok: false, error: "JSON inválido: " + e.message }); return null; } }
