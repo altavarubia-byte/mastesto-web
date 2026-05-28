@@ -542,7 +542,7 @@ export default function CrearViviendaPage() {
   const [unidadVelocidad, setUnidadVelocidad] = useState<"ms" | "kmh">("ms");
   const [anguloMovimiento, setAnguloMovimiento] = useState(0);
   const [dopplerActual, setDopplerActual] = useState(0);
-  const [intervaloSionna, setIntervaloSionna] = useState(0.1);
+  const [intervaloSionna, setIntervaloSionna] = useState(3);
   const calculandoDinamicoRef = useRef(false);
 
   const [cir, setCir] = useState<MuestraCIR[]>([]);
@@ -1358,10 +1358,12 @@ export default function CrearViviendaPage() {
 
       const datos = crearDatosVivienda();
 
-      const url =
-        simulando || modoCalculo === "sionna"
-          ? `${SIONNA_API_URL}/raytrace`
-          : `${API_URL}/calcular`;
+      const BASE_URL =
+  SIONNA_API_URL ||
+  API_URL ||
+  "https://VicenteAltava-mastesto-sionna-api.hf.space";
+
+const url = `${BASE_URL}/raytrace`;
 
       const res = await fetch(url, {
         method: "POST",
@@ -1483,7 +1485,7 @@ export default function CrearViviendaPage() {
   useEffect(() => {
     if (!simulando) return;
 
-    const intervaloMs = Math.max(0.1, intervaloSionna) * 1000;
+    const intervaloMs = Math.max(3, intervaloSionna) * 1000;
 
     const intervalo = setInterval(() => {
       const ang = (anguloMovimiento * Math.PI) / 180;
