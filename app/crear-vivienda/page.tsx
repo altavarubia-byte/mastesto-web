@@ -3328,7 +3328,10 @@ const url = `${BASE_URL}/raytrace`;
                           SNR
                         </p>
                         <p className="text-sm font-black text-white">
-                          {resultadoCobertura.mimoMetricas.snrDb.toFixed(2)} dB
+                          {nrf(
+  resultadoCobertura.mimoMetricas?.snrDb ??
+    (resultadoCobertura.mimoMetricas as any)?.snrDbRel,
+).toFixed(2)} dB
                         </p>
                       </div>
 
