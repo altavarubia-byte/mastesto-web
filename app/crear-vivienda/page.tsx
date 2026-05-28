@@ -533,7 +533,7 @@ export default function CrearViviendaPage() {
   // ---------------------------------------------------------
   // ESTADO: VISUALIZACIÓN, SIMULACIÓN DINÁMICA Y MIMO
   // ---------------------------------------------------------
-  const [maxRayos, setMaxRayos] = useState(15);
+  const [maxRayos, setMaxRayos] = useState(200);
   const [simulando, setSimulando] = useState(false);
   const [moverReceptor, setMoverReceptor] = useState(true);
   const [moverPersonas, setMoverPersonas] = useState(true);
@@ -1707,14 +1707,55 @@ const url = `${BASE_URL}/raytrace`;
 
       if (!res.ok) {
         const error = await res.text();
-        console.error(error);
+        console.error("Error /generar-glb:", error);
         alert("No se pudo generar el modelo GLB.");
+        return;
+      }
+
+      const contentType = res.headers.get("content-type") || "";
+
+      // Compatibilidad doble:
+      // 1) Backend nuevo: devuelve directamente el binario .glb.
+      // 2) Backend antiguo: devuelve JSON {ok, archivo} y luego se descarga /descargar/{archivo}.
+      if (contentType.includes("application/json")) {
+        const payload = await res.json();
+
+        if (!payload?.ok) {
+          console.error("Respuesta /generar-glb no OK:", payload);
+          alert(payload?.mensaje || "No se pudo generar el modelo GLB.");
+          return;
+        }
+
+        const archivo = payload.archivo || payload.filename || payload.file;
+        const urlDescarga = payload.url
+          ? String(payload.url)
+          : archivo
+            ? `${SIONNA_API_URL}/descargar/${archivo}`
+            : "";
+
+        if (!urlDescarga) {
+          console.error("/generar-glb no devolvió archivo descargable:", payload);
+          alert("El backend generó GLB pero no devolvió URL de descarga.");
+          return;
+        }
+
+        const resGlb = await fetch(urlDescarga);
+
+        if (!resGlb.ok) {
+          const error = await resGlb.text();
+          console.error("Error descargando GLB:", error);
+          alert("No se pudo descargar el modelo GLB generado.");
+          return;
+        }
+
+        const blob = await resGlb.blob();
+        const url = URL.createObjectURL(blob);
+        setModeloGlb(url);
         return;
       }
 
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
-
       setModeloGlb(url);
     } catch (error) {
       console.error(error);
@@ -3551,7 +3592,7 @@ const url = `${BASE_URL}/raytrace`;
                   <input
                     type="range"
                     min={1}
-                    max={100}
+                    max={1000}
                     value={maxRayos}
                     onChange={(e) => setMaxRayos(Number(e.target.value))}
                     className="w-full accent-cyan-400"
@@ -4803,8 +4844,44 @@ function CapaCobertura({
   modoHeatmap: "potencia" | "delay" | "doppler";
   mostrarMesh: boolean;
 }) {
-  const heatmapBase = resultado.heatmap ?? [];
-  const heatmapCanal = resultado.heatmapCanal ?? [];
+  // -------------------------------------------------------
+  // Heatmap robusto: normaliza X/Z y acepta respuestas antiguas
+  // con coordenada y como planta. Así el mapa queda alineado con
+  // la planta 3D y con el transmisor/router.
+  // -------------------------------------------------------
+  const normalizarPuntoHeatmap = (p: any): PuntoHeatmap | null => {
+    if (!p) return null;
+
+    const x = nrf(p.x, NaN);
+    const z = nrf(p.z ?? p.y, NaN);
+    const potenciaDbm = nrf(p.potenciaDbm ?? p.powerDbm ?? p.potencia_dbm, NaN);
+
+    if (!Number.isFinite(x) || !Number.isFinite(z) || !Number.isFinite(potenciaDbm)) {
+      return null;
+    }
+
+    return {
+      ...p,
+      x,
+      z,
+      potenciaDbm,
+      calidad: p.calidad ?? "media",
+      delaySpreadRmsNs: p.delaySpreadRmsNs,
+      retardoMedioNs: p.retardoMedioNs,
+      dopplerHz: p.dopplerHz,
+      numComponentes: p.numComponentes,
+      modelo: p.modelo,
+    };
+  };
+
+  const heatmapBase = (resultado.heatmap ?? [])
+    .map(normalizarPuntoHeatmap)
+    .filter((p): p is PuntoHeatmap => Boolean(p));
+
+  const heatmapCanal = (resultado.heatmapCanal ?? [])
+    .map(normalizarPuntoHeatmap)
+    .filter((p): p is PuntoHeatmap => Boolean(p));
+
   const heatmapActivo =
     modoHeatmap === "potencia"
       ? heatmapBase
@@ -4812,56 +4889,21 @@ function CapaCobertura({
         ? heatmapCanal
         : heatmapBase;
 
-  const heatmapMesh =
-    resultado.heatmapConMesh ?? resultado.coberturaConMesh?.heatmap ?? [];
+  const heatmapMesh = (resultado.heatmapConMesh ?? resultado.coberturaConMesh?.heatmap ?? [])
+    .map(normalizarPuntoHeatmap)
+    .filter((p): p is PuntoHeatmap => Boolean(p));
 
   // -------------------------------------------------------
-  // Rayos visibles físicamente coherentes TX -> RX
+  // Rayos visibles parametrizables
   // -------------------------------------------------------
-  // Con Sionna/difracción pueden llegar muchos candidatos geométricos.
-  // Para no pintar una "telaraña", el frontend solo dibuja rayos cuyo
-  // extremo final cae cerca de un receptor real de la escena. Si hay varios
-  // receptores, se permite maxRayos por receptor. Si no hay receptores
-  // reales colocados, se usa el comportamiento anterior como fallback.
-  const receptoresEscena = (objetos ?? []).filter((obj) => {
-    const tipo = (obj.tipo || "").toLowerCase().trim();
-    return ["receptor", "rx", "receiver", "cliente", "movil", "móvil", "portatil", "portátil"].includes(tipo);
-  });
-
-  const distancia3 = (a: { x: number; y: number; z: number }, b: { x: number; y: number; z: number }) => {
-    const dx = Number(a.x) - Number(b.x);
-    const dy = Number(a.y) - Number(b.y);
-    const dz = Number(a.z) - Number(b.z);
-    return Math.sqrt(dx * dx + dy * dy + dz * dz);
-  };
-
+  // El backend puede devolver rayos directos, reflejados, difractados,
+  // térmicos y Sionna. Aquí NO se filtran por receptor cercano ni por
+  // duplicado geométrico: el usuario decide cuántos ver con maxRayos.
   const puntoFinito = (p: any) =>
     p &&
     Number.isFinite(Number(p.x)) &&
     Number.isFinite(Number(p.y)) &&
     Number.isFinite(Number(p.z));
-
-  const receptorCercano = (p: any) => {
-    if (!puntoFinito(p) || receptoresEscena.length === 0) return null;
-
-    let mejor: Objeto3D | null = null;
-    let mejorD = Infinity;
-
-    for (const rx of receptoresEscena) {
-      const d = distancia3(
-        { x: Number(p.x), y: Number(p.y), z: Number(p.z) },
-        { x: Number(rx.x), y: Number(rx.y), z: Number(rx.z) },
-      );
-
-      if (d < mejorD) {
-        mejorD = d;
-        mejor = rx;
-      }
-    }
-
-    // Tolerancia suficiente para redondeos del backend y tamaño del icono RX.
-    return mejorD <= 0.85 ? mejor : null;
-  };
 
   const normalizarPuntosRayo = (rayo: RayoCobertura) => {
     const puntos = (rayo.puntos ?? []).filter(puntoFinito).map((p) => ({
@@ -4871,52 +4913,23 @@ function CapaCobertura({
     }));
 
     if (puntos.length < 2) return [];
-
-    if (receptoresEscena.length === 0) return puntos;
-
-    const primeroLlegaRx = receptorCercano(puntos[0]);
-    const ultimoLlegaRx = receptorCercano(puntos[puntos.length - 1]);
-
-    if (ultimoLlegaRx) return puntos;
-    if (primeroLlegaRx) return [...puntos].reverse();
-
-    return [];
+    return puntos;
   };
 
   const rayosVisibles = (resultado.rayos ?? [])
-    .map((rayo) => ({
+    .map((rayo, index) => ({
       ...rayo,
+      id: rayo.id ?? `rayo-${index}`,
       puntos: normalizarPuntosRayo(rayo),
+      potenciaDbm: nrf(rayo.potenciaDbm, -120),
     }))
-    .filter((rayo) => {
-      if (!rayo.puntos || rayo.puntos.length < 2) return false;
-      if (!Number.isFinite(Number(rayo.potenciaDbm))) return false;
-
-      // Evitamos pintar caminos extremadamente débiles si hay muchos candidatos.
-      if (Number(rayo.potenciaDbm) < -115) return false;
-
-      // Si hay RX reales, obligatorio que el rayo termine cerca de alguno.
-      if (receptoresEscena.length > 0) {
-        return Boolean(receptorCercano(rayo.puntos[rayo.puntos.length - 1]));
-      }
-
-      return true;
-    })
+    .filter((rayo) => rayo.puntos && rayo.puntos.length >= 2)
     .sort((a, b) => Number(b.potenciaDbm) - Number(a.potenciaDbm));
 
-  const firmasRayos = new Set<string>();
-  const limiteTotalRayos = Math.max(1, maxRayos) * Math.max(1, receptoresEscena.length);
-  const rayosVisiblesUnicos = rayosVisibles
-    .filter((rayo) => {
-      const firma = rayo.puntos
-        .map((p) => `${p.x.toFixed(2)},${p.y.toFixed(2)},${p.z.toFixed(2)}`)
-        .join("|");
-
-      if (firmasRayos.has(firma)) return false;
-      firmasRayos.add(firma);
-      return true;
-    })
-    .slice(0, limiteTotalRayos);
+  const rayosVisiblesUnicos = rayosVisibles.slice(
+    0,
+    Math.max(1, Math.min(maxRayos, rayosVisibles.length)),
+  );
 
   return (
     <group>
@@ -4976,7 +4989,7 @@ function CapaCobertura({
 
           return (
             <Line
-              key={rayo.id}
+              key={rayo.id ?? `rayo-${puntos.map((p) => p.join(",")).join("|")}`}
               points={puntos}
               color={colorRayo(rayo)}
               lineWidth={grosorRayo(rayo)}
