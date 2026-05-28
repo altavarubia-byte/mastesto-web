@@ -1,0 +1,175 @@
+{
+  "ai": {
+    "module": "pipeline",
+    "prompt": "sistema completo con enlace optico de 10 gbps, antena helicoidal de 20 espiras a 2.45 ghz, 3 habitaciones, 4 receptores y columna termica a 800 K",
+    "level": "pro"
+  },
+  "optical": {
+    "wavelengthNm": 1550,
+    "lengthKm": 10,
+    "txPowerDbm": 0,
+    "rxSensitivityDbm": -20,
+    "bitrateGbps": 10,
+    "wdmChannels": 1,
+    "connectors": 2,
+    "connectorLossDb": 0.4,
+    "splices": 4,
+    "spliceLossDb": 0.1,
+    "splitterLossDb": 0,
+    "edfaGainDb": 0,
+    "marginRequiredDb": 3
+  },
+  "rf": {
+    "frequencyGHz": 2.45,
+    "txPowerDbm": 20,
+    "antennaType": "helix",
+    "geometry": {
+      "turns": 20,
+      "helixRadiusMm": 21.1,
+      "pitchAngleDeg": 13,
+      "conductorDiameterMm": 2,
+      "groundPlaneRadiusMm": 65
+    },
+    "targetOhm": 50,
+    "modulation": "QPSK",
+    "requiredSnrDb": 10,
+    "bandwidthMHz": 20
+  },
+  "anechoic": {
+    "rf": {
+      "frequencyGHz": 2.45,
+      "txPowerDbm": 20,
+      "antennaType": "helix",
+      "geometry": {
+        "turns": 20,
+        "helixRadiusMm": 21.1,
+        "pitchAngleDeg": 13,
+        "conductorDiameterMm": 2,
+        "groundPlaneRadiusMm": 65
+      }
+    },
+    "chamber": {
+      "lengthM": 7,
+      "widthM": 4,
+      "heightM": 3,
+      "measurementDistanceM": 3,
+      "quietZoneDiameterM": 0.8,
+      "absorberReflectivityDb": -35,
+      "thetaStartDeg": -180,
+      "thetaStopDeg": 180,
+      "thetaStepDeg": 2,
+      "frequencyStartGHz": 2,
+      "frequencyStopGHz": 3,
+      "frequencyPoints": 201
+    }
+  },
+  "sionna": {
+    "sceneName": "generated_scene",
+    "rooms": [
+      {
+        "id": "room-1",
+        "name": "Sala 1",
+        "x": 0,
+        "z": 0,
+        "width": 6,
+        "length": 5,
+        "height": 2.8,
+        "material": "concrete"
+      },
+      {
+        "id": "room-2",
+        "name": "Sala 2",
+        "x": 6,
+        "z": 0,
+        "width": 5,
+        "length": 5,
+        "height": 2.8,
+        "material": "concrete"
+      },
+      {
+        "id": "room-3",
+        "name": "Sala 3",
+        "x": 0,
+        "z": 5,
+        "width": 6,
+        "length": 4,
+        "height": 2.8,
+        "material": "brick"
+      }
+    ],
+    "objects": [
+      {
+        "id": "thermal-column",
+        "type": "thermal_column",
+        "x": 1,
+        "y": 1.5,
+        "z": 1,
+        "sx": 0.8,
+        "sy": 3,
+        "sz": 0.8,
+        "material": "hot_air"
+      }
+    ],
+    "tx": [
+      {
+        "id": "tx1",
+        "x": -2,
+        "y": 1.2,
+        "z": 0,
+        "powerDbm": 20
+      }
+    ],
+    "rx": [
+      {
+        "id": "rx1",
+        "x": 3,
+        "y": 1.2,
+        "z": 1
+      },
+      {
+        "id": "rx2",
+        "x": 8,
+        "y": 1.2,
+        "z": 2
+      },
+      {
+        "id": "rx3",
+        "x": 2,
+        "y": 1.2,
+        "z": 6
+      }
+    ],
+    "maxDepth": 6,
+    "samplesPerSrc": 1000000,
+    "thermalTempK": 700,
+    "distanceM": 10,
+    "wallLossDb": 12,
+    "multipathLossDb": 4,
+    "noiseFigureDb": 5
+  },
+  "electronics": {
+    "lnaNoiseFigureDb": 2,
+    "mixerLossDb": 6,
+    "ifGainDb": 30,
+    "adcBits": 12,
+    "adcFsMHz": 40,
+    "frontendPowerW": 2.8,
+    "paEfficiencyPct": 35
+  },
+  "dsp": {
+    "modulation": "QPSK",
+    "codingRate": 0.75,
+    "fftSize": 64,
+    "occupiedSubcarriers": 52,
+    "cpRatio": 0.25,
+    "processingPowerW": 4.5
+  },
+  "energy": {
+    "batteryCapacityWh": 200,
+    "solarAreaM2": 1.2,
+    "irradianceWm2": 850,
+    "solarEfficiencyPct": 20,
+    "hoursPerDay": 8,
+    "baseSystemPowerW": 2
+  }
+}
