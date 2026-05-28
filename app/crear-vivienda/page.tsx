@@ -18,10 +18,19 @@ import {
 // =========================================================
 // CONFIGURACIÓN DE APIS
 // =========================================================
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
-const SIONNA_API_URL = (process.env.NEXT_PUBLIC_SIONNA_API_URL || "").replace(
-  /\/$/,
-  "",
+// Backend Hugging Face activo para crear-vivienda.
+// En Vercel puedes sobrescribirlo con:
+// NEXT_PUBLIC_API_URL
+// NEXT_PUBLIC_SIONNA_API_URL
+const DEFAULT_BACKEND_URL = "https://VicenteAltava-mastesto-sionna-api.hf.space";
+
+const normalizarApiUrl = (url?: string) =>
+  (url && url.trim().length > 0 ? url : DEFAULT_BACKEND_URL).replace(/\/$/, "");
+
+const API_URL = normalizarApiUrl(process.env.NEXT_PUBLIC_API_URL);
+
+const SIONNA_API_URL = normalizarApiUrl(
+  process.env.NEXT_PUBLIC_SIONNA_API_URL || process.env.NEXT_PUBLIC_API_URL,
 );
 
 // =========================================================
