@@ -14,6 +14,8 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  LineChart,
+  Line as RechartsLine,
 } from "recharts";
 
 // =========================================================
@@ -218,6 +220,68 @@ const materialRfValue = (m: any, camel: string, snake: string, fallback = 0): nu
 const fmtFixed = (value: unknown, digits = 3): string => nrf(value).toFixed(digits);
 
 const fmtExp = (value: unknown, digits = 2): string => nrf(value).toExponential(digits);
+
+
+
+type EstadisticaCanalV5 = {
+  meanExcessDelayNs?: number;
+  rmsDelaySpreadNs?: number;
+  delaySpreadRmsNs?: number;
+  coherenceBandwidth50Hz?: number;
+  coherenceBandwidth90Hz?: number;
+  coherenceBandwidth50Mhz?: number;
+  coherenceBandwidth90Mhz?: number;
+  riceKFactorDb?: number;
+  kFactorDb?: number;
+  pdp?: { delayNs?: number; powerDbm?: number; potenciaDbm?: number; powerLinear?: number }[];
+  modelo?: string;
+  [key: string]: any;
+};
+
+type PolarizacionV5 = {
+  polarizacionTx?: string;
+  polarizacionRx?: string;
+  acoploLineal?: number;
+  acoploPolarizacionDb?: number;
+  modelo?: string;
+  [key: string]: any;
+};
+
+type MimoAvanzadoV5 = {
+  rank?: number;
+  rankReal?: number;
+  conditionNumber?: number;
+  conditionNumberDb?: number;
+  capacidadWaterfillingMbps?: number;
+  capacidadSvdMbps?: number;
+  eigenvalues?: number[];
+  singularValues?: number[];
+  modelo?: string;
+  [key: string]: any;
+};
+
+type CanalTemporalV5 = {
+  modelo?: string;
+  numTapsUsados?: number;
+  timeS?: number[];
+  h?: { re: number; im: number; abs: number; phaseRad?: number }[];
+  absMin?: number;
+  absMax?: number;
+  absMean?: number;
+  [key: string]: any;
+};
+
+type RespuestaFrecuenciaV5 = {
+  modelo?: string;
+  centerFreqHz?: number;
+  bandwidthHz?: number;
+  freqOffsetHz?: number[];
+  H?: { re: number; im: number; abs: number; phaseRad?: number }[];
+  magDbMin?: number;
+  magDbMax?: number;
+  magDbMean?: number;
+  [key: string]: any;
+};
 
 type ResultadoCobertura = {
   ok: boolean;
@@ -430,6 +494,12 @@ type ResultadoCobertura = {
     sionnaUsado?: boolean;
     advertencia?: string;
   };
+  estadisticaCanal?: EstadisticaCanalV5;
+  polarizacion?: PolarizacionV5;
+  mimoAvanzado?: MimoAvanzadoV5;
+  canalTemporal?: CanalTemporalV5;
+  respuestaFrecuencia?: RespuestaFrecuenciaV5;
+
   modeloAvanzado?: {
     difraccion?: string;
     rugosidad?: string;
@@ -454,6 +524,165 @@ type ResultadoCobertura = {
     [key: string]: any;
   };
 };
+
+
+
+const toMhz = (hz: unknown): string => (nrf(hz) / 1e6).toFixed(3);
+const toNs = (s: unknown): string => (nrf(s) * 1e9).toFixed(3);
+const dbFromAbs = (absValue: unknown): number => 20 * Math.log10(Math.max(nrf(absValue), 1e-30));
+
+const prepararHtChart = (canalTemporal?: CanalTemporalV5) => {
+  const time = canalTemporal?.timeS ?? [];
+  const h = canalTemporal?.h ?? [];
+  return time.slice(0, 160).map((t, i) => ({
+    tMs: Number((t * 1000).toFixed(3)),
+    abs: Number(nrf(h[i]?.abs).toExponential(6)),
+    absDb: Number(dbFromAbs(h[i]?.abs).toFixed(2)),
+    fase: Number(nrf(h[i]?.phaseRad).toFixed(3)),
+  }));
+};
+
+const prepararHfChart = (respuestaFrecuencia?: RespuestaFrecuenciaV5) => {
+  const f = respuestaFrecuencia?.freqOffsetHz ?? [];
+  const H = respuestaFrecuencia?.H ?? [];
+  return f.slice(0, 160).map((fo, i) => ({
+    fMhz: Number((fo / 1e6).toFixed(3)),
+    absDb: Number(dbFromAbs(H[i]?.abs).toFixed(2)),
+    fase: Number(nrf(H[i]?.phaseRad).toFixed(3)),
+  }));
+};
+
+function PanelSionnaV5({ resultado }: { resultado: ResultadoCobertura }) {
+  const estadistica = resultado.estadisticaCanal;
+  const pol = resultado.polarizacion;
+  const mimo = resultado.mimoAvanzado;
+  const ht = resultado.canalTemporal;
+  const hf = resultado.respuestaFrecuencia;
+  const htData = prepararHtChart(ht);
+  const hfData = prepararHfChart(hf);
+  const pdp = estadistica?.pdp ?? (resultado.cir ?? []).map((tap) => ({ delayNs: tap.delayNs, potenciaDbm: tap.potenciaDbm }));
+  const pdpData = pdp.slice(0, 40).map((p: any, i: number) => ({
+    path: i,
+    delayNs: nrf(p.delayNs ?? p.retardoNs),
+    potenciaDbm: nrf(p.potenciaDbm ?? p.powerDbm ?? p.power_dbm, -120),
+  }));
+  const sionnaV5 = resultado.modeloAvanzado?.sionnaV5;
+
+  if (!estadistica && !pol && !mimo && !ht && !hf && !sionnaV5) return null;
+
+  return (
+    <div className="bg-black/80 border border-cyan-900 rounded-2xl p-4 mt-4 space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[9px] uppercase text-cyan-300 font-black tracking-widest">Sionna RF v5</p>
+          <p className="text-[9px] text-slate-500 uppercase leading-relaxed">Canal, polarización circular, H(t), H(f), MIMO avanzado y estadística multipath.</p>
+        </div>
+        <span className={`text-[9px] font-black uppercase rounded-full px-3 py-1 border ${sionnaV5?.estado === "enriquecido" ? "text-emerald-300 border-emerald-900 bg-emerald-950/30" : "text-orange-300 border-orange-900 bg-orange-950/30"}`}>
+          {sionnaV5?.estado ?? "recibido"}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+          <p className="text-[8px] uppercase text-slate-500 font-black">RMS delay spread</p>
+          <p className="text-sm font-black text-cyan-300">{fmtFixed(estadistica?.rmsDelaySpreadNs ?? estadistica?.delaySpreadRmsNs ?? resultado.cirResumen?.delaySpreadRmsNs, 3)} ns</p>
+        </div>
+        <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+          <p className="text-[8px] uppercase text-slate-500 font-black">Retardo medio</p>
+          <p className="text-sm font-black text-sky-300">{fmtFixed(estadistica?.meanExcessDelayNs ?? resultado.cirResumen?.retardoMedioNs, 3)} ns</p>
+        </div>
+        <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+          <p className="text-[8px] uppercase text-slate-500 font-black">Coherence BW 50%</p>
+          <p className="text-sm font-black text-emerald-300">{fmtFixed(estadistica?.coherenceBandwidth50Mhz ?? nrf(estadistica?.coherenceBandwidth50Hz) / 1e6, 3)} MHz</p>
+        </div>
+        <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+          <p className="text-[8px] uppercase text-slate-500 font-black">Rice K</p>
+          <p className="text-sm font-black text-amber-300">{fmtFixed(estadistica?.riceKFactorDb ?? estadistica?.kFactorDb, 2)} dB</p>
+        </div>
+      </div>
+
+      {pol && (
+        <div className="bg-slate-950 border border-fuchsia-900 rounded-xl p-3 space-y-2">
+          <p className="text-[8px] uppercase text-fuchsia-300 font-black">Polarización V/H/RHCP/LHCP</p>
+          <div className="grid grid-cols-3 gap-2">
+            <div><p className="text-[8px] text-slate-500 uppercase">TX</p><p className="text-xs text-white font-black">{pol.polarizacionTx}</p></div>
+            <div><p className="text-[8px] text-slate-500 uppercase">RX</p><p className="text-xs text-white font-black">{pol.polarizacionRx}</p></div>
+            <div><p className="text-[8px] text-slate-500 uppercase">Pérdida</p><p className="text-xs text-fuchsia-300 font-black">{fmtFixed(pol.acoploPolarizacionDb, 2)} dB</p></div>
+          </div>
+          <p className="text-[9px] text-slate-500 uppercase leading-relaxed">Acoplo lineal: {fmtFixed(pol.acoploLineal, 4)} · {pol.modelo ?? "Jones vector"}</p>
+        </div>
+      )}
+
+      {mimo && (
+        <div className="bg-slate-950 border border-emerald-900 rounded-xl p-3 space-y-2">
+          <p className="text-[8px] uppercase text-emerald-300 font-black">MIMO avanzado</p>
+          <div className="grid grid-cols-2 gap-2">
+            <p className="text-[9px] text-slate-300 uppercase">Rank: <span className="text-white font-black">{mimo.rank ?? mimo.rankReal ?? resultado.mimoMetricas?.rankReal ?? "N/D"}</span></p>
+            <p className="text-[9px] text-slate-300 uppercase">Condición: <span className="text-white font-black">{fmtFixed(mimo.conditionNumber ?? mimo.conditionNumberDb, 2)}</span></p>
+            <p className="text-[9px] text-slate-300 uppercase">Waterfilling: <span className="text-emerald-300 font-black">{fmtFixed(mimo.capacidadWaterfillingMbps ?? mimo.capacityWaterfillingMbps, 2)} Mbps</span></p>
+            <p className="text-[9px] text-slate-300 uppercase">SVD: <span className="text-emerald-300 font-black">{fmtFixed(mimo.capacidadSvdMbps ?? mimo.capacitySvdMbps, 2)} Mbps</span></p>
+          </div>
+          {(mimo.eigenvalues?.length || mimo.singularValues?.length) ? (
+            <p className="text-[9px] text-slate-500 uppercase leading-relaxed">Valores: {(mimo.eigenvalues ?? mimo.singularValues ?? []).slice(0, 6).map((v: number) => fmtFixed(v, 3)).join(" · ")}</p>
+          ) : null}
+        </div>
+      )}
+
+      {pdpData.length > 0 && (
+        <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2">
+          <p className="text-[8px] uppercase text-slate-400 font-black">PDP · Power Delay Profile</p>
+          <div className="h-36">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={pdpData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="delayNs" tick={{ fontSize: 9 }} />
+                <YAxis tick={{ fontSize: 9 }} />
+                <Tooltip />
+                <Bar dataKey="potenciaDbm" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
+      {htData.length > 0 && (
+        <div className="bg-slate-950 border border-purple-900 rounded-xl p-3 space-y-2">
+          <p className="text-[8px] uppercase text-purple-300 font-black">Canal temporal H(t)</p>
+          <div className="h-36">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={htData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="tMs" tick={{ fontSize: 9 }} />
+                <YAxis tick={{ fontSize: 9 }} />
+                <Tooltip />
+                <RechartsLine type="monotone" dataKey="absDb" dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          <p className="text-[9px] text-slate-500 uppercase">Muestras: {ht?.numTimeSamples ?? htData.length} · taps usados: {ht?.numTapsUsados ?? 0} · |h| medio: {fmtExp(ht?.absMean, 2)}</p>
+        </div>
+      )}
+
+      {hfData.length > 0 && (
+        <div className="bg-slate-950 border border-blue-900 rounded-xl p-3 space-y-2">
+          <p className="text-[8px] uppercase text-blue-300 font-black">Respuesta en frecuencia H(f)</p>
+          <div className="h-36">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={hfData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="fMhz" tick={{ fontSize: 9 }} />
+                <YAxis tick={{ fontSize: 9 }} />
+                <Tooltip />
+                <RechartsLine type="monotone" dataKey="absDb" dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          <p className="text-[9px] text-slate-500 uppercase">BW: {toMhz(hf?.bandwidthHz)} MHz · centro: {toMhz(hf?.centerFreqHz)} MHz · rango: {fmtFixed(hf?.magDbMin, 2)} a {fmtFixed(hf?.magDbMax, 2)} dB</p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // =========================================================
 // PÁGINA PRINCIPAL: CREAR VIVIENDA / SIMULADOR RF
@@ -3281,6 +3510,8 @@ const url = `${BASE_URL}/raytrace`;
                   </div>
                 )}
 
+                <PanelSionnaV5 resultado={resultadoCobertura} />
+
                 {resultadoCobertura.validacionFekoSionna && (
                   <div className="bg-black/70 border border-fuchsia-900 rounded-xl p-4 mt-4 space-y-3">
                     <p className="text-[9px] uppercase text-fuchsia-300 font-black">
@@ -3761,8 +3992,8 @@ const url = `${BASE_URL}/raytrace`;
                       >
                         <option value="V">Vertical</option>
                         <option value="H">Horizontal</option>
-                        <option value="RHCP">RHCP FEKO</option>
-                        <option value="LHCP">LHCP FEKO</option>
+                        <option value="RHCP">RHCP circular derecha</option>
+                        <option value="LHCP">LHCP circular izquierda</option>
                       </select>
                     </div>
                     <div>
@@ -3774,8 +4005,8 @@ const url = `${BASE_URL}/raytrace`;
                       >
                         <option value="V">Vertical</option>
                         <option value="H">Horizontal</option>
-                        <option value="RHCP">RHCP FEKO</option>
-                        <option value="LHCP">LHCP FEKO</option>
+                        <option value="RHCP">RHCP circular derecha</option>
+                        <option value="LHCP">LHCP circular izquierda</option>
                       </select>
                     </div>
                     <div className="col-span-2">
