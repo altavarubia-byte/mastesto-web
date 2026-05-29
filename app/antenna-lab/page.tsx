@@ -28,6 +28,8 @@ const API_URL = normalizarApiUrl(
   process.env.NEXT_PUBLIC_SIONNA_API_URL || process.env.NEXT_PUBLIC_API_URL,
 );
 
+type SolverMode = "analytic" | "mom";
+
 type Pattern2DPoint = {
   thetaDeg: number;
   phiDeg: number;
@@ -47,6 +49,17 @@ type Pattern3DVertex = {
   gainRelDb: number;
 };
 
+type CurrentPoint = {
+  index?: number;
+  zM: number;
+  zLambda?: number;
+  currentReal?: number;
+  currentImag?: number;
+  currentAbs?: number;
+  currentAbsNorm?: number;
+  currentPhaseRad?: number;
+};
+
 type DipoleResult = {
   ok: boolean;
   antennaType: string;
@@ -58,34 +71,60 @@ type DipoleResult = {
     lengthM: number;
     radiusLambda: number;
     radiusM: number;
+    segments?: number;
+    dzM?: number;
+    feedIndex?: number;
     axis: string;
-    feed: string;
+    feed?: string;
   };
   impedance: {
-    inputResistanceOhm: number;
-    inputReactanceOhm: number;
-    inputImpedanceOhm: { real: number; imag: number };
+    inputResistanceOhm?: number;
+    inputReactanceOhm?: number;
+    inputResistanceOhmRaw?: number;
+    inputReactanceOhmRaw?: number;
+    inputImpedanceOhm?: { real: number; imag: number };
+    inputImpedanceOhmRaw?: { real: number; imag: number };
+    calibrated?: boolean;
   };
   sParameters: {
     z0Ohm: number;
     s11Db: number;
     vswr: number;
     mismatchLossDb: number;
+    returnLossDb?: number;
+    gammaAbs?: number;
   };
   performance: {
-    directivityDbi: number;
+    directivityDbi?: number;
+    directivityLinear?: number;
     gainMaxDbi: number;
     realizedGainMaxDbi: number;
     efficiency: number;
     polarization: string;
+    polarizationBasis?: string;
   };
-  pattern2D: { cut: string; points: Pattern2DPoint[] };
+  pattern2D: {
+    cut: string;
+    source?: string;
+    points: Pattern2DPoint[];
+  };
   pattern3D?: {
     type: string;
+    source?: string;
     vertices: Pattern3DVertex[];
     thetaSamples: number;
     phiSamples: number;
   } | null;
+  currents?: CurrentPoint[];
+  mom?: {
+    matrix?: {
+      size?: number[];
+      conditionNumber?: number;
+      solvedDirectly?: boolean;
+      error?: string | null;
+    };
+    equation?: string;
+  };
   exportSionna: any;
   warnings?: string[];
 };
@@ -125,11 +164,15 @@ function RadiationPattern3D({ vertices }: { vertices: Pattern3DVertex[] }) {
   const geometry = useMemo(() => {
     if (!vertices?.length) return null;
 
-    const thetaValues = Array.from(new Set(vertices.map((v) => v.thetaDeg))).sort((a, b) => a - b);
-    const phiValues = Array.from(new Set(vertices.map((v) => v.phiDeg))).sort((a, b) => a - b);
+    const thetaValues = Array.from(new Set(vertices.map((v) => v.thetaDeg))).sort(
+      (a, b) => a - b,
+    );
+    const phiValues = Array.from(new Set(vertices.map((v) => v.phiDeg))).sort(
+      (a, b) => a - b,
+    );
+
     const thetaN = thetaValues.length;
     const phiN = phiValues.length;
-
     if (thetaN < 2 || phiN < 2) return null;
 
     const positions: number[] = [];
@@ -167,7 +210,14 @@ function RadiationPattern3D({ vertices }: { vertices: Pattern3DVertex[] }) {
 
   return (
     <mesh geometry={geometry}>
-      <meshStandardMaterial vertexColors transparent opacity={0.78} side={THREE.DoubleSide} roughness={0.45} metalness={0.05} />
+      <meshStandardMaterial
+        vertexColors
+        transparent
+        opacity={0.78}
+        side={THREE.DoubleSide}
+        roughness={0.45}
+        metalness={0.05}
+      />
     </mesh>
   );
 }
@@ -185,6 +235,7 @@ function StatCard({ label, value, unit }: { label: string; value: string | numbe
 }
 
 export default function AntennaLabPage() {
+  const [solverMode, setSolverMode] = useState<SolverMode>("analytic");
   const [frequencyGhz, setFrequencyGhz] = useState(2.45);
   const [lengthLambda, setLengthLambda] = useState(0.5);
   const [radiusLambda, setRadiusLambda] = useState(0.001);
@@ -193,7 +244,9 @@ export default function AntennaLabPage() {
   const [thetaSamples, setThetaSamples] = useState(361);
   const [phiSamples, setPhiSamples] = useState(181);
   const [includePattern3D, setIncludePattern3D] = useState(true);
-
+  const [segments, setSegments] = useState(101);
+  const [feedVoltageV, setFeedVoltageV] = useState(1);
+  const [calibrateImpedance, setCalibrateImpedance] = useState(true);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<DipoleResult | null>(null);
   const [error, setError] = useState("");
@@ -203,7 +256,7 @@ export default function AntennaLabPage() {
     setError("");
 
     try {
-      const payload = {
+      const basePayload = {
         frequencyHz: frequencyGhz * 1e9,
         lengthLambda,
         radiusLambda,
@@ -214,7 +267,22 @@ export default function AntennaLabPage() {
         includePattern3D,
       };
 
-      const res = await fetch(`${API_URL}/antenna/dipole/calculate`, {
+      const endpoint =
+        solverMode === "mom"
+          ? "/antenna/mom/dipole/calculate"
+          : "/antenna/dipole/calculate";
+
+      const payload =
+        solverMode === "mom"
+          ? {
+              ...basePayload,
+              segments,
+              feedVoltageV,
+              calibrateImpedance,
+            }
+          : basePayload;
+
+      const res = await fetch(`${API_URL}${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -250,6 +318,18 @@ export default function AntennaLabPage() {
         value: Math.max(0, p.powerNorm),
       })) ?? [];
 
+  const currentsData =
+    result?.currents?.map((c) => ({
+      zLambda:
+        typeof c.zLambda === "number"
+          ? Number(c.zLambda.toFixed(4))
+          : Number((c.zM / (result.lambdaM || 1)).toFixed(4)),
+      currentAbsNorm: Number((c.currentAbsNorm ?? 0).toFixed(5)),
+      phaseRad: Number((c.currentPhaseRad ?? 0).toFixed(4)),
+    })) ?? [];
+
+  const isMom = result?.solver?.includes("mom");
+
   return (
     <main className="min-h-screen bg-[#050505] text-white">
       <section className="border-b border-white/10 bg-gradient-to-b from-zinc-950 to-black px-6 py-10">
@@ -257,58 +337,96 @@ export default function AntennaLabPage() {
           <p className="text-xs font-bold uppercase tracking-[0.35em] text-orange-400">Mastesto RF Engine</p>
           <h1 className="mt-4 text-4xl font-black uppercase italic tracking-tight md:text-6xl">Antenna Lab</h1>
           <p className="mt-4 max-w-3xl text-zinc-400">
-            Dipolo parametrizable por xλ, S11, VSWR, ganancia, directividad, diagrama 2D/3D y exportación preparada para Sionna.
+            Laboratorio RF de antenas: dipolo parametrizable por xλ, solver analítico, solver MoM de hilo fino, S11, VSWR, corrientes, patrón 2D, diagrama 3D y exportación preparada para Sionna.
           </p>
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-7xl gap-6 px-6 py-8 lg:grid-cols-[380px_1fr]">
+      <section className="mx-auto grid max-w-7xl gap-6 px-6 py-8 lg:grid-cols-[400px_1fr]">
         <aside className="rounded-3xl border border-white/10 bg-zinc-950/80 p-5">
-          <h2 className="text-lg font-black uppercase tracking-[0.18em]">Geometría del dipolo</h2>
+          <h2 className="text-lg font-black uppercase tracking-[0.18em]">Configuración de antena</h2>
 
           <div className="mt-5 space-y-5">
+            <div>
+              <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">Solver</span>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setSolverMode("analytic")}
+                  className={`rounded-xl border px-4 py-3 text-sm font-bold uppercase ${
+                    solverMode === "analytic"
+                      ? "border-orange-500 bg-orange-500 text-black"
+                      : "border-white/10 bg-black text-zinc-300"
+                  }`}
+                >
+                  Analítico
+                </button>
+                <button
+                  onClick={() => setSolverMode("mom")}
+                  className={`rounded-xl border px-4 py-3 text-sm font-bold uppercase ${
+                    solverMode === "mom"
+                      ? "border-orange-500 bg-orange-500 text-black"
+                      : "border-white/10 bg-black text-zinc-300"
+                  }`}
+                >
+                  MoM
+                </button>
+              </div>
+            </div>
+
             <label className="block">
               <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">Frecuencia GHz</span>
-              <input type="number" step="0.01" value={frequencyGhz} onChange={(e) => setFrequencyGhz(Number(e.target.value))}
-                className="mt-2 w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-orange-500" />
+              <input type="number" step="0.01" value={frequencyGhz} onChange={(e) => setFrequencyGhz(Number(e.target.value))} className="mt-2 w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-orange-500" />
             </label>
 
             <label className="block">
               <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">Longitud L = xλ</span>
-              <input type="number" step="0.01" value={lengthLambda} onChange={(e) => setLengthLambda(Number(e.target.value))}
-                className="mt-2 w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-orange-500" />
-              <input type="range" min="0.05" max="3" step="0.01" value={lengthLambda} onChange={(e) => setLengthLambda(Number(e.target.value))}
-                className="mt-3 w-full" />
+              <input type="number" step="0.01" value={lengthLambda} onChange={(e) => setLengthLambda(Number(e.target.value))} className="mt-2 w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-orange-500" />
+              <input type="range" min="0.05" max="3" step="0.01" value={lengthLambda} onChange={(e) => setLengthLambda(Number(e.target.value))} className="mt-3 w-full" />
             </label>
 
             <label className="block">
               <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">Radio conductor en λ</span>
-              <input type="number" step="0.0001" value={radiusLambda} onChange={(e) => setRadiusLambda(Number(e.target.value))}
-                className="mt-2 w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-orange-500" />
+              <input type="number" step="0.0001" value={radiusLambda} onChange={(e) => setRadiusLambda(Number(e.target.value))} className="mt-2 w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-orange-500" />
             </label>
 
             <label className="block">
               <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">Impedancia referencia Ω</span>
-              <input type="number" step="1" value={feedImpedanceOhm} onChange={(e) => setFeedImpedanceOhm(Number(e.target.value))}
-                className="mt-2 w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-orange-500" />
+              <input type="number" step="1" value={feedImpedanceOhm} onChange={(e) => setFeedImpedanceOhm(Number(e.target.value))} className="mt-2 w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-orange-500" />
             </label>
 
             <label className="block">
               <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">Eficiencia</span>
-              <input type="number" step="0.01" value={efficiency} onChange={(e) => setEfficiency(Number(e.target.value))}
-                className="mt-2 w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-orange-500" />
+              <input type="number" step="0.01" value={efficiency} onChange={(e) => setEfficiency(Number(e.target.value))} className="mt-2 w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-orange-500" />
             </label>
+
+            {solverMode === "mom" && (
+              <div className="rounded-2xl border border-orange-500/20 bg-orange-500/10 p-4">
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-orange-300">Parámetros MoM</p>
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <label className="block">
+                    <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">Segmentos</span>
+                    <input type="number" value={segments} onChange={(e) => setSegments(Number(e.target.value))} className="mt-2 w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-orange-500" />
+                  </label>
+                  <label className="block">
+                    <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">V feed</span>
+                    <input type="number" step="0.1" value={feedVoltageV} onChange={(e) => setFeedVoltageV(Number(e.target.value))} className="mt-2 w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-orange-500" />
+                  </label>
+                </div>
+                <label className="mt-4 flex items-center gap-3 rounded-xl border border-white/10 bg-black/40 p-3">
+                  <input type="checkbox" checked={calibrateImpedance} onChange={(e) => setCalibrateImpedance(e.target.checked)} />
+                  <span className="text-sm text-zinc-300">Calibrar impedancia para MVP</span>
+                </label>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <label className="block">
                 <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">θ samples</span>
-                <input type="number" value={thetaSamples} onChange={(e) => setThetaSamples(Number(e.target.value))}
-                  className="mt-2 w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-orange-500" />
+                <input type="number" value={thetaSamples} onChange={(e) => setThetaSamples(Number(e.target.value))} className="mt-2 w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-orange-500" />
               </label>
               <label className="block">
                 <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">φ samples</span>
-                <input type="number" value={phiSamples} onChange={(e) => setPhiSamples(Number(e.target.value))}
-                  className="mt-2 w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-orange-500" />
+                <input type="number" value={phiSamples} onChange={(e) => setPhiSamples(Number(e.target.value))} className="mt-2 w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-orange-500" />
               </label>
             </div>
 
@@ -317,9 +435,8 @@ export default function AntennaLabPage() {
               <span className="text-sm text-zinc-300">Calcular patrón 3D</span>
             </label>
 
-            <button onClick={calcularDipolo} disabled={loading}
-              className="w-full rounded-2xl bg-orange-500 px-5 py-4 font-black uppercase tracking-[0.18em] text-black transition hover:bg-orange-400 disabled:cursor-not-allowed disabled:opacity-50">
-              {loading ? "Calculando..." : "Calcular dipolo"}
+            <button onClick={calcularDipolo} disabled={loading} className="w-full rounded-2xl bg-orange-500 px-5 py-4 font-black uppercase tracking-[0.18em] text-black transition hover:bg-orange-400 disabled:cursor-not-allowed disabled:opacity-50">
+              {loading ? "Calculando..." : `Calcular dipolo ${solverMode === "mom" ? "MoM" : "analítico"}`}
             </button>
 
             {error && <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">{error}</div>}
@@ -329,12 +446,22 @@ export default function AntennaLabPage() {
         <section className="space-y-6">
           {!result && (
             <div className="rounded-3xl border border-white/10 bg-zinc-950/70 p-8 text-zinc-400">
-              Calcula un dipolo para ver resultados, patrón 2D, patrón 3D y exportación preparada para Sionna.
+              Calcula un dipolo para ver resultados. Usa el modo analítico para respuesta rápida o MoM para resolver corrientes con Z·I=V.
             </div>
           )}
 
           {result && (
             <>
+              <div className="rounded-3xl border border-white/10 bg-zinc-950/80 p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.25em] text-zinc-500">Solver activo</p>
+                    <h2 className="mt-1 text-2xl font-black uppercase text-white">{result.solver}</h2>
+                  </div>
+                  {isMom && <div className="rounded-full border border-orange-500/30 bg-orange-500/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-orange-300">MoM · Z·I=V</div>}
+                </div>
+              </div>
+
               <div className="grid gap-4 md:grid-cols-4">
                 <StatCard label="λ" value={fmt(result.lambdaM, 4)} unit="m" />
                 <StatCard label="Longitud" value={fmt(result.geometry.lengthM, 4)} unit="m" />
@@ -343,11 +470,20 @@ export default function AntennaLabPage() {
               </div>
 
               <div className="grid gap-4 md:grid-cols-4">
-                <StatCard label="Zin real" value={fmt(result.impedance.inputResistanceOhm, 2)} unit="Ω" />
-                <StatCard label="Zin imag" value={fmt(result.impedance.inputReactanceOhm, 2)} unit="Ω" />
+                <StatCard label="Zin real" value={fmt(result.impedance.inputResistanceOhm ?? result.impedance.inputResistanceOhmRaw, 2)} unit="Ω" />
+                <StatCard label="Zin imag" value={fmt(result.impedance.inputReactanceOhm ?? result.impedance.inputReactanceOhmRaw, 2)} unit="Ω" />
                 <StatCard label="Directividad" value={fmt(result.performance.directivityDbi, 2)} unit="dBi" />
                 <StatCard label="Ganancia realizada" value={fmt(result.performance.realizedGainMaxDbi, 2)} unit="dBi" />
               </div>
+
+              {isMom && result.mom?.matrix && (
+                <div className="grid gap-4 md:grid-cols-4">
+                  <StatCard label="Matriz Z" value={Array.isArray(result.mom.matrix.size) ? `${result.mom.matrix.size[0]}×${result.mom.matrix.size[1]}` : "-"} />
+                  <StatCard label="Condición" value={fmt(result.mom.matrix.conditionNumber, 2)} />
+                  <StatCard label="Segmentos" value={result.geometry.segments ?? "-"} />
+                  <StatCard label="dz" value={fmt(result.geometry.dzM, 5)} unit="m" />
+                </div>
+              )}
 
               <div className="grid gap-6 xl:grid-cols-2">
                 <div className="rounded-3xl border border-white/10 bg-zinc-950/80 p-5">
@@ -392,6 +528,24 @@ export default function AntennaLabPage() {
                   </div>
                 </div>
               </div>
+
+              {currentsData.length > 0 && (
+                <div className="rounded-3xl border border-white/10 bg-zinc-950/80 p-5">
+                  <h3 className="text-sm font-black uppercase tracking-[0.25em] text-zinc-400">Corriente sobre el hilo · I(z)</h3>
+                  <p className="mt-2 text-sm text-zinc-500">Distribución de corriente calculada por MoM. En el dipolo λ/2 debe ser máxima en el centro y tender a cero en extremos.</p>
+                  <div className="mt-4 h-[320px] rounded-2xl border border-white/10 bg-black p-3">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={currentsData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                        <XAxis dataKey="zLambda" stroke="#a1a1aa" />
+                        <YAxis stroke="#a1a1aa" domain={[0, 1]} />
+                        <Tooltip contentStyle={{ background: "#09090b", border: "1px solid #27272a", color: "white" }} />
+                        <Line type="monotone" dataKey="currentAbsNorm" dot={false} strokeWidth={2} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              )}
 
               <div className="rounded-3xl border border-white/10 bg-zinc-950/80 p-5">
                 <h3 className="text-sm font-black uppercase tracking-[0.25em] text-zinc-400">Exportación preparada para Sionna</h3>
