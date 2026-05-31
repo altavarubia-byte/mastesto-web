@@ -408,6 +408,77 @@ function EmptyChart({ text }: { text: string }) {
   );
 }
 
+
+function FloatingJobProgress({
+  visible,
+  progress,
+  message,
+  stage,
+  jobId,
+}: {
+  visible: boolean;
+  progress: number;
+  message: string;
+  stage: string;
+  jobId: string | null;
+}) {
+  if (!visible) return null;
+
+  const safeProgress = Math.round(clamp(progress, 0, 100));
+  const isMatrix = stage === "matrix";
+  const isDone = safeProgress >= 100;
+
+  return (
+    <div className="fixed bottom-5 right-5 z-50 w-[360px] max-w-[calc(100vw-2rem)] rounded-3xl border border-orange-500/30 bg-zinc-950/95 p-4 text-white shadow-2xl shadow-orange-950/30 backdrop-blur-xl">
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className={`h-2.5 w-2.5 rounded-full ${isDone ? "bg-emerald-400" : "animate-pulse bg-orange-400"}`} />
+            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-orange-400">
+              MoM Engine
+            </p>
+          </div>
+
+          <p className="mt-2 line-clamp-2 text-sm font-semibold leading-snug text-zinc-100">
+            {message || "Calculando matriz electromagnética..."}
+          </p>
+        </div>
+
+        <div className="shrink-0 rounded-full bg-orange-500 px-3 py-1 text-sm font-black text-black">
+          {safeProgress}%
+        </div>
+      </div>
+
+      <div className="h-3 overflow-hidden rounded-full bg-zinc-800 ring-1 ring-white/10">
+        <div
+          className="h-full rounded-full bg-orange-500 transition-all duration-300"
+          style={{ width: `${safeProgress}%` }}
+        />
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] uppercase tracking-[0.16em] text-zinc-500">
+        <div className="rounded-xl border border-white/10 bg-black/40 px-3 py-2">
+          <span className="block text-zinc-600">Fase</span>
+          <span className="mt-1 block truncate font-bold text-zinc-300">{stage || "-"}</span>
+        </div>
+
+        <div className="rounded-xl border border-white/10 bg-black/40 px-3 py-2">
+          <span className="block text-zinc-600">Job</span>
+          <span className="mt-1 block truncate font-bold text-zinc-300">
+            {jobId ? `${jobId.slice(0, 8)}...` : "-"}
+          </span>
+        </div>
+      </div>
+
+      {isMatrix && (
+        <p className="mt-3 rounded-xl border border-orange-500/20 bg-orange-500/10 px-3 py-2 text-xs leading-relaxed text-orange-200">
+          Construyendo la matriz Z fila a fila. Esta es la parte más pesada del cálculo MoM.
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function AntennaLabPage() {
   const [solverMode, setSolverMode] = useState<SolverMode>("analytic");
   const [frequencyGhz, setFrequencyGhz] = useState(2.45);
@@ -877,6 +948,14 @@ export default function AntennaLabPage() {
           )}
         </section>
       </section>
+
+      <FloatingJobProgress
+        visible={loading && solverMode === "mom"}
+        progress={progress}
+        message={progressText}
+        stage={jobStage}
+        jobId={jobId}
+      />
     </main>
   );
 }
