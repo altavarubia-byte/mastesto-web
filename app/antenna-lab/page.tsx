@@ -246,7 +246,7 @@ const normalizeCurrents = (result: DipoleResult | null): CurrentChartPoint[] => 
             : 0
         ).toFixed(5),
       ),
-      currentAbs: Number(p.currentAbs.toExponential ? p.currentAbs : num(p.currentAbs, 0)),
+      currentAbs: num(p.currentAbs, 0),
       phaseDeg: Number(p.phaseDeg.toFixed(2)),
     }))
     .filter((p) => Number.isFinite(p.zLambda));
