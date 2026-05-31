@@ -143,6 +143,18 @@ type DipoleResult = {
   summary?: any;
 };
 
+
+type MoMJobStatus = {
+  ok: boolean;
+  jobId: string;
+  status: "queued" | "running" | "done" | "error" | string;
+  progress: number;
+  stage: string;
+  message: string;
+  error?: { detail?: string } | string | null;
+  result?: DipoleResult;
+};
+
 const num = (v: unknown, fallback = 0) => {
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
@@ -411,10 +423,63 @@ export default function AntennaLabPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<DipoleResult | null>(null);
   const [error, setError] = useState("");
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [progressText, setProgressText] = useState("");
+  const [jobStage, setJobStage] = useState("");
+  const [basisType, setBasisType] = useState("piecewise_sinusoidal");
+
+  const esperarResultadoJob = async (newJobId: string): Promise<DipoleResult> => {
+    while (true) {
+      const statusRes = await fetch(`${API_URL}/antenna/mom/job/status/${newJobId}`, {
+        cache: "no-store",
+      });
+      const statusData: MoMJobStatus = await statusRes.json();
+
+      if (!statusRes.ok || !statusData.ok) {
+        throw new Error((statusData as any)?.detail || "Error consultando progreso MoM");
+      }
+
+      setProgress(Number(statusData.progress || 0));
+      setProgressText(statusData.message || "Calculando...");
+      setJobStage(statusData.stage || "");
+
+      if (statusData.status === "error") {
+        const detail =
+          typeof statusData.error === "string"
+            ? statusData.error
+            : statusData.error?.detail;
+        throw new Error(detail || "Error en cálculo MoM");
+      }
+
+      if (statusData.status === "done") {
+        const resultRes = await fetch(`${API_URL}/antenna/mom/job/result/${newJobId}`, {
+          cache: "no-store",
+        });
+        const resultData: MoMJobStatus = await resultRes.json();
+
+        if (!resultRes.ok || !resultData.ok) {
+          throw new Error((resultData as any)?.detail || "Error obteniendo resultado MoM");
+        }
+
+        if (!resultData.result?.ok) {
+          throw new Error("El job terminó, pero no devolvió resultado válido");
+        }
+
+        return resultData.result;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 700));
+    }
+  };
 
   const calcularDipolo = async () => {
     setLoading(true);
     setError("");
+    setProgress(0);
+    setProgressText("");
+    setJobStage("");
+    setJobId(null);
 
     try {
       const cleanSegments = Math.max(11, Math.min(401, Math.round(segments)));
@@ -431,35 +496,56 @@ export default function AntennaLabPage() {
         includePattern3D,
       };
 
-      const endpoint =
-        solverMode === "mom"
-          ? "/antenna/mom/dipole/calculate"
-          : "/antenna/dipole/calculate";
+      if (solverMode === "mom") {
+        const payload = {
+          ...basePayload,
+          segments: oddSegments,
+          feedVoltageV,
+          calibrateImpedance: false,
+          basisType,
+        };
 
-      const payload =
-        solverMode === "mom"
-          ? {
-              ...basePayload,
-              segments: oddSegments,
-              feedVoltageV,
-              calibrateImpedance: false,
-            }
-          : basePayload;
+        const startRes = await fetch(`${API_URL}/antenna/mom/job/start`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
 
-      const res = await fetch(`${API_URL}${endpoint}`, {
+        const startData: MoMJobStatus = await startRes.json();
+
+        if (!startRes.ok || !startData.ok) {
+          throw new Error((startData as any)?.detail || "Error iniciando job MoM");
+        }
+
+        setJobId(startData.jobId);
+        setProgress(Number(startData.progress || 0));
+        setProgressText(startData.message || "Trabajo MoM iniciado");
+        setJobStage(startData.stage || "queued");
+
+        const data = await esperarResultadoJob(startData.jobId);
+        console.log("Antenna Lab MoM job result:", data);
+
+        setSegments(oddSegments);
+        setProgress(100);
+        setProgressText("Cálculo completado");
+        setJobStage("done");
+        setResult(data);
+        return;
+      }
+
+      const res = await fetch(`${API_URL}/antenna/dipole/calculate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(basePayload),
       });
 
       const data = await res.json();
-      console.log("Antenna Lab result:", data);
+      console.log("Antenna Lab analytic result:", data);
 
       if (!res.ok || !data.ok) {
         throw new Error(data?.detail || data?.error || "Error calculando dipolo");
       }
 
-      setSegments(oddSegments);
       setResult(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error desconocido");
@@ -581,8 +667,21 @@ export default function AntennaLabPage() {
                     <input type="number" step="0.1" value={feedVoltageV} onChange={(e) => setFeedVoltageV(Number(e.target.value))} className="mt-2 w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-orange-500" />
                   </label>
                 </div>
+
+                <label className="mt-4 block">
+                  <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">Base numérica</span>
+                  <select
+                    value={basisType}
+                    onChange={(e) => setBasisType(e.target.value)}
+                    className="mt-2 w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-orange-500"
+                  >
+                    <option value="piecewise_sinusoidal">Piecewise sinusoidal</option>
+                    <option value="default">EFIE/PEEC estable</option>
+                  </select>
+                </label>
+
                 <p className="mt-4 rounded-xl border border-white/10 bg-black/40 p-3 text-xs leading-relaxed text-zinc-400">
-                  EFIE/PEEC sin calibración artificial. Para validar convergencia usa 101, 201 y 401 segmentos.
+                  El modo MoM usa jobs backend con progreso real. Para cálculos pesados prueba 101, 201 y 401 segmentos.
                 </p>
               </div>
             )}
@@ -606,6 +705,27 @@ export default function AntennaLabPage() {
             <button onClick={calcularDipolo} disabled={loading} className="w-full rounded-2xl bg-orange-500 px-5 py-4 font-black uppercase tracking-[0.18em] text-black transition hover:bg-orange-400 disabled:cursor-not-allowed disabled:opacity-50">
               {loading ? "Calculando..." : `Calcular dipolo ${solverMode === "mom" ? "MoM" : "analítico"}`}
             </button>
+
+            {loading && solverMode === "mom" && (
+              <div className="rounded-2xl border border-white/10 bg-black/50 p-4">
+                <div className="mb-2 flex items-center justify-between gap-4 text-xs uppercase tracking-[0.2em]">
+                  <span className="truncate text-zinc-400">{progressText || "Calculando MoM..."}</span>
+                  <span className="font-bold text-orange-400">{Math.round(progress)}%</span>
+                </div>
+
+                <div className="h-3 overflow-hidden rounded-full bg-zinc-800">
+                  <div
+                    className="h-full rounded-full bg-orange-500 transition-all duration-300"
+                    style={{ width: `${clamp(progress, 0, 100)}%` }}
+                  />
+                </div>
+
+                <div className="mt-2 flex items-center justify-between gap-3 text-xs text-zinc-500">
+                  <span>Fase: {jobStage || "-"}</span>
+                  {jobId && <span>Job: {jobId.slice(0, 8)}...</span>}
+                </div>
+              </div>
+            )}
 
             {error && <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">{error}</div>}
           </div>
