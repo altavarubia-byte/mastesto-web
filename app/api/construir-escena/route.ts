@@ -81,6 +81,7 @@ export async function POST(req: Request) {
       }
       if (conPasillos) {
         habitaciones.push({
+          altoBase: Math.round(offsetY * 10) / 10,
           id: `pasillo-${p + 1}`,
           nombre: `Pasillo planta ${p + 1}`,
           x: 0,
