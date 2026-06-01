@@ -47,6 +47,7 @@ type Habitacion = {
   ancho: number;
   largo: number;
   alto: number;
+  altoBase?: number;
   materialPared?: string;
   materialSuelo?: string;
   materialTecho?: string;
@@ -4941,10 +4942,12 @@ function GrupoHabitacion({
   onClick: () => void;
 }) {
   const { x, z, ancho, largo, alto } = habitacion;
+  const base = habitacion.altoBase ?? 0;
   const grosor = 0.12;
 
   return (
     <group
+      position={[0, base, 0]}
       onClick={(e) => {
         e.stopPropagation();
         onClick();
