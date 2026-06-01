@@ -768,6 +768,154 @@ function PanelSionnaV5({ resultado }: { resultado: ResultadoCobertura }) {
 
 
 
+
+function polygonCentroidLocal(points: any[]) {
+  const clean = points
+    .map((p) => ({ x: nrf(p.x), z: nrf(p.z) }))
+    .filter((p) => Number.isFinite(p.x) && Number.isFinite(p.z));
+
+  if (clean.length === 0) return { x: 0, z: 0 };
+
+  return {
+    x: clean.reduce((acc, p) => acc + p.x, 0) / clean.length,
+    z: clean.reduce((acc, p) => acc + p.z, 0) / clean.length,
+  };
+}
+
+function createFlatPolygonGeometry(footprint: any[], y = 0) {
+  const pts = (footprint ?? [])
+    .map((p: any) => ({ x: nrf(p.x), z: nrf(p.z) }))
+    .filter((p: any) => Number.isFinite(p.x) && Number.isFinite(p.z));
+
+  const geo = new THREE.BufferGeometry();
+  if (pts.length < 3) return geo;
+
+  const c = polygonCentroidLocal(pts);
+  const positions: number[] = [c.x, y, c.z];
+  pts.forEach((p) => positions.push(p.x, y, p.z));
+
+  const indices: number[] = [];
+  for (let i = 1; i <= pts.length; i++) {
+    const next = i === pts.length ? 1 : i + 1;
+    indices.push(0, i, next);
+  }
+
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+  return geo;
+}
+
+function createExtrudedBuildingGeometry(footprint: any[], heightM: number) {
+  const pts = (footprint ?? [])
+    .map((p: any) => ({ x: nrf(p.x), z: nrf(p.z) }))
+    .filter((p: any) => Number.isFinite(p.x) && Number.isFinite(p.z));
+
+  const geo = new THREE.BufferGeometry();
+  if (pts.length < 3) return geo;
+
+  const h = clampNumber(nrf(heightM, 9), 2.5, 120);
+  const c = polygonCentroidLocal(pts);
+
+  const positions: number[] = [];
+
+  // base polygon vertices
+  pts.forEach((p) => positions.push(p.x, 0, p.z));
+  // top polygon vertices
+  pts.forEach((p) => positions.push(p.x, h, p.z));
+  // centroid bottom + top
+  const bottomCenterIndex = pts.length * 2;
+  positions.push(c.x, 0, c.z);
+  const topCenterIndex = pts.length * 2 + 1;
+  positions.push(c.x, h, c.z);
+
+  const indices: number[] = [];
+  const n = pts.length;
+
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+
+    // sides
+    indices.push(i, j, n + j);
+    indices.push(i, n + j, n + i);
+
+    // roof fan
+    indices.push(topCenterIndex, n + i, n + j);
+
+    // underside
+    indices.push(bottomCenterIndex, j, i);
+  }
+
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+  return geo;
+}
+
+function UrbanBuildingMesh({ building, selected }: { building: any; selected?: boolean }) {
+  const footprint = building.footprint ?? [];
+  const height = clampNumber(nrf(building.heightM, 9), 2.5, 120);
+  const source = String(building.source ?? "");
+  const isCatastro = source.includes("catastro");
+
+  const geometry = useMemo(
+    () => createExtrudedBuildingGeometry(footprint, height),
+    [footprint, height],
+  );
+
+  if (!footprint || footprint.length < 3) return null;
+
+  const color = selected ? "#38bdf8" : isCatastro ? "#d8e2ea" : "#9fb2c4";
+  const roofColor = selected ? "#7dd3fc" : "#f8fafc";
+  const edgeColor = selected ? "#22d3ee" : "#7dd3fc";
+
+  const center = polygonCentroidLocal(footprint);
+  const labelY = height + 0.8;
+
+  return (
+    <group>
+      <mesh geometry={geometry} castShadow receiveShadow>
+        <meshStandardMaterial
+          color={color}
+          roughness={0.58}
+          metalness={0.04}
+          transparent={false}
+          opacity={1}
+        />
+      </mesh>
+
+      <lineSegments geometry={new THREE.EdgesGeometry(geometry, 18)}>
+        <lineBasicMaterial color={edgeColor} transparent opacity={0.42} />
+      </lineSegments>
+
+      <mesh geometry={createFlatPolygonGeometry(footprint, height + 0.025)} receiveShadow>
+        <meshStandardMaterial color={roofColor} roughness={0.82} metalness={0.02} />
+      </mesh>
+
+      {height > 9 && (
+        <group position={[center.x, labelY, center.z]}>
+          <mesh rotation={[-Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[0.7, 0.95, 32]} />
+            <meshBasicMaterial color="#22d3ee" transparent opacity={0.22} side={THREE.DoubleSide} />
+          </mesh>
+        </group>
+      )}
+    </group>
+  );
+}
+
+function UrbanGreenArea({ area }: { area: any }) {
+  const footprint = area.footprint ?? [];
+  const geometry = useMemo(() => createFlatPolygonGeometry(footprint, 0.022), [footprint]);
+  if (!footprint || footprint.length < 3) return null;
+
+  return (
+    <mesh geometry={geometry} receiveShadow>
+      <meshStandardMaterial color="#166534" roughness={0.95} metalness={0} transparent opacity={0.72} side={THREE.DoubleSide} />
+    </mesh>
+  );
+}
+
 function CapaEscenarioUrbano({
   scenario,
   visible,
@@ -775,83 +923,59 @@ function CapaEscenarioUrbano({
   scenario: UrbanScenario | null;
   visible: boolean;
 }) {
-  const buildings = useMemo(() => (scenario?.urban?.buildings ?? []).slice(0, 180), [scenario]);
-  const roads = useMemo(() => (scenario?.urban?.roads ?? []).slice(0, 120), [scenario]);
-  const greenAreas = useMemo(() => (scenario?.urban?.greenAreas ?? []).slice(0, 40), [scenario]);
+  const buildings = useMemo(() => (scenario?.urban?.buildings ?? []).slice(0, 260), [scenario]);
+  const roads = useMemo(() => (scenario?.urban?.roads ?? []).slice(0, 180), [scenario]);
+  const greenAreas = useMemo(() => (scenario?.urban?.greenAreas ?? []).slice(0, 80), [scenario]);
   const radius = Number(scenario?.site?.radiusM ?? 60);
 
   if (!visible || !scenario) return null;
 
-  const bboxFromFootprint = (footprint: any[]) => {
-    const xs = footprint.map((p) => nrf(p.x));
-    const zs = footprint.map((p) => nrf(p.z));
-    const minX = Math.min(...xs);
-    const maxX = Math.max(...xs);
-    const minZ = Math.min(...zs);
-    const maxZ = Math.max(...zs);
-    return {
-      cx: (minX + maxX) / 2,
-      cz: (minZ + maxZ) / 2,
-      sx: Math.max(0.6, maxX - minX),
-      sz: Math.max(0.6, maxZ - minZ),
-    };
-  };
-
   return (
     <group name="urban-rf-scenario">
-      <mesh position={[0, -0.045, 0]} receiveShadow>
-        <boxGeometry args={[radius * 2, 0.035, radius * 2]} />
-        <meshStandardMaterial color="#07111c" roughness={0.92} metalness={0.02} />
+      <mesh position={[0, -0.075, 0]} receiveShadow>
+        <boxGeometry args={[radius * 2.04, 0.055, radius * 2.04]} />
+        <meshStandardMaterial color="#111827" roughness={0.96} metalness={0.01} />
+      </mesh>
+
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.035, 0]}>
+        <circleGeometry args={[radius, 128]} />
+        <meshBasicMaterial color="#0f172a" transparent opacity={0.55} side={THREE.DoubleSide} />
       </mesh>
 
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]}>
-        <ringGeometry args={[Math.max(1, radius - 0.6), radius, 96]} />
-        <meshBasicMaterial color="#22d3ee" transparent opacity={0.13} side={THREE.DoubleSide} />
+        <ringGeometry args={[Math.max(1, radius - 0.7), radius, 128]} />
+        <meshBasicMaterial color="#22d3ee" transparent opacity={0.16} side={THREE.DoubleSide} />
       </mesh>
 
-      {greenAreas.map((area: any) => {
-        const fp = area.footprint ?? [];
-        if (fp.length < 3) return null;
-        const b = bboxFromFootprint(fp);
-        return (
-          <mesh key={area.id} position={[b.cx, 0.006, b.cz]} receiveShadow>
-            <boxGeometry args={[b.sx, 0.012, b.sz]} />
-            <meshStandardMaterial color="#14532d" transparent opacity={0.55} roughness={0.9} />
-          </mesh>
-        );
-      })}
+      {greenAreas.map((area: any) => (
+        <UrbanGreenArea key={area.id} area={area} />
+      ))}
 
       {roads.map((road: any) => {
         const points = (road.points ?? [])
-          .slice(0, 80)
-          .map((p: any) => [nrf(p.x), 0.035, nrf(p.z)] as [number, number, number]);
+          .slice(0, 120)
+          .map((p: any) => [nrf(p.x), 0.07, nrf(p.z)] as [number, number, number]);
         if (points.length < 2) return null;
-        return <Line key={road.id} points={points} color="#64748b" lineWidth={2} transparent opacity={0.75} />;
+        const roadType = String(road.roadType ?? "");
+        const isMain = ["primary", "secondary", "tertiary", "trunk"].some((t) => roadType.includes(t));
+        return (
+          <Line
+            key={road.id}
+            points={points}
+            color={isMain ? "#cbd5e1" : "#64748b"}
+            lineWidth={isMain ? 3.5 : 2.1}
+            transparent
+            opacity={isMain ? 0.88 : 0.68}
+          />
+        );
       })}
 
       {buildings.map((building: any) => {
         const fp = building.footprint ?? [];
         if (fp.length < 3) return null;
-        const b = bboxFromFootprint(fp);
-        const h = clampNumber(nrf(building.heightM, 9), 2.5, 85);
-        const isNearCenter = Math.abs(b.cx) < 8 && Math.abs(b.cz) < 8;
-        return (
-          <mesh
-            key={building.id}
-            position={[b.cx, h / 2, b.cz]}
-            castShadow
-            receiveShadow
-          >
-            <boxGeometry args={[b.sx, h, b.sz]} />
-            <meshStandardMaterial
-              color={isNearCenter ? "#0ea5e9" : "#334155"}
-              transparent
-              opacity={isNearCenter ? 0.45 : 0.38}
-              roughness={0.75}
-              metalness={0.08}
-            />
-          </mesh>
-        );
+        const c = polygonCentroidLocal(fp);
+        const isNearCenter = Math.abs(c.x) < 10 && Math.abs(c.z) < 10;
+        return <UrbanBuildingMesh key={building.id} building={building} selected={isNearCenter} />;
       })}
     </group>
   );
