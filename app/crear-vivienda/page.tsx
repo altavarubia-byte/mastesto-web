@@ -865,6 +865,94 @@ function evaluarColocacionEdificio(
   return { libre: colisiones === 0, colisiones };
 }
 
+
+function buscarHuecoLibreEdificio(
+  scenario: UrbanScenario | null,
+  dimensiones: { ancho: number; largo: number },
+) {
+  const radius = nrf(scenario?.site?.radiusM, 120);
+  const buildings = scenario?.urban?.buildings ?? [];
+  const ancho = Math.max(1, nrf(dimensiones.ancho, 8));
+  const largo = Math.max(1, nrf(dimensiones.largo, 6));
+  const mayor = Math.max(ancho, largo);
+
+  // Separación mínima respecto a edificios existentes.
+  const margenSeguridad = Math.max(2.0, mayor * 0.18);
+
+  // Evitar colocar justo en el borde del área importada.
+  const limite = Math.max(5, radius - mayor * 0.75 - 3);
+
+  // Paso de búsqueda: suficiente para encontrar huecos sin bloquear el navegador.
+  const paso = clampNumber(mayor * 0.55, 4, 18);
+
+  let mejor = {
+    x: 0,
+    z: 0,
+    libre: false,
+    colisiones: Number.POSITIVE_INFINITY,
+    score: Number.POSITIVE_INFINITY,
+  };
+
+  const evaluar = (x: number, z: number) => {
+    if (Math.abs(x) > limite || Math.abs(z) > limite) return;
+
+    const b0 = rectBounds2D(x, z, ancho, largo);
+    const colisiones = buildings.filter((b: any) =>
+      boundsOverlap2D(b0, buildingBounds2D(b), margenSeguridad),
+    ).length;
+
+    const distanciaCentro = Math.sqrt(x * x + z * z);
+
+    // Preferimos huecos libres cerca del centro, pero nunca dentro de edificios.
+    const score = colisiones * 1_000_000 + distanciaCentro;
+
+    if (score < mejor.score) {
+      mejor = {
+        x: Number(x.toFixed(2)),
+        z: Number(z.toFixed(2)),
+        libre: colisiones === 0,
+        colisiones,
+        score,
+      };
+    }
+  };
+
+  // 1) centro
+  evaluar(0, 0);
+
+  // 2) búsqueda en espiral/cuadrícula alrededor del centro
+  for (let r = paso; r <= limite; r += paso) {
+    const samples = Math.max(16, Math.ceil((2 * Math.PI * r) / paso));
+    for (let i = 0; i < samples; i++) {
+      const a = (i / samples) * Math.PI * 2;
+      evaluar(Math.cos(a) * r, Math.sin(a) * r);
+    }
+
+    // Si ya encontró sitio libre cerca, no necesita recorrer todo el radio.
+    if (mejor.libre && r > mayor * 1.5) break;
+  }
+
+  // 3) refuerzo por cuadrícula para zonas urbanas con geometrías raras
+  if (!mejor.libre) {
+    for (let x = -limite; x <= limite; x += paso) {
+      for (let z = -limite; z <= limite; z += paso) {
+        evaluar(x, z);
+      }
+    }
+  }
+
+  return {
+    x: mejor.x,
+    z: mejor.z,
+    libre: mejor.libre,
+    colisiones: Number.isFinite(mejor.colisiones) ? mejor.colisiones : 0,
+    margenSeguridad,
+    metodo: mejor.libre
+      ? "auto_free_spot_spiral_search"
+      : "auto_least_collision_spot_no_free_area_found",
+  };
+}
+
 function footprintEdificioPrincipal(pose: EdificioPrincipalPose, dimensiones: { ancho: number; largo: number }) {
   const a = dimensiones.ancho / 2;
   const l = dimensiones.largo / 2;
@@ -2172,6 +2260,40 @@ export default function CrearViviendaPage() {
     setResultadoCobertura(null);
   };
 
+  const buscarHuecoLibreYColocarEdificio = (
+    scenario: UrbanScenario | null = urbanScenario,
+    activarArrastre = true,
+  ) => {
+    if (!scenario) {
+      setUrbanImportError("Primero importa un escenario real.");
+      return null;
+    }
+
+    const hueco = buscarHuecoLibreEdificio(scenario, dimensionesEdificioPrincipal);
+    const pose = crearPoseEdificioPrincipal(
+      hueco.x,
+      hueco.z,
+      edificioPrincipalPose.rotationDeg,
+      scenario,
+    );
+
+    setEdificioPrincipalPose(pose);
+    setScenarioMode("urban");
+    setMostrarEscenarioUrbano(true);
+    if (activarArrastre) setColocandoEdificioPrincipal(true);
+
+    if (!pose.libre) {
+      setUrbanImportError(
+        "No he encontrado una zona completamente libre en el radio importado. He colocado el edificio en la zona con menos colisiones; aumenta el radio o muévelo manualmente.",
+      );
+    } else {
+      setUrbanImportError("");
+    }
+
+    setResultadoCobertura(null);
+    return pose;
+  };
+
   const fijarEdificioPrincipal = () => {
     if (!urbanScenario) return;
     if (!edificioPrincipalPose.libre) {
@@ -2193,7 +2315,8 @@ export default function CrearViviendaPage() {
               rotationDeg: pose.rotationDeg,
               placementStatus: "free",
               placementLocked: true,
-              placementModel: "dragged_on_urban_canvas_aabb_collision_check",
+              placementModel: "auto_free_spot_plus_manual_drag_aabb_collision_check",
+              autoPlacementAdjustedByUser: true,
               dimensiones: {
                 ancho: dimensionesEdificioPrincipal.ancho,
                 largo: dimensionesEdificioPrincipal.largo,
@@ -2327,7 +2450,8 @@ export default function CrearViviendaPage() {
       setUrbanImportStatus("polling");
 
       const result = await esperarImportacionUrbana(startData.jobId);
-      const poseInicial = crearPoseEdificioPrincipal(0, 0, 0, result.scenario);
+      const huecoInicial = buscarHuecoLibreEdificio(result.scenario, dimensionesEdificioPrincipal);
+      const poseInicial = crearPoseEdificioPrincipal(huecoInicial.x, huecoInicial.z, 0, result.scenario);
       setUrbanScenario({
         ...result.scenario,
         edificioPrincipal: {
@@ -2338,12 +2462,24 @@ export default function CrearViviendaPage() {
           lon: poseInicial.lon,
           rotationDeg: poseInicial.rotationDeg,
           placementStatus: poseInicial.libre ? "free" : "occupied",
+          placementModel: huecoInicial.metodo,
+          autoPlacement: true,
+          dimensiones: {
+            ancho: dimensionesEdificioPrincipal.ancho,
+            largo: dimensionesEdificioPrincipal.largo,
+            alto: dimensionesEdificioPrincipal.alto,
+          },
         },
       });
       setEdificioPrincipalPose(poseInicial);
       setScenarioMode("urban");
       setColocandoEdificioPrincipal(true);
       setMostrarEscenarioUrbano(true);
+      if (!poseInicial.libre) {
+        setUrbanImportError("Escenario importado, pero no se encontró hueco totalmente libre. El edificio se ha colocado en la zona con menos colisiones; muévelo manualmente o aumenta el radio.");
+      } else {
+        setUrbanImportError("");
+      }
       setUrbanProgress(100);
       setUrbanStage("done");
       setUrbanMessage("Escenario RF real importado");
@@ -3828,27 +3964,34 @@ const url = `${BASE_URL}/raytrace`;
                   onChange={rotarEdificioPrincipal}
                 />
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    onClick={() => buscarHuecoLibreYColocarEdificio(urbanScenario, true)}
+                    className="rounded-xl bg-cyan-400 px-3 py-3 text-[9px] font-black uppercase text-black transition-all hover:bg-white"
+                  >
+                    Auto hueco
+                  </button>
                   <button
                     onClick={() => {
                       setScenarioMode("urban");
+                      setMostrarEscenarioUrbano(true);
                       setColocandoEdificioPrincipal((v) => !v);
                     }}
                     className={`rounded-xl px-3 py-3 text-[9px] font-black uppercase transition-all ${colocandoEdificioPrincipal ? "bg-orange-400 text-black" : "bg-slate-800 text-slate-300"}`}
                   >
-                    {colocandoEdificioPrincipal ? "Arrastrando" : "Colocar"}
+                    {colocandoEdificioPrincipal ? "Arrastrando" : "Mover"}
                   </button>
                   <button
                     onClick={fijarEdificioPrincipal}
                     disabled={!edificioPrincipalPose.libre}
                     className="rounded-xl bg-emerald-400 px-3 py-3 text-[9px] font-black uppercase text-black transition-all disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    Fijar sitio
+                    Fijar
                   </button>
                 </div>
 
                 <p className="text-[9px] uppercase leading-relaxed text-slate-500">
-                  Al fijarlo se guarda la posición local y la lat/lon real en el JSON del escenario.
+                  Al importar, el sistema busca automáticamente un hueco libre. Después puedes moverlo con el ratón y fijar la lat/lon real.
                 </p>
               </div>
             )}
@@ -7725,3 +7868,4 @@ function ConteoHabitaciones({ numPlantas, onConfirmar }: { numPlantas: number; o
     </div>
   );
 }
+
