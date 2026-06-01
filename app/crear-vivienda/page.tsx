@@ -2584,18 +2584,19 @@ const url = `${BASE_URL}/raytrace`;
   const generarEscenaDesdeIA = async (datos: Record<string, any>) => {
     setIaCargando(true);
     try {
-      const num = parseInt(datos.numHabitaciones) || 4;
-      const anchoTotal = parseFloat(datos.anchoTotal) || 10;
-      const largoTotal = parseFloat(datos.largoTotal) || 12;
-      const alto = parseFloat(datos.altoTecho) || 2.7;
+      const pf = (v: any, def: number) => parseFloat(String(v ?? '').replace(/[^0-9.\-]/g, '')) || def;
+      const num = pf(datos.numHabitaciones, 4);
+      const anchoTotal = pf(datos.anchoTotal, 10);
+      const largoTotal = pf(datos.largoTotal, 12);
+      const alto = pf(datos.altoTecho, 2.7);
       const matPared = datos.materialParedIA || 'ladrillo';
       const matSuelo = datos.materialSueloIA || 'hormigon';
       const matTecho = datos.materialTechoIA || 'pladur';
-      const espesorP = parseFloat(datos.espesorParedIA) || 0.115;
-      const rugosidadP = parseFloat(datos.rugosidadParedIA) || 0.0015;
-      const espesorS = parseFloat(datos.espesorSueloIA) || 0.2;
-      const espesorT = parseFloat(datos.espesorTechoIA) || 0.013;
-      const freq = parseFloat(datos.frecuenciaIA) || 5000;
+      const espesorP = pf(datos.espesorParedIA, 0.115);
+      const rugosidadP = pf(datos.rugosidadParedIA, 0.0015);
+      const espesorS = pf(datos.espesorSueloIA, 0.2);
+      const espesorT = pf(datos.espesorTechoIA, 0.013);
+      const freq = pf(datos.frecuenciaIA, 5000);
 
       const res = await fetch('/api/construir-escena', {
         method: 'POST',
