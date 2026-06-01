@@ -356,6 +356,16 @@ type UrbanJobStatus = {
   result?: UrbanImportResult;
 };
 
+type EdificioPrincipalPose = {
+  x: number;
+  z: number;
+  rotationDeg: number;
+  lat: number | null;
+  lon: number | null;
+  libre: boolean;
+  colisiones: number;
+};
+
 const clampNumber = (value: number, min: number, max: number) =>
   Math.max(min, Math.min(max, value));
 
@@ -782,6 +792,90 @@ function polygonCentroidLocal(points: any[]) {
   };
 }
 
+
+function metersPerDegLonFrontend(lat: number) {
+  return Math.max(111320 * Math.cos((lat * Math.PI) / 180), 1e-9);
+}
+
+function localXzToLatLonFrontend(x: number, z: number, site?: UrbanScenario["site"]) {
+  const lat0 = nrf(site?.lat, 0);
+  const lon0 = nrf(site?.lon, 0);
+  if (!Number.isFinite(lat0) || !Number.isFinite(lon0)) return { lat: null, lon: null };
+
+  const lat = lat0 + z / 111320;
+  const lon = lon0 + x / metersPerDegLonFrontend(lat0);
+  return { lat, lon };
+}
+
+function calcularDimensionesEdificioInterior(habitaciones: Habitacion[]) {
+  if (!habitaciones.length) {
+    return { ancho: 8, largo: 6, alto: 3, minX: -4, maxX: 4, minZ: -3, maxZ: 3 };
+  }
+
+  const minX = Math.min(...habitaciones.map((h) => h.x - h.ancho / 2));
+  const maxX = Math.max(...habitaciones.map((h) => h.x + h.ancho / 2));
+  const minZ = Math.min(...habitaciones.map((h) => h.z - h.largo / 2));
+  const maxZ = Math.max(...habitaciones.map((h) => h.z + h.largo / 2));
+  const alto = Math.max(...habitaciones.map((h) => (h.altoBase ?? 0) + h.alto), 3);
+
+  return {
+    ancho: Math.max(1, maxX - minX),
+    largo: Math.max(1, maxZ - minZ),
+    alto: Math.max(2.6, alto),
+    minX,
+    maxX,
+    minZ,
+    maxZ,
+  };
+}
+
+function boundsFromPoints(points: any[]) {
+  const xs = (points ?? []).map((p: any) => nrf(p.x)).filter(Number.isFinite);
+  const zs = (points ?? []).map((p: any) => nrf(p.z)).filter(Number.isFinite);
+  if (!xs.length || !zs.length) return null;
+  return { minX: Math.min(...xs), maxX: Math.max(...xs), minZ: Math.min(...zs), maxZ: Math.max(...zs) };
+}
+
+function buildingBounds2D(building: any) {
+  return boundsFromPoints(building?.footprint ?? []);
+}
+
+function rectBounds2D(x: number, z: number, ancho: number, largo: number) {
+  return { minX: x - ancho / 2, maxX: x + ancho / 2, minZ: z - largo / 2, maxZ: z + largo / 2 };
+}
+
+function boundsOverlap2D(a: any, b: any, margen = 0.8) {
+  if (!a || !b) return false;
+  return !(
+    a.maxX + margen < b.minX ||
+    a.minX - margen > b.maxX ||
+    a.maxZ + margen < b.minZ ||
+    a.minZ - margen > b.maxZ
+  );
+}
+
+function evaluarColocacionEdificio(
+  x: number,
+  z: number,
+  dimensiones: { ancho: number; largo: number },
+  buildings: any[] = [],
+) {
+  const b0 = rectBounds2D(x, z, dimensiones.ancho, dimensiones.largo);
+  const colisiones = buildings.filter((b) => boundsOverlap2D(b0, buildingBounds2D(b), 0.8)).length;
+  return { libre: colisiones === 0, colisiones };
+}
+
+function footprintEdificioPrincipal(pose: EdificioPrincipalPose, dimensiones: { ancho: number; largo: number }) {
+  const a = dimensiones.ancho / 2;
+  const l = dimensiones.largo / 2;
+  return [
+    { x: pose.x - a, z: pose.z - l },
+    { x: pose.x + a, z: pose.z - l },
+    { x: pose.x + a, z: pose.z + l },
+    { x: pose.x - a, z: pose.z + l },
+  ];
+}
+
 function createFlatPolygonGeometry(footprint: any[], y = 0) {
   const pts = (footprint ?? [])
     .map((p: any) => ({ x: nrf(p.x), z: nrf(p.z) }))
@@ -977,6 +1071,114 @@ function CapaEscenarioUrbano({
         const isNearCenter = Math.abs(c.x) < 10 && Math.abs(c.z) < 10;
         return <UrbanBuildingMesh key={building.id} building={building} selected={isNearCenter} />;
       })}
+    </group>
+  );
+}
+
+
+function EdificioPrincipalDraggable({
+  visible,
+  placing,
+  pose,
+  dimensiones,
+  onMove,
+  onConfirm,
+}: {
+  visible: boolean;
+  placing: boolean;
+  pose: EdificioPrincipalPose;
+  dimensiones: { ancho: number; largo: number; alto: number };
+  onMove: (x: number, z: number) => void;
+  onConfirm: () => void;
+}) {
+  const { camera, gl } = useThree();
+  const planoSuelo = useRef(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0));
+  const puntoInterseccion = useRef(new THREE.Vector3());
+  const raycaster = useRef(new THREE.Raycaster());
+  const mouse = useRef(new THREE.Vector2());
+  const [arrastrando, setArrastrando] = useState(false);
+
+  const color = pose.libre ? "#22c55e" : "#ef4444";
+  const footprint = useMemo(() => footprintEdificioPrincipal(pose, dimensiones), [pose, dimensiones]);
+  const footprintGeo = useMemo(() => createFlatPolygonGeometry(footprint, 0.11), [footprint]);
+
+  if (!visible) return null;
+
+  const moverEnSuelo = (event: any) => {
+    if (!arrastrando || !placing) return;
+    const rect = gl.domElement.getBoundingClientRect();
+    mouse.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.current.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.current.setFromCamera(mouse.current, camera);
+
+    const hit = raycaster.current.ray.intersectPlane(planoSuelo.current, puntoInterseccion.current);
+    if (!hit) return;
+
+    onMove(
+      Number(puntoInterseccion.current.x.toFixed(2)),
+      Number(puntoInterseccion.current.z.toFixed(2)),
+    );
+  };
+
+  return (
+    <group name="edificio-principal-placement">
+      <mesh
+        geometry={footprintGeo}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (!placing && pose.libre) onConfirm();
+        }}
+        onPointerDown={(e: any) => {
+          e.stopPropagation();
+          if (!placing) return;
+          setArrastrando(true);
+          gl.domElement.style.cursor = "grabbing";
+          if (e.target?.setPointerCapture) e.target.setPointerCapture(e.pointerId);
+        }}
+        onPointerMove={(e: any) => {
+          if (!arrastrando) return;
+          e.stopPropagation();
+          moverEnSuelo(e);
+        }}
+        onPointerUp={(e: any) => {
+          e.stopPropagation();
+          setArrastrando(false);
+          gl.domElement.style.cursor = "default";
+          if (e.target?.releasePointerCapture) e.target.releasePointerCapture(e.pointerId);
+        }}
+        onPointerOver={() => {
+          if (placing) gl.domElement.style.cursor = "grab";
+        }}
+        onPointerOut={() => {
+          if (!arrastrando) gl.domElement.style.cursor = "default";
+        }}
+      >
+        <meshBasicMaterial color={color} transparent opacity={placing ? 0.34 : 0.2} side={THREE.DoubleSide} />
+      </mesh>
+
+      <group position={[pose.x, 0.16, pose.z]}>
+        <mesh castShadow receiveShadow position={[0, dimensiones.alto / 2, 0]}>
+          <boxGeometry args={[dimensiones.ancho, Math.max(0.4, dimensiones.alto), dimensiones.largo]} />
+          <meshStandardMaterial
+            color={color}
+            roughness={0.65}
+            metalness={0.02}
+            transparent
+            opacity={placing ? 0.22 : 0.12}
+            wireframe={placing}
+          />
+        </mesh>
+
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.08, 0]}>
+          <ringGeometry args={[Math.max(dimensiones.ancho, dimensiones.largo) * 0.55, Math.max(dimensiones.ancho, dimensiones.largo) * 0.62, 64]} />
+          <meshBasicMaterial color={color} transparent opacity={placing ? 0.35 : 0.18} side={THREE.DoubleSide} />
+        </mesh>
+
+        <mesh position={[0, Math.max(0.8, dimensiones.alto) + 0.8, 0]}>
+          <sphereGeometry args={[0.45, 24, 12]} />
+          <meshBasicMaterial color={color} transparent opacity={0.9} />
+        </mesh>
+      </group>
     </group>
   );
 }
@@ -1325,6 +1527,16 @@ export default function CrearViviendaPage() {
   const [urbanStage, setUrbanStage] = useState("");
   const [urbanMessage, setUrbanMessage] = useState("");
   const [mostrarEscenarioUrbano, setMostrarEscenarioUrbano] = useState(true);
+  const [colocandoEdificioPrincipal, setColocandoEdificioPrincipal] = useState(false);
+  const [edificioPrincipalPose, setEdificioPrincipalPose] = useState<EdificioPrincipalPose>({
+    x: 0,
+    z: 0,
+    rotationDeg: 0,
+    lat: null,
+    lon: null,
+    libre: true,
+    colisiones: 0,
+  });
 
   // ---------------------------------------------------------
   // ESTADO: VISUALIZACIÓN, SIMULACIÓN DINÁMICA Y MIMO
@@ -1385,6 +1597,13 @@ export default function CrearViviendaPage() {
 
   const velocidadRxMps =
     unidadVelocidad === "kmh" ? velocidadRx / 3.6 : velocidadRx;
+
+  const dimensionesEdificioPrincipal = useMemo(
+    () => calcularDimensionesEdificioInterior(habitaciones),
+    [habitaciones],
+  );
+
+  const offsetEdificioPrincipal = scenarioMode === "urban" && urbanScenario ? edificioPrincipalPose : null;
 
   const esReceptor = (tipo: string) =>
     tipo === "receptor" || tipo === "rx" || tipo === "receiver";
@@ -1900,7 +2119,93 @@ export default function CrearViviendaPage() {
         rugosidadTechoM,
       })),
       objetos,
+      urbanRF: urbanScenario
+        ? {
+            scenarioMode,
+            site: urbanScenario.site,
+            bounds: urbanScenario.bounds,
+            edificioPrincipalPose,
+            edificioPrincipalPlacement: {
+              x: edificioPrincipalPose.x,
+              z: edificioPrincipalPose.z,
+              lat: edificioPrincipalPose.lat,
+              lon: edificioPrincipalPose.lon,
+              rotationDeg: edificioPrincipalPose.rotationDeg,
+              libre: edificioPrincipalPose.libre,
+              colisiones: edificioPrincipalPose.colisiones,
+              dimensiones: dimensionesEdificioPrincipal,
+            },
+          }
+        : undefined,
     };
+  };
+
+
+  const crearPoseEdificioPrincipal = (
+    x: number,
+    z: number,
+    rotationDeg: number = edificioPrincipalPose.rotationDeg,
+    scenario: UrbanScenario | null = urbanScenario,
+  ): EdificioPrincipalPose => {
+    const buildings = scenario?.urban?.buildings ?? [];
+    const evaluacion = evaluarColocacionEdificio(x, z, dimensionesEdificioPrincipal, buildings);
+    const ll = localXzToLatLonFrontend(x, z, scenario?.site);
+
+    return {
+      x: Number(x.toFixed(2)),
+      z: Number(z.toFixed(2)),
+      rotationDeg: Number(rotationDeg.toFixed(1)),
+      lat: ll.lat === null ? null : Number(ll.lat.toFixed(8)),
+      lon: ll.lon === null ? null : Number(ll.lon.toFixed(8)),
+      libre: evaluacion.libre,
+      colisiones: evaluacion.colisiones,
+    };
+  };
+
+  const moverEdificioPrincipal = (x: number, z: number) => {
+    setEdificioPrincipalPose(crearPoseEdificioPrincipal(x, z));
+    setResultadoCobertura(null);
+  };
+
+  const rotarEdificioPrincipal = (rotationDeg: number) => {
+    setEdificioPrincipalPose((prev) => crearPoseEdificioPrincipal(prev.x, prev.z, rotationDeg));
+    setResultadoCobertura(null);
+  };
+
+  const fijarEdificioPrincipal = () => {
+    if (!urbanScenario) return;
+    if (!edificioPrincipalPose.libre) {
+      setUrbanImportError("La posición seleccionada colisiona con edificios existentes. Muévelo a una zona libre.");
+      return;
+    }
+
+    const pose = edificioPrincipalPose;
+    setUrbanScenario((prev) =>
+      prev
+        ? {
+            ...prev,
+            edificioPrincipal: {
+              ...(prev.edificioPrincipal ?? {}),
+              x: pose.x,
+              z: pose.z,
+              lat: pose.lat,
+              lon: pose.lon,
+              rotationDeg: pose.rotationDeg,
+              placementStatus: "free",
+              placementLocked: true,
+              placementModel: "dragged_on_urban_canvas_aabb_collision_check",
+              dimensiones: {
+                ancho: dimensionesEdificioPrincipal.ancho,
+                largo: dimensionesEdificioPrincipal.largo,
+                alto: dimensionesEdificioPrincipal.alto,
+              },
+            },
+          }
+        : prev,
+    );
+    setColocandoEdificioPrincipal(false);
+    setUrbanImportError("");
+    setResultadoCobertura(null);
   };
 
 
@@ -2022,8 +2327,22 @@ export default function CrearViviendaPage() {
       setUrbanImportStatus("polling");
 
       const result = await esperarImportacionUrbana(startData.jobId);
-      setUrbanScenario(result.scenario);
+      const poseInicial = crearPoseEdificioPrincipal(0, 0, 0, result.scenario);
+      setUrbanScenario({
+        ...result.scenario,
+        edificioPrincipal: {
+          ...(result.scenario.edificioPrincipal ?? {}),
+          x: poseInicial.x,
+          z: poseInicial.z,
+          lat: poseInicial.lat,
+          lon: poseInicial.lon,
+          rotationDeg: poseInicial.rotationDeg,
+          placementStatus: poseInicial.libre ? "free" : "occupied",
+        },
+      });
+      setEdificioPrincipalPose(poseInicial);
       setScenarioMode("urban");
+      setColocandoEdificioPrincipal(true);
       setMostrarEscenarioUrbano(true);
       setUrbanProgress(100);
       setUrbanStage("done");
@@ -2044,6 +2363,8 @@ export default function CrearViviendaPage() {
     setUrbanJobId(null);
     setUrbanImportStatus("idle");
     setMostrarEscenarioUrbano(true);
+    setColocandoEdificioPrincipal(false);
+    setEdificioPrincipalPose({ x: 0, z: 0, rotationDeg: 0, lat: null, lon: null, libre: true, colisiones: 0 });
   };
 
   const actualizarDopplerDesdeBackend = (taps: MuestraCIR[]) => {
@@ -3470,6 +3791,68 @@ const url = `${BASE_URL}/raytrace`;
               </label>
             )}
 
+
+            {urbanScenario && (
+              <div className="mb-5 rounded-2xl border border-orange-900/50 bg-black/60 p-4 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-[10px] font-black uppercase tracking-widest text-orange-300">
+                      Edificio principal
+                    </h2>
+                    <p className="mt-1 text-[9px] uppercase leading-relaxed text-slate-500">
+                      Arrastra la huella verde a una zona libre. Rojo = colisión.
+                    </p>
+                  </div>
+                  <span className={`rounded-full px-3 py-1 text-[9px] font-black uppercase ${edificioPrincipalPose.libre ? "bg-emerald-400 text-black" : "bg-red-500 text-white"}`}>
+                    {edificioPrincipalPose.libre ? "Libre" : `${edificioPrincipalPose.colisiones} col.`}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-[9px] uppercase text-slate-400">
+                  <div className="rounded-xl border border-slate-800 bg-slate-950 p-2">
+                    <p className="text-slate-600">X/Z</p>
+                    <p className="font-black text-white">{fmtUrban(edificioPrincipalPose.x, 1)} / {fmtUrban(edificioPrincipalPose.z, 1)} m</p>
+                  </div>
+                  <div className="rounded-xl border border-slate-800 bg-slate-950 p-2">
+                    <p className="text-slate-600">Lat/Lon</p>
+                    <p className="font-black text-white">{edificioPrincipalPose.lat ? fmtUrban(edificioPrincipalPose.lat, 5) : "-"} / {edificioPrincipalPose.lon ? fmtUrban(edificioPrincipalPose.lon, 5) : "-"}</p>
+                  </div>
+                </div>
+
+                <Control
+                  label="Rotación edificio"
+                  value={edificioPrincipalPose.rotationDeg}
+                  min={-180}
+                  max={180}
+                  step={1}
+                  onChange={rotarEdificioPrincipal}
+                />
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => {
+                      setScenarioMode("urban");
+                      setColocandoEdificioPrincipal((v) => !v);
+                    }}
+                    className={`rounded-xl px-3 py-3 text-[9px] font-black uppercase transition-all ${colocandoEdificioPrincipal ? "bg-orange-400 text-black" : "bg-slate-800 text-slate-300"}`}
+                  >
+                    {colocandoEdificioPrincipal ? "Arrastrando" : "Colocar"}
+                  </button>
+                  <button
+                    onClick={fijarEdificioPrincipal}
+                    disabled={!edificioPrincipalPose.libre}
+                    className="rounded-xl bg-emerald-400 px-3 py-3 text-[9px] font-black uppercase text-black transition-all disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Fijar sitio
+                  </button>
+                </div>
+
+                <p className="text-[9px] uppercase leading-relaxed text-slate-500">
+                  Al fijarlo se guarda la posición local y la lat/lon real en el JSON del escenario.
+                </p>
+              </div>
+            )}
+
             <button
               onClick={crearHabitacion}
               className="w-full py-4 rounded-xl bg-cyan-400 text-slate-950 text-[10px] font-black uppercase hover:bg-white transition-all mb-4"
@@ -4086,7 +4469,21 @@ const url = `${BASE_URL}/raytrace`;
                 visible={scenarioMode === "urban" && mostrarEscenarioUrbano}
               />
 
-              {habitaciones.map((h) => (
+              <EdificioPrincipalDraggable
+                visible={scenarioMode === "urban" && !!urbanScenario}
+                placing={colocandoEdificioPrincipal}
+                pose={edificioPrincipalPose}
+                dimensiones={dimensionesEdificioPrincipal}
+                onMove={moverEdificioPrincipal}
+                onConfirm={fijarEdificioPrincipal}
+              />
+
+              <group
+                name="edificio-interior-principal"
+                position={[offsetEdificioPrincipal?.x ?? 0, 0, offsetEdificioPrincipal?.z ?? 0]}
+                rotation={[0, ((offsetEdificioPrincipal?.rotationDeg ?? 0) * Math.PI) / 180, 0]}
+              >
+                {habitaciones.map((h) => (
                 <GrupoHabitacion
                   key={h.id}
                   habitacion={h}
@@ -4102,13 +4499,15 @@ const url = `${BASE_URL}/raytrace`;
                   seleccionado={obj.id === objetoSeleccionado}
                   onSeleccionar={() => setObjetoSeleccionado(obj.id)}
                   onMover={(x, z) => {
+                    const xLocal = offsetEdificioPrincipal ? x - offsetEdificioPrincipal.x : x;
+                    const zLocal = offsetEdificioPrincipal ? z - offsetEdificioPrincipal.z : z;
                     setObjetos((prev) =>
                       prev.map((o) =>
                         o.id === obj.id
                           ? {
                               ...o,
-                              x,
-                              z,
+                              x: Number(xLocal.toFixed(2)),
+                              z: Number(zLocal.toFixed(2)),
                             }
                           : o,
                       ),
@@ -4150,6 +4549,7 @@ const url = `${BASE_URL}/raytrace`;
                   mostrarMesh={mostrarMesh}
                 />
               )}
+              </group>
 
               <axesHelper args={[4]} />
 
@@ -4163,7 +4563,7 @@ const url = `${BASE_URL}/raytrace`;
                 rotateSpeed={0.8}
                 panSpeed={1}
                 zoomSpeed={1}
-                target={[0, 1, 0]}
+                target={[offsetEdificioPrincipal?.x ?? 0, 1, offsetEdificioPrincipal?.z ?? 0]}
                 maxPolarAngle={Math.PI / 2}
                 minDistance={2}
                 maxDistance={urbanScenario && scenarioMode === "urban" ? Math.max(80, urbanRadiusM * 1.8) : 40}
