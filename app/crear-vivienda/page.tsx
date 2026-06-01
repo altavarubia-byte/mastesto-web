@@ -1066,8 +1066,8 @@ function UrbanBuildingMesh({ building, selected }: { building: any; selected?: b
         />
       </mesh>
 
-      <lineSegments geometry={new THREE.EdgesGeometry(geometry, 18)}>
-        <lineBasicMaterial color={edgeColor} transparent opacity={0.42} />
+      <lineSegments geometry={new THREE.EdgesGeometry(geometry, 30)}>
+        <lineBasicMaterial color={edgeColor} transparent opacity={0.3} />
       </lineSegments>
 
       <mesh geometry={createFlatPolygonGeometry(footprint, height + 0.025)} receiveShadow>
@@ -4581,6 +4581,15 @@ const url = `${BASE_URL}/raytrace`;
             </div>
             <Canvas
               shadows
+              dpr={[1, 2]}
+              gl={{
+                antialias: true,
+                alpha: false,
+                powerPreference: "high-performance",
+                logarithmicDepthBuffer: true,
+                toneMapping: THREE.ACESFilmicToneMapping,
+                outputColorSpace: THREE.SRGBColorSpace,
+              }}
               camera={{ position: urbanScenario && scenarioMode === "urban" ? [Math.max(35, urbanRadiusM * 0.22), Math.max(28, urbanRadiusM * 0.18), Math.max(35, urbanRadiusM * 0.22)] : [10, 8, 10], fov: 48 }}
               style={{ background: "#06111f" }}
             >
@@ -4732,7 +4741,7 @@ const url = `${BASE_URL}/raytrace`;
                   🧊 Modelo 3D Blender
                 </p>
 
-                <Canvas camera={{ position: [8, 6, 8], fov: 45 }}>
+                <Canvas dpr={[1, 2]} gl={{ antialias: true }} camera={{ position: [8, 6, 8], fov: 45 }}>
                   <ambientLight intensity={0.8} />
                   <directionalLight position={[5, 8, 5]} intensity={2} />
 
@@ -7868,4 +7877,5 @@ function ConteoHabitaciones({ numPlantas, onConfirmar }: { numPlantas: number; o
     </div>
   );
 }
+
 
