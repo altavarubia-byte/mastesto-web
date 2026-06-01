@@ -2598,7 +2598,9 @@ const url = `${BASE_URL}/raytrace`;
       const espesorT = pf(datos.espesorTechoIA, 0.013);
       const freq = pf(datos.frecuenciaIA, 5000);
 
-      const res = await fetch('/api/construir-escena', {
+
+        console.log('Datos enviados:', JSON.stringify(datos));
+        const res = await fetch('/api/construir-escena', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ datos }),
