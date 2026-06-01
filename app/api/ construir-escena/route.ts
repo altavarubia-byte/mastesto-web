@@ -102,15 +102,24 @@ Objetos adicionales: ${addObjetos}`,
 
     const data = await response.json();
     let texto = data.choices?.[0]?.message?.content || '';
-    texto = texto.replace(/```json|```/g, '').trim();
-
-    // Extraer solo el JSON si hay texto extra
-    const match = texto.match(/\{[\s\S]*\}/);
-    if (!match) {
-      return NextResponse.json({ ok: false, error: 'No se generó JSON válido' }, { status: 500 });
+    
+    // Limpiar markdown y texto extra
+    texto = texto.replace(/```json/g, '').replace(/```/g, '').trim();
+    
+    // Extraer el JSON más externo
+    const start = texto.indexOf('{');
+    const end = texto.lastIndexOf('}');
+    if (start === -1 || end === -1 || end <= start) {
+      return NextResponse.json({ ok: false, error: `No se encontró JSON en la respuesta: ${texto.slice(0, 200)}` }, { status: 500 });
     }
-
-    const escena = JSON.parse(match[0]);
+    
+    const jsonStr = texto.slice(start, end + 1);
+    let escena: any;
+    try {
+      escena = JSON.parse(jsonStr);
+    } catch (parseErr) {
+      return NextResponse.json({ ok: false, error: `JSON inválido: ${String(parseErr)} | Texto: ${jsonStr.slice(0, 300)}` }, { status: 500 });
+    }
 
     if (!escena.habitaciones?.length) {
       return NextResponse.json({ ok: false, error: 'La escena no tiene habitaciones' }, { status: 500 });
