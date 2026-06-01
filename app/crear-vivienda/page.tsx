@@ -3,7 +3,7 @@
 import ModelObjeto from "@/components/ModelObjeto";
 import { Canvas, useThree, useFrame } from "@react-three/fiber";
 import { OrbitControls, Grid, Line, useGLTF } from "@react-three/drei";
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState, useMemo } from "react";
 import * as THREE from "three";
 import jsPDF from "jspdf";
 import {
@@ -713,6 +713,9 @@ export default function CrearViviendaPage() {
   const [iaCargando, setIaCargando] = useState(false);
   const [iaSliderValores, setIaSliderValores] = useState<Record<string, number>>({});
   const iaScrollRef = useRef<HTMLDivElement>(null);
+
+  // Constructor paso a paso (bucle de preguntas)
+  const [wizardAbierto, setWizardAbierto] = useState(false);
 
   // ---------------------------------------------------------
   // ESTADO: VIVIENDA, HABITACIONES Y MATERIALES
@@ -3182,6 +3185,12 @@ const url = `${BASE_URL}/raytrace`;
               🤖 Construir escena con IA
             </button>
             <button
+              onClick={() => setWizardAbierto(true)}
+              className="mt-3 w-full py-4 rounded-xl bg-cyan-600 text-white text-[10px] font-black uppercase hover:bg-cyan-500 transition-all"
+            >
+              📋 Constructor paso a paso
+            </button>
+            <button
               onClick={exportarJSON}
               className="mt-5 w-full py-4 rounded-xl bg-cyan-400 text-slate-950 text-[10px] font-black uppercase hover:bg-white transition-all"
             >
@@ -4927,6 +4936,26 @@ const url = `${BASE_URL}/raytrace`;
         </div>
       )}
 
+      <ConstructorPasoAPaso
+        abierto={wizardAbierto}
+        onClose={() => setWizardAbierto(false)}
+        onComplete={(r: ResultadoConstructor) => {
+          setHabitaciones(r.habitaciones);
+          setHabitacionSeleccionada(r.habitaciones[0]?.id ?? "");
+          setObjetos(r.objetos);
+          setObjetoSeleccionado(
+            r.objetos.find((o) => o.tipo === "router")?.id ?? "",
+          );
+          setFrecuenciaMhz(r.frecuenciaMhz);
+          setMaterialPared(r.materialPared);
+          setMaterialSuelo(r.materialSuelo);
+          setMaterialTecho(r.materialTecho);
+          setResultadoCobertura(null);
+          setCir([]);
+          setCirResumen(null);
+        }}
+      />
+
     </main>
   );
 }
@@ -5916,6 +5945,628 @@ function Control({
           className="w-full bg-black/70 border border-slate-700 rounded-lg px-2 py-1 text-[10px] text-white outline-none"
         />
       </div>
+    </div>
+  );
+}
+
+// =========================================================
+// CONSTRUCTOR PASO A PASO (bucle de preguntas) - embebido
+// =========================================================
+type ResultadoConstructor = {
+  habitaciones: Habitacion[];
+  objetos: Objeto3D[];
+  frecuenciaMhz: number;
+  materialPared: string;
+  materialSuelo: string;
+  materialTecho: string;
+};
+
+const MATERIALES = ["ladrillo", "hormigon", "pladur", "yeso", "madera", "cristal", "metal"];
+
+const TIPOS_OBJETO: Record<string, { color: string; sx: number; sy: number; sz: number; y: number }> = {
+  sofa: { color: "#7c2d12", sx: 1.8, sy: 0.6, sz: 0.8, y: 0.4 },
+  mesa: { color: "#92400e", sx: 1.2, sy: 0.25, sz: 0.8, y: 0.4 },
+  silla: { color: "#57534e", sx: 0.5, sy: 0.8, sz: 0.5, y: 0.4 },
+  tv: { color: "#020617", sx: 1.3, sy: 0.08, sz: 0.8, y: 1.4 },
+  cama: { color: "#1e3a8a", sx: 2, sy: 0.45, sz: 1.4, y: 0.4 },
+  armario: { color: "#44403c", sx: 1.2, sy: 2, sz: 0.5, y: 1.0 },
+  ventana: { color: "#7dd3fc", sx: 1.8, sy: 1.1, sz: 0.08, y: 1.5 },
+  persona: { color: "#facc15", sx: 0.55, sy: 1.25, sz: 0.55, y: 0.9 },
+};
+
+const POSICIONES_REL = [
+  { label: "Centro", fx: 0, fz: 0 },
+  { label: "Delante-izq", fx: -0.3, fz: -0.3 },
+  { label: "Delante-der", fx: 0.3, fz: -0.3 },
+  { label: "Detrás-izq", fx: -0.3, fz: 0.3 },
+  { label: "Detrás-der", fx: 0.3, fz: 0.3 },
+  { label: "Pared izq", fx: -0.3, fz: 0 },
+  { label: "Pared der", fx: 0.3, fz: 0 },
+  { label: "Pared delante", fx: 0, fz: -0.3 },
+  { label: "Pared detrás", fx: 0, fz: 0.3 },
+];
+
+const uid = (p: string) => `${p}-${Math.random().toString(36).slice(2, 10)}`;
+
+// Borradores que se van rellenando paso a paso
+type DraftObjeto = {
+  tipo: string;
+  modoPos: "relativa" | "absoluta";
+  posRelIdx: number;
+  x: number;
+  z: number;
+  sx: number;
+  sy: number;
+  sz: number;
+  material: string;
+};
+
+type DraftReceptor = {
+  modoPos: "relativa" | "absoluta";
+  posRelIdx: number;
+  x: number;
+  z: number;
+  altura: number;
+};
+
+type DraftHabitacion = {
+  nombre: string;
+  cx: number;
+  cz: number;
+  ancho: number;
+  largo: number;
+  alto: number;
+  matPared: string;
+  matSuelo: string;
+  matTecho: string;
+  multicapaPared: MaterialCapaRF[] | null;
+  multicapaSuelo: MaterialCapaRF[] | null;
+  multicapaTecho: MaterialCapaRF[] | null;
+  objetos: DraftObjeto[];
+  receptores: DraftReceptor[];
+  planta: number;
+  altoBase: number;
+};
+
+function ConstructorPasoAPaso({
+  abierto,
+  onClose,
+  onComplete,
+}: {
+  abierto: boolean;
+  onClose: () => void;
+  onComplete: (r: ResultadoConstructor) => void;
+}) {
+  // Config global
+  const [frecuencia, setFrecuencia] = useState(2400);
+  const [matParedG, setMatParedG] = useState("ladrillo");
+  const [matSueloG, setMatSueloG] = useState("hormigon");
+  const [matTechoG, setMatTechoG] = useState("hormigon");
+  const [numPlantas, setNumPlantas] = useState(2);
+
+  // Habitaciones en construccion
+  const [habs, setHabs] = useState<DraftHabitacion[]>([]);
+
+  // Router
+  const [routerPlanta, setRouterPlanta] = useState(0);
+  const [routerX, setRouterX] = useState(0);
+  const [routerZ, setRouterZ] = useState(0);
+  const [routerAltura, setRouterAltura] = useState(1.5);
+
+  // Columna termica
+  const [usarColumna, setUsarColumna] = useState(false);
+  const [colPlanta, setColPlanta] = useState(0);
+  const [colX, setColX] = useState(0);
+  const [colZ, setColZ] = useState(0);
+  const [colSx, setColSx] = useState(1.2);
+  const [colSz, setColSz] = useState(1.2);
+  const [colSy, setColSy] = useState(3.0);
+  const [colTempC, setColTempC] = useState(327);
+  const [colTambC, setColTambC] = useState(20);
+
+  // Navegacion: fase del wizard
+  // 0=global, 1=plantas/conteo, 2=habitaciones (una por una), 3=router, 4=columna, 5=resumen
+  const [fase, setFase] = useState(0);
+  const [habActual, setHabActual] = useState(0); // indice de habitacion que se esta editando
+
+  const grosorForjado = 0.3;
+
+  // Altura base por planta segun alturas reales de habitaciones ya creadas
+  const basesPorPlanta = useMemo(() => {
+    const alturaPlanta: number[] = [];
+    for (let p = 0; p < numPlantas; p++) {
+      const hsP = habs.filter((h) => h.planta < p);
+      // base de la planta p = suma de (alto max de cada planta anterior + forjado)
+      let base = 0;
+      for (let q = 0; q < p; q++) {
+        const altMax = Math.max(2.7, ...habs.filter((h) => h.planta === q).map((h) => h.alto));
+        base += altMax + grosorForjado;
+      }
+      alturaPlanta.push(base);
+    }
+    return alturaPlanta;
+  }, [habs, numPlantas]);
+
+  // ---- helpers de construccion ----
+  const iniciar = () => {
+    setFase(0);
+    setHabs([]);
+    setHabActual(0);
+  };
+
+  const crearEsqueletoHabitaciones = (conteoPorPlanta: number[]) => {
+    const nuevas: DraftHabitacion[] = [];
+    for (let p = 0; p < numPlantas; p++) {
+      for (let i = 0; i < conteoPorPlanta[p]; i++) {
+        nuevas.push({
+          nombre: `Planta ${p} · Hab ${i + 1}`,
+          cx: i * 5,
+          cz: 0,
+          ancho: 4,
+          largo: 4,
+          alto: 2.7,
+          matPared: "",
+          matSuelo: "",
+          matTecho: "",
+          multicapaPared: null,
+          multicapaSuelo: null,
+          multicapaTecho: null,
+          objetos: [],
+          receptores: [{ modoPos: "relativa", posRelIdx: 0, x: 0, z: 0, altura: 1.2 }],
+          planta: p,
+          altoBase: 0,
+        });
+      }
+    }
+    setHabs(nuevas);
+    setHabActual(0);
+    setFase(2);
+  };
+
+  const actualizarHab = (idx: number, patch: Partial<DraftHabitacion>) => {
+    setHabs((prev) => prev.map((h, i) => (i === idx ? { ...h, ...patch } : h)));
+  };
+
+  // ---- construir resultado final ----
+  const finalizar = () => {
+    const habitaciones: Habitacion[] = [];
+    const objetos: Objeto3D[] = [];
+
+    habs.forEach((h) => {
+      const altoBase = basesPorPlanta[h.planta] ?? 0;
+      const idHab = uid("hab");
+
+      habitaciones.push({
+        id: idHab,
+        nombre: h.nombre,
+        x: h.cx,
+        z: h.cz,
+        ancho: h.ancho,
+        largo: h.largo,
+        alto: h.alto,
+        altoBase,
+        materialPared: h.matPared || matParedG,
+        materialSuelo: h.matSuelo || matSueloG,
+        materialTecho: h.matTecho || matTechoG,
+        capasPared: h.multicapaPared ?? undefined,
+        capasSuelo: h.multicapaSuelo ?? undefined,
+        capasTecho: h.multicapaTecho ?? undefined,
+      });
+
+      // objetos
+      h.objetos.forEach((o) => {
+        const cfg = TIPOS_OBJETO[o.tipo] || { color: "#888", sx: 0.8, sy: 0.8, sz: 0.8, y: 0.4 };
+        let x = o.x;
+        let z = o.z;
+        if (o.modoPos === "relativa") {
+          const pr = POSICIONES_REL[o.posRelIdx] || POSICIONES_REL[0];
+          x = h.cx + pr.fx * h.ancho;
+          z = h.cz + pr.fz * h.largo;
+        }
+        objetos.push({
+          id: uid(`obj-${o.tipo}`),
+          tipo: o.tipo,
+          x: Number(x.toFixed(2)),
+          y: Number((altoBase + cfg.y).toFixed(2)),
+          z: Number(z.toFixed(2)),
+          sx: o.sx,
+          sy: o.sy,
+          sz: o.sz,
+          color: cfg.color,
+          material: o.material || o.tipo,
+        });
+      });
+
+      // receptores
+      h.receptores.forEach((r) => {
+        let x = r.x;
+        let z = r.z;
+        if (r.modoPos === "relativa") {
+          const pr = POSICIONES_REL[r.posRelIdx] || POSICIONES_REL[0];
+          x = h.cx + pr.fx * h.ancho;
+          z = h.cz + pr.fz * h.largo;
+        }
+        objetos.push({
+          id: uid("rx"),
+          tipo: "receptor",
+          x: Number(x.toFixed(2)),
+          y: Number((altoBase + r.altura).toFixed(2)),
+          z: Number(z.toFixed(2)),
+          sx: 0.25,
+          sy: 0.25,
+          sz: 0.25,
+          color: "#22c55e",
+          material: "rx",
+        });
+      });
+    });
+
+    // router
+    const baseRouter = basesPorPlanta[routerPlanta] ?? 0;
+    objetos.push({
+      id: uid("router"),
+      tipo: "router",
+      x: Number(routerX.toFixed(2)),
+      y: Number((baseRouter + routerAltura).toFixed(2)),
+      z: Number(routerZ.toFixed(2)),
+      sx: 0.35,
+      sy: 0.35,
+      sz: 0.35,
+      color: "#f97316",
+      material: undefined,
+    });
+
+    // columna termica
+    if (usarColumna) {
+      const baseCol = basesPorPlanta[colPlanta] ?? 0;
+      objetos.push({
+        id: uid("columna_termica"),
+        tipo: "columna_termica",
+        x: Number(colX.toFixed(2)),
+        y: Number((baseCol + colSy / 2).toFixed(2)),
+        z: Number(colZ.toFixed(2)),
+        sx: colSx,
+        sy: colSy,
+        sz: colSz,
+        color: "#ff6b00",
+        material: "aire_caliente",
+        temperaturaC: colTempC,
+        T_amb_K: Number((colTambC + 273.15).toFixed(2)),
+        T_hot_K: Number((colTempC + 273.15).toFixed(2)),
+        v_mean_mps: 2.0,
+        sigma_v_mps: 0.5,
+        turbulence_strength: 0.35,
+        absorcion_extra_db_m: 0.02,
+        pressure_hpa: 1013.25,
+        humidity_rel: 0.45,
+      });
+    }
+
+    onComplete({
+      habitaciones,
+      objetos,
+      frecuenciaMhz: frecuencia,
+      materialPared: matParedG,
+      materialSuelo: matSueloG,
+      materialTecho: matTechoG,
+    });
+    onClose();
+  };
+
+  if (!abierto) return null;
+
+  // ---------- subcomponentes UI ----------
+  const Sel = ({ value, onChange, opciones, extra }: { value: string; onChange: (v: string) => void; opciones: string[]; extra?: string[] }) => (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-xs text-white outline-none"
+    >
+      {(extra ?? []).map((o) => (
+        <option key={o} value={o}>{o}</option>
+      ))}
+      {opciones.map((o) => (
+        <option key={o} value={o}>{o}</option>
+      ))}
+    </select>
+  );
+
+  const Num = ({ label, value, onChange, step = 0.5, min }: { label: string; value: number; onChange: (v: number) => void; step?: number; min?: number }) => (
+    <div>
+      <p className="text-[8px] uppercase text-slate-500 font-black mb-1">{label}</p>
+      <input
+        type="number"
+        value={value}
+        step={step}
+        min={min}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-xs text-white outline-none"
+      />
+    </div>
+  );
+
+  // Editor de capas multicapa para una superficie
+  const EditorCapas = ({ titulo, capas, onChange }: { titulo: string; capas: MaterialCapaRF[] | null; onChange: (c: MaterialCapaRF[] | null) => void }) => {
+    const activo = capas !== null;
+    return (
+      <div className="border border-slate-800 rounded-xl p-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="text-[9px] uppercase text-cyan-300 font-black">{titulo}</p>
+          <button
+            onClick={() => onChange(activo ? null : [{ material: "ladrillo", espesorM: 0.115 }])}
+            className={`text-[8px] font-black uppercase px-2 py-1 rounded-lg ${activo ? "bg-cyan-400 text-black" : "bg-slate-800 text-slate-300"}`}
+          >
+            {activo ? "Multicapa ON" : "Simple"}
+          </button>
+        </div>
+        {activo && (
+          <div className="space-y-2">
+            {capas!.map((capa, i) => (
+              <div key={i} className="grid grid-cols-[1fr_70px_24px] gap-2 items-end">
+                <Sel value={capa.material} opciones={MATERIALES} extra={["aire"]} onChange={(v) => {
+                  const nc = [...capas!]; nc[i] = { ...nc[i], material: v }; onChange(nc);
+                }} />
+                <div>
+                  <p className="text-[7px] uppercase text-slate-500 font-black mb-1">Espesor m</p>
+                  <input type="number" step={0.005} min={0.001} value={capa.espesorM}
+                    onChange={(e) => { const nc = [...capas!]; nc[i] = { ...nc[i], espesorM: Number(e.target.value) }; onChange(nc); }}
+                    className="w-full bg-black/70 border border-slate-700 rounded-lg p-1.5 text-[10px] text-white outline-none" />
+                </div>
+                <button onClick={() => onChange(capas!.filter((_, j) => j !== i))}
+                  className="h-8 rounded-lg bg-red-700 text-white text-[10px] font-black">×</button>
+              </div>
+            ))}
+            <button onClick={() => onChange([...capas!, { material: "hormigon", espesorM: 0.2 }])}
+              className="w-full py-1.5 rounded-lg bg-slate-800 text-cyan-300 text-[9px] font-black uppercase">+ capa</button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const h = habs[habActual];
+
+  return (
+    <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[170] flex items-center justify-center p-4">
+      <div className="w-full max-w-2xl bg-slate-950 border border-cyan-900/60 rounded-2xl overflow-hidden flex flex-col shadow-[0_0_60px_rgba(8,145,178,0.2)]" style={{ maxHeight: "90vh" }}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800 bg-black/40">
+          <div>
+            <p className="text-[9px] uppercase text-cyan-300 font-black tracking-widest">Constructor paso a paso</p>
+            <p className="text-[8px] text-slate-500 uppercase">
+              {fase === 0 && "Configuración global"}
+              {fase === 1 && "Plantas y habitaciones"}
+              {fase === 2 && `Habitación ${habActual + 1} de ${habs.length}`}
+              {fase === 3 && "Router"}
+              {fase === 4 && "Columna térmica"}
+              {fase === 5 && "Resumen"}
+            </p>
+          </div>
+          <button onClick={onClose} className="w-7 h-7 rounded-full bg-slate-800 text-slate-400 hover:text-white text-xs font-black">✕</button>
+        </div>
+
+        {/* Cuerpo */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          {/* FASE 0: GLOBAL */}
+          {fase === 0 && (
+            <div className="space-y-4">
+              <Num label="Frecuencia (MHz)" value={frecuencia} step={100} min={100} onChange={setFrecuencia} />
+              <div className="grid grid-cols-3 gap-2">
+                <div><p className="text-[8px] uppercase text-slate-500 font-black mb-1">Pared global</p><Sel value={matParedG} opciones={MATERIALES} onChange={setMatParedG} /></div>
+                <div><p className="text-[8px] uppercase text-slate-500 font-black mb-1">Suelo global</p><Sel value={matSueloG} opciones={MATERIALES} onChange={setMatSueloG} /></div>
+                <div><p className="text-[8px] uppercase text-slate-500 font-black mb-1">Techo global</p><Sel value={matTechoG} opciones={MATERIALES} onChange={setMatTechoG} /></div>
+              </div>
+              <Num label="Número de plantas" value={numPlantas} step={1} min={1} onChange={(v) => setNumPlantas(Math.max(1, Math.round(v)))} />
+            </div>
+          )}
+
+          {/* FASE 1: conteo de habitaciones por planta */}
+          {fase === 1 && (
+            <ConteoHabitaciones numPlantas={numPlantas} onConfirmar={crearEsqueletoHabitaciones} />
+          )}
+
+          {/* FASE 2: habitacion actual */}
+          {fase === 2 && h && (
+            <div className="space-y-4">
+              <div className="bg-cyan-950/20 border border-cyan-900/40 rounded-xl p-2 text-[9px] uppercase text-cyan-300 font-black text-center">
+                Planta {h.planta} · altura base {(basesPorPlanta[h.planta] ?? 0).toFixed(2)} m
+              </div>
+              <input value={h.nombre} onChange={(e) => actualizarHab(habActual, { nombre: e.target.value })}
+                className="w-full bg-black/70 border border-slate-700 rounded-xl p-2 text-xs text-white outline-none" />
+              <div className="grid grid-cols-3 gap-2">
+                <Num label="Centro X" value={h.cx} onChange={(v) => actualizarHab(habActual, { cx: v })} />
+                <Num label="Centro Z" value={h.cz} onChange={(v) => actualizarHab(habActual, { cz: v })} />
+                <Num label="Alto" value={h.alto} step={0.1} onChange={(v) => actualizarHab(habActual, { alto: v })} />
+                <Num label="Ancho (X)" value={h.ancho} onChange={(v) => actualizarHab(habActual, { ancho: v })} />
+                <Num label="Largo (Z)" value={h.largo} onChange={(v) => actualizarHab(habActual, { largo: v })} />
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div><p className="text-[8px] uppercase text-slate-500 font-black mb-1">Pared</p><Sel value={h.matPared || matParedG} opciones={MATERIALES} onChange={(v) => actualizarHab(habActual, { matPared: v })} /></div>
+                <div><p className="text-[8px] uppercase text-slate-500 font-black mb-1">Suelo</p><Sel value={h.matSuelo || matSueloG} opciones={MATERIALES} onChange={(v) => actualizarHab(habActual, { matSuelo: v })} /></div>
+                <div><p className="text-[8px] uppercase text-slate-500 font-black mb-1">Techo</p><Sel value={h.matTecho || matTechoG} opciones={MATERIALES} onChange={(v) => actualizarHab(habActual, { matTecho: v })} /></div>
+              </div>
+
+              {/* Cerramiento multicapa por habitacion */}
+              <p className="text-[10px] uppercase text-cyan-300 font-black border-t border-slate-800 pt-3">Cerramiento multicapa (esta habitación)</p>
+              <EditorCapas titulo="Pared" capas={h.multicapaPared} onChange={(c) => actualizarHab(habActual, { multicapaPared: c })} />
+              <EditorCapas titulo="Suelo" capas={h.multicapaSuelo} onChange={(c) => actualizarHab(habActual, { multicapaSuelo: c })} />
+              <EditorCapas titulo="Techo" capas={h.multicapaTecho} onChange={(c) => actualizarHab(habActual, { multicapaTecho: c })} />
+
+              {/* Objetos */}
+              <div className="border-t border-slate-800 pt-3">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] uppercase text-cyan-300 font-black">Objetos en la habitación</p>
+                  <button onClick={() => actualizarHab(habActual, { objetos: [...h.objetos, { tipo: "sofa", modoPos: "relativa", posRelIdx: 0, x: h.cx, z: h.cz, sx: 1.8, sy: 0.6, sz: 0.8, material: "" }] })}
+                    className="text-[8px] font-black uppercase px-2 py-1 rounded-lg bg-cyan-400 text-black">+ objeto</button>
+                </div>
+                <div className="space-y-2">
+                  {h.objetos.map((o, oi) => (
+                    <div key={oi} className="bg-black/50 border border-slate-800 rounded-xl p-3 space-y-2">
+                      <div className="grid grid-cols-[1fr_1fr_24px] gap-2 items-end">
+                        <div><p className="text-[7px] uppercase text-slate-500 font-black mb-1">Tipo</p>
+                          <Sel value={o.tipo} opciones={Object.keys(TIPOS_OBJETO)} onChange={(v) => { const no = [...h.objetos]; const cfg = TIPOS_OBJETO[v]; no[oi] = { ...no[oi], tipo: v, sx: cfg.sx, sy: cfg.sy, sz: cfg.sz }; actualizarHab(habActual, { objetos: no }); }} /></div>
+                        <div><p className="text-[7px] uppercase text-slate-500 font-black mb-1">Posición</p>
+                          <Sel value={o.modoPos} opciones={["relativa", "absoluta"]} onChange={(v) => { const no = [...h.objetos]; no[oi] = { ...no[oi], modoPos: v as "relativa" | "absoluta" }; actualizarHab(habActual, { objetos: no }); }} /></div>
+                        <button onClick={() => actualizarHab(habActual, { objetos: h.objetos.filter((_, j) => j !== oi) })}
+                          className="h-8 rounded-lg bg-red-700 text-white text-[10px] font-black">×</button>
+                      </div>
+                      {o.modoPos === "relativa" ? (
+                        <Sel value={String(o.posRelIdx)} opciones={POSICIONES_REL.map((p, idx) => `${idx}:${p.label}`)} onChange={(v) => { const no = [...h.objetos]; no[oi] = { ...no[oi], posRelIdx: Number(v.split(":")[0]) }; actualizarHab(habActual, { objetos: no }); }} />
+                      ) : (
+                        <div className="grid grid-cols-2 gap-2">
+                          <Num label="X abs" value={o.x} step={0.1} onChange={(v) => { const no = [...h.objetos]; no[oi] = { ...no[oi], x: v }; actualizarHab(habActual, { objetos: no }); }} />
+                          <Num label="Z abs" value={o.z} step={0.1} onChange={(v) => { const no = [...h.objetos]; no[oi] = { ...no[oi], z: v }; actualizarHab(habActual, { objetos: no }); }} />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {h.objetos.length === 0 && <p className="text-[9px] text-slate-600 uppercase">Sin objetos. Pulsa “+ objeto”.</p>}
+                </div>
+              </div>
+
+              {/* Receptores */}
+              <div className="border-t border-slate-800 pt-3">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] uppercase text-green-300 font-black">Receptores</p>
+                  <button onClick={() => actualizarHab(habActual, { receptores: [...h.receptores, { modoPos: "relativa", posRelIdx: 0, x: h.cx, z: h.cz, altura: 1.2 }] })}
+                    className="text-[8px] font-black uppercase px-2 py-1 rounded-lg bg-green-500 text-black">+ receptor</button>
+                </div>
+                <div className="space-y-2">
+                  {h.receptores.map((r, ri) => (
+                    <div key={ri} className="bg-black/50 border border-green-900/40 rounded-xl p-3 space-y-2">
+                      <div className="grid grid-cols-[1fr_70px_24px] gap-2 items-end">
+                        <div><p className="text-[7px] uppercase text-slate-500 font-black mb-1">Posición</p>
+                          <Sel value={r.modoPos} opciones={["relativa", "absoluta"]} onChange={(v) => { const nr = [...h.receptores]; nr[ri] = { ...nr[ri], modoPos: v as "relativa" | "absoluta" }; actualizarHab(habActual, { receptores: nr }); }} /></div>
+                        <Num label="Altura" value={r.altura} step={0.1} onChange={(v) => { const nr = [...h.receptores]; nr[ri] = { ...nr[ri], altura: v }; actualizarHab(habActual, { receptores: nr }); }} />
+                        <button onClick={() => actualizarHab(habActual, { receptores: h.receptores.filter((_, j) => j !== ri) })}
+                          className="h-8 rounded-lg bg-red-700 text-white text-[10px] font-black">×</button>
+                      </div>
+                      {r.modoPos === "relativa" ? (
+                        <Sel value={String(r.posRelIdx)} opciones={POSICIONES_REL.map((p, idx) => `${idx}:${p.label}`)} onChange={(v) => { const nr = [...h.receptores]; nr[ri] = { ...nr[ri], posRelIdx: Number(v.split(":")[0]) }; actualizarHab(habActual, { receptores: nr }); }} />
+                      ) : (
+                        <div className="grid grid-cols-2 gap-2">
+                          <Num label="X abs" value={r.x} step={0.1} onChange={(v) => { const nr = [...h.receptores]; nr[ri] = { ...nr[ri], x: v }; actualizarHab(habActual, { receptores: nr }); }} />
+                          <Num label="Z abs" value={r.z} step={0.1} onChange={(v) => { const nr = [...h.receptores]; nr[ri] = { ...nr[ri], z: v }; actualizarHab(habActual, { receptores: nr }); }} />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* FASE 3: router */}
+          {fase === 3 && (
+            <div className="space-y-4">
+              <Num label="Planta del router (0 = baja)" value={routerPlanta} step={1} min={0} onChange={(v) => setRouterPlanta(Math.max(0, Math.min(numPlantas - 1, Math.round(v))))} />
+              <div className="grid grid-cols-3 gap-2">
+                <Num label="X" value={routerX} step={0.1} onChange={setRouterX} />
+                <Num label="Z" value={routerZ} step={0.1} onChange={setRouterZ} />
+                <Num label="Altura" value={routerAltura} step={0.1} onChange={setRouterAltura} />
+              </div>
+            </div>
+          )}
+
+          {/* FASE 4: columna termica */}
+          {fase === 4 && (
+            <div className="space-y-4">
+              <button onClick={() => setUsarColumna(!usarColumna)}
+                className={`w-full py-3 rounded-xl text-[10px] font-black uppercase ${usarColumna ? "bg-orange-500 text-black" : "bg-slate-800 text-slate-300"}`}>
+                {usarColumna ? "Columna térmica ACTIVADA" : "Sin columna térmica (pulsa para añadir)"}
+              </button>
+              {usarColumna && (
+                <div className="space-y-3">
+                  <Num label="Planta de la columna" value={colPlanta} step={1} min={0} onChange={(v) => setColPlanta(Math.max(0, Math.min(numPlantas - 1, Math.round(v))))} />
+                  <div className="grid grid-cols-2 gap-2">
+                    <Num label="X" value={colX} step={0.1} onChange={setColX} />
+                    <Num label="Z" value={colZ} step={0.1} onChange={setColZ} />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <Num label="Ancho sx" value={colSx} step={0.1} onChange={setColSx} />
+                    <Num label="Fondo sz" value={colSz} step={0.1} onChange={setColSz} />
+                    <Num label="Alto sy" value={colSy} step={0.1} onChange={setColSy} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Num label="Temp. núcleo °C" value={colTempC} step={10} onChange={setColTempC} />
+                    <Num label="Temp. ambiente °C" value={colTambC} step={1} onChange={setColTambC} />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* FASE 5: resumen */}
+          {fase === 5 && (
+            <div className="space-y-3 text-[10px] text-slate-300">
+              <p className="text-cyan-300 font-black uppercase">Resumen</p>
+              <p>Frecuencia: {frecuencia} MHz · Plantas: {numPlantas}</p>
+              <p>Habitaciones: {habs.length}</p>
+              <p>Objetos: {habs.reduce((a, x) => a + x.objetos.length, 0)} · Receptores: {habs.reduce((a, x) => a + x.receptores.length, 0)}</p>
+              <p>Router: planta {routerPlanta} en ({routerX}, {routerZ})</p>
+              <p>Columna térmica: {usarColumna ? `sí (planta ${colPlanta}, ${colTempC} °C)` : "no"}</p>
+              <div className="bg-black/50 border border-slate-800 rounded-xl p-3 space-y-1 max-h-40 overflow-y-auto">
+                {habs.map((x, i) => (
+                  <p key={i} className="text-[9px] text-slate-400 uppercase">
+                    {x.nombre}: {x.ancho}×{x.largo} m · multicapa {x.multicapaPared ? "pared " : ""}{x.multicapaSuelo ? "suelo " : ""}{x.multicapaTecho ? "techo" : ""}{!x.multicapaPared && !x.multicapaSuelo && !x.multicapaTecho ? "no" : ""}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer navegacion */}
+        <div className="flex items-center justify-between gap-2 px-5 py-4 border-t border-slate-800 bg-black/40">
+          <button
+            onClick={() => {
+              if (fase === 2 && habActual > 0) { setHabActual(habActual - 1); return; }
+              if (fase === 2 && habActual === 0) { setFase(1); return; }
+              setFase(Math.max(0, fase - 1));
+            }}
+            className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-[10px] font-black uppercase"
+          >
+            ← Atrás
+          </button>
+
+          <button
+            onClick={() => {
+              if (fase === 0) { setFase(1); return; }
+              if (fase === 2) {
+                if (habActual < habs.length - 1) { setHabActual(habActual + 1); return; }
+                setFase(3); return;
+              }
+              if (fase === 5) { finalizar(); return; }
+              setFase(fase + 1);
+            }}
+            className="px-5 py-2 rounded-xl bg-cyan-400 text-black text-[10px] font-black uppercase hover:bg-white transition-all"
+          >
+            {fase === 5 ? "✓ Crear escena" : "Siguiente →"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Subcomponente: conteo de habitaciones por planta
+function ConteoHabitaciones({ numPlantas, onConfirmar }: { numPlantas: number; onConfirmar: (c: number[]) => void }) {
+  const [conteo, setConteo] = useState<number[]>(Array(numPlantas).fill(1));
+  return (
+    <div className="space-y-3">
+      <p className="text-[10px] uppercase text-cyan-300 font-black">¿Cuántas habitaciones por planta?</p>
+      {Array.from({ length: numPlantas }).map((_, p) => (
+        <div key={p} className="flex items-center gap-3">
+          <span className="text-[10px] text-slate-400 uppercase w-20">Planta {p}</span>
+          <input type="number" min={1} value={conteo[p]}
+            onChange={(e) => { const c = [...conteo]; c[p] = Math.max(1, Number(e.target.value)); setConteo(c); }}
+            className="flex-1 bg-black/70 border border-slate-700 rounded-xl p-2 text-xs text-white outline-none" />
+        </div>
+      ))}
+      <button onClick={() => onConfirmar(conteo)}
+        className="w-full py-3 rounded-xl bg-cyan-400 text-black text-[10px] font-black uppercase hover:bg-white">
+        Empezar a definir habitaciones →
+      </button>
     </div>
   );
 }
