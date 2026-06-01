@@ -1,7 +1,7 @@
 "use client";
 // FRONTEND RF V4 INTEGRADO: preparado para materialesRF, anchoBanda, modeloAvanzado y validacionFekoSionna.
 import ModelObjeto from "@/components/ModelObjeto";
-import { Canvas, useThree, useFrame } from "@react-three/fiber";
+import { Canvas, useThree, useFrame, useLoader } from "@react-three/fiber";
 import { OrbitControls, Grid, Line, Sky, useGLTF } from "@react-three/drei";
 import { Suspense, useEffect, useRef, useState, useMemo } from "react";
 import * as THREE from "three";
@@ -336,6 +336,8 @@ type UrbanScenario = {
   tx?: any[];
   rx?: any[];
   antennas?: any[];
+  visualLayer?: any;
+  rfLayer?: any;
 };
 
 type UrbanImportResult = {
@@ -1277,6 +1279,44 @@ function UrbanGreenArea({ area }: { area: any }) {
   );
 }
 
+
+function UrbanOrthoTexturePlane({ imageUrl, radius }: { imageUrl: string; radius: number }) {
+  const texture = useLoader(THREE.TextureLoader, imageUrl);
+
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 8;
+  texture.wrapS = THREE.ClampToEdgeWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.004, 0]} receiveShadow>
+      <planeGeometry args={[radius * 2, radius * 2, 1, 1]} />
+      <meshStandardMaterial
+        map={texture}
+        roughness={0.92}
+        metalness={0}
+        transparent
+        opacity={0.9}
+        side={THREE.DoubleSide}
+      />
+    </mesh>
+  );
+}
+
+function UrbanOrthoGround({ scenario }: { scenario: UrbanScenario | null }) {
+  const radius = Number(scenario?.site?.radiusM ?? 60);
+  const imageUrlRaw = scenario?.visualLayer?.ortho?.imageUrl;
+
+  if (!imageUrlRaw) return null;
+
+  const imageUrl =
+    String(imageUrlRaw).startsWith("http")
+      ? String(imageUrlRaw)
+      : `${SIONNA_API_URL}${imageUrlRaw}`;
+
+  return <UrbanOrthoTexturePlane imageUrl={imageUrl} radius={radius} />;
+}
+
 function CapaEscenarioUrbano({
   scenario,
   visible,
@@ -1321,6 +1361,8 @@ function CapaEscenarioUrbano({
         <circleGeometry args={[radius, 192]} />
         <meshStandardMaterial color="#111827" roughness={0.97} metalness={0.01} transparent opacity={0.88} side={THREE.DoubleSide} />
       </mesh>
+
+      <UrbanOrthoGround scenario={scenario} />
 
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.018, 0]}>
         <ringGeometry args={[Math.max(1, radius - 0.7), radius, 192]} />
@@ -1893,6 +1935,54 @@ export default function CrearViviendaPage() {
   );
 
   const offsetEdificioPrincipal = scenarioMode === "urban" && urbanScenario ? edificioPrincipalPose : null;
+
+  useEffect(() => {
+    const site = urbanScenario?.site;
+    if (!site?.lat || !site?.lon || !site?.radiusM) return;
+    if (urbanScenario?.visualLayer?.ortho?.imageUrl) return;
+
+    let cancelado = false;
+
+    const cargarCapasVisuales = async () => {
+      try {
+        const res = await fetch(`${SIONNA_API_URL}/urban/visual-layers/config`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            site,
+            radiusM: site.radiusM,
+            quality: "realista",
+            enableOrtho: true,
+            enableTerrain: true,
+            enablePhotorealistic3d: false,
+            terrainGridN: 33,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.ok || cancelado) return;
+
+        setUrbanScenario((prev) =>
+          prev
+            ? {
+                ...prev,
+                visualLayer: data.visualLayer,
+                rfLayer: data.rfLayer,
+              }
+            : prev,
+        );
+      } catch (err) {
+        console.warn("No se pudieron cargar capas visuales urbanas", err);
+      }
+    };
+
+    cargarCapasVisuales();
+
+    return () => {
+      cancelado = true;
+    };
+  }, [urbanScenario?.site?.lat, urbanScenario?.site?.lon, urbanScenario?.site?.radiusM, urbanScenario?.visualLayer?.ortho?.imageUrl]);
 
   const esReceptor = (tipo: string) =>
     tipo === "receptor" || tipo === "rx" || tipo === "receiver";
