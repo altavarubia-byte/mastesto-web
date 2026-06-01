@@ -47,6 +47,7 @@ type Habitacion = {
   ancho: number;
   largo: number;
   alto: number;
+  altoBase?: number;
   materialPared?: string;
   materialSuelo?: string;
   materialTecho?: string;
@@ -5530,7 +5531,7 @@ function CapaCobertura({
         mejorHab = h;
       }
     }
-    return (mejorHab as any).altoBase ?? 0;
+    return mejorHab.altoBase ?? 0;
   };
 
   const heatmapBase = (resultado.heatmap ?? [])
