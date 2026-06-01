@@ -7,6 +7,8 @@ export async function POST(req: Request) {
     const {
       tipo = 'Vivienda',
       numHabitaciones = '4',
+      numPlantas = '1',
+      tienePasillos = 'No, solo habitaciones',
       anchoTotal = '10',
       largoTotal = '12',
       altoTecho = '2.7',
@@ -21,15 +23,20 @@ export async function POST(req: Request) {
       addObjetos = 'Solo router y receptor',
     } = datos;
 
-    const num = parseInt(numHabitaciones) || 4;
-    const anchoT = parseFloat(anchoTotal) || 10;
-    const largoT = parseFloat(largoTotal) || 12;
-    const alto = parseFloat(altoTecho) || 2.7;
-    const espesorP = parseFloat(espesorParedIA) || 0.115;
-    const rugosidadP = parseFloat(rugosidadParedIA) || 0.0015;
-    const espesorS = parseFloat(espesorSueloIA) || 0.2;
-    const espesorT = parseFloat(espesorTechoIA) || 0.013;
-    const freq = parseFloat(frecuenciaIA) || 5000;
+    const num = parseInt(String(numHabitaciones)) || 4;
+    const plantas = parseInt(String(numPlantas)) || 1;
+    const anchoT = parseFloat(String(anchoTotal)) || 10;
+    const largoT = parseFloat(String(largoTotal)) || 12;
+    const alto = parseFloat(String(altoTecho)) || 2.7;
+    const espesorP = parseFloat(String(espesorParedIA)) || 0.115;
+    const rugosidadP = parseFloat(String(rugosidadParedIA)) || 0.0015;
+    const espesorS = parseFloat(String(espesorSueloIA)) || 0.2;
+    const espesorT = parseFloat(String(espesorTechoIA)) || 0.013;
+    const freq = parseFloat(String(frecuenciaIA)) || 5000;
+    const conPasillos = String(tienePasillos).includes('Sí');
+    const conMuebles = String(addObjetos).includes('completos');
+
+    const totalHabitaciones = num * plantas + (conPasillos ? plantas : 0);
 
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -43,58 +50,49 @@ export async function POST(req: Request) {
         messages: [
           {
             role: 'system',
-            content: `Eres un generador de escenas RF para simulación Sionna.
-Responde ÚNICAMENTE con un JSON válido. Sin texto, sin markdown, sin explicaciones.
-Estructura obligatoria:
+            content: `Eres un generador de escenas RF para simulación Sionna indoor.
+Responde ÚNICAMENTE con JSON válido. Sin texto, sin markdown, sin explicaciones.
+
+OBJETOS DISPONIBLES (usa SOLO estos tipos):
+- router: {id, tipo:"router", x, y:1.2, z, sx:0.35, sy:0.35, sz:0.35, color:"#f97316"}
+- receptor: {id, tipo:"receptor", x, y:1.2, z, sx:0.25, sy:0.25, sz:0.25, color:"#22c55e"}
+- sofa: {id, tipo:"sofa", x, y:0.4, z, sx:1.8, sy:0.6, sz:0.8, color:"#7c2d12", material:"tejido"}
+- mesa: {id, tipo:"mesa", x, y:0.4, z, sx:1.2, sy:0.25, sz:0.8, color:"#92400e", material:"madera"}
+- silla: {id, tipo:"silla", x, y:0.4, z, sx:0.5, sy:0.8, sz:0.5, color:"#57534e", material:"madera"}
+- tv: {id, tipo:"tv", x, y:1.4, z, sx:1.3, sy:0.08, sz:0.8, color:"#020617", material:"metal"}
+- cama: {id, tipo:"cama", x, y:0.4, z, sx:2, sy:0.45, sz:1.4, color:"#1e3a8a", material:"tejido"}
+- armario: {id, tipo:"armario", x, y:1, z, sx:1.2, sy:2, sz:0.5, color:"#44403c", material:"madera"}
+- ventana: {id, tipo:"ventana", x, y:1.5, z, sx:1.8, sy:1.1, sz:0.08, color:"#7dd3fc", material:"cristal"}
+
+ESTRUCTURA JSON OBLIGATORIA:
 {
-  "habitaciones": [
-    {
-      "id": "h-1",
-      "nombre": "Salón",
-      "x": 0, "z": 0,
-      "ancho": 5, "largo": 4, "alto": 2.7,
-      "materialPared": "ladrillo",
-      "materialSuelo": "hormigon",
-      "materialTecho": "pladur",
-      "espesorParedM": 0.115,
-      "espesorSueloM": 0.2,
-      "espesorTechoM": 0.013,
-      "rugosidadParedM": 0.0015,
-      "rugosidadSueloM": 0.002,
-      "rugosidadTechoM": 0.0005
-    }
-  ],
-  "objetos": [
-    {
-      "id": "router-1",
-      "tipo": "router",
-      "x": 0, "y": 1.2, "z": 0,
-      "sx": 0.35, "sy": 0.35, "sz": 0.35,
-      "color": "#f97316"
-    }
-  ]
+  "habitaciones": [...],
+  "objetos": [...]
 }
-REGLAS:
-- Distribuye ${num} habitaciones sin solapamiento usando x y z como centros de cada sala
-- El ancho total disponible es ${anchoT}m y el largo total es ${largoT}m
-- Todas las habitaciones deben caber dentro de esos límites
-- Usa los materiales y propiedades físicas exactas indicadas
-- Coloca un router (color #f97316) en el centro geométrico del espacio completo
-- Coloca un receptor (tipo receptor, color #22c55e, sx/sy/sz 0.25) en la habitación más alejada del router
-- Si se piden muebles, añade objetos realistas según el tipo de espacio
-- Solo devuelve el JSON, absolutamente nada más`,
+
+REGLAS CRÍTICAS:
+- Distribuye ${totalHabitaciones} habitaciones SIN solapamiento en el espacio ${anchoT}x${largoT}m
+- ${conPasillos ? `Incluye ${plantas} pasillo(s) de 1.5m de ancho conectando las habitaciones` : 'Sin pasillos'}
+- ${plantas > 1 ? `Distribuye en ${plantas} plantas: offset z += ${largoT + 2} por cada planta` : 'Una sola planta'}
+- Coloca router en el centro geométrico del espacio
+- Coloca receptor en la habitación más alejada del router
+- ${conMuebles ? 'Añade muebles realistas según el tipo de espacio usando SOLO los tipos listados' : 'Solo router y receptor como objetos'}
+- USA SOLO los tipos de objeto listados arriba
+- Solo devuelve el JSON, nada más`,
           },
           {
             role: 'user',
-            content: `Genera la escena con estos parámetros físicos exactos:
-Tipo de espacio: ${tipo}
-Número de zonas: ${num}
-Dimensiones totales: ${anchoT}m ancho × ${largoT}m largo × ${alto}m alto
-Material paredes: ${materialParedIA}, espesor: ${espesorP}m, rugosidad: ${rugosidadP}m
-Material suelo: ${materialSueloIA}, espesor: ${espesorS}m
-Material techo: ${materialTechoIA}, espesor: ${espesorT}m
-Frecuencia RF: ${freq} MHz
-Objetos adicionales: ${addObjetos}`,
+            content: `Genera escena RF:
+Tipo: ${tipo}
+Plantas: ${plantas}
+Zonas por planta: ${num}
+Pasillos: ${conPasillos ? 'Sí' : 'No'}
+Dimensiones planta: ${anchoT}m × ${largoT}m × ${alto}m
+Paredes: ${materialParedIA}, espesor ${espesorP}m, rugosidad ${rugosidadP}m
+Suelo: ${materialSueloIA}, espesor ${espesorS}m
+Techo: ${materialTechoIA}, espesor ${espesorT}m
+Frecuencia: ${freq} MHz
+Mobiliario: ${addObjetos}`,
           },
         ],
       }),
@@ -102,27 +100,23 @@ Objetos adicionales: ${addObjetos}`,
 
     const data = await response.json();
     let texto = data.choices?.[0]?.message?.content || '';
-    
-    // Limpiar markdown y texto extra
     texto = texto.replace(/```json/g, '').replace(/```/g, '').trim();
-    
-    // Extraer el JSON más externo
+
     const start = texto.indexOf('{');
     const end = texto.lastIndexOf('}');
     if (start === -1 || end === -1 || end <= start) {
-      return NextResponse.json({ ok: false, error: `No se encontró JSON en la respuesta: ${texto.slice(0, 200)}` }, { status: 500 });
+      return NextResponse.json({ ok: false, error: `Sin JSON: ${texto.slice(0, 200)}` }, { status: 500 });
     }
-    
-    const jsonStr = texto.slice(start, end + 1);
+
     let escena: any;
     try {
-      escena = JSON.parse(jsonStr);
-    } catch (parseErr) {
-      return NextResponse.json({ ok: false, error: `JSON inválido: ${String(parseErr)} | Texto: ${jsonStr.slice(0, 300)}` }, { status: 500 });
+      escena = JSON.parse(texto.slice(start, end + 1));
+    } catch (e) {
+      return NextResponse.json({ ok: false, error: `JSON inválido: ${String(e)}` }, { status: 500 });
     }
 
     if (!escena.habitaciones?.length) {
-      return NextResponse.json({ ok: false, error: 'La escena no tiene habitaciones' }, { status: 500 });
+      return NextResponse.json({ ok: false, error: 'Sin habitaciones' }, { status: 500 });
     }
 
     return NextResponse.json({ ok: true, escena });
