@@ -987,8 +987,19 @@ function estiloVisualEdificio(building: any, selected: boolean, distanceM: numbe
 
 function alturaVisualEdificio(building: any) {
   const h = nrf(building?.heightM, 9);
-  // Capa visual: evita rascacielos absurdos por datos OSM/Catastro raros.
-  return clampNumber(h, 2.8, 52);
+
+  // Visualización: no usamos la altura 1:1 si no viene clara.
+  // En modo RF/GIS se entiende mejor si los edificios no tapan toda la ortofoto.
+  const source = String(building?.source ?? "").toLowerCase();
+  const heightSource = String(building?.heightSource ?? "").toLowerCase();
+
+  const hasReliableHeight =
+    heightSource.includes("height") ||
+    heightSource.includes("osm_height") ||
+    source.includes("catastro");
+
+  const scaled = hasReliableHeight ? h * 0.82 : h * 0.62;
+  return clampNumber(scaled, 2.6, 34);
 }
 
 
@@ -1183,15 +1194,17 @@ function UrbanBuildingMesh({ building, selected }: { building: any; selected?: b
   );
 
   const roofGeometry = useMemo(
-    () => createFlatPolygonGeometry(footprint, visualHeight + 0.055),
+    () => createFlatPolygonGeometry(footprint, visualHeight + 0.045),
     [footprint, visualHeight],
   );
 
-  const edgeGeometry = useMemo(() => new THREE.EdgesGeometry(geometry, 22), [geometry]);
+  const edgeGeometry = useMemo(() => new THREE.EdgesGeometry(geometry, 18), [geometry]);
   const style = estiloVisualEdificio(building, Boolean(selected), distanceM);
 
   if (!footprint || footprint.length < 3) return null;
 
+  const opacity = selected ? 0.78 : distanceM < 120 ? 0.58 : distanceM < 260 ? 0.44 : 0.32;
+  const roofOpacity = selected ? 0.86 : 0.64;
   const floors = Math.max(1, Math.floor(visualHeight / 3));
   const b = boundsFromPoints(footprint);
   const widthX = b ? Math.max(0.4, b.maxX - b.minX) : 1;
@@ -1199,45 +1212,47 @@ function UrbanBuildingMesh({ building, selected }: { building: any; selected?: b
   const facadeAxisX = widthX >= widthZ;
 
   return (
-    <group name={`urban-building-premium-${building.id ?? "unknown"}`}>
+    <group name={`urban-building-refined-${building.id ?? "unknown"}`}>
       <mesh geometry={geometry} castShadow receiveShadow>
         <meshStandardMaterial
           color={style.facade}
-          roughness={style.roughness}
-          metalness={style.metalness}
-          transparent={false}
+          roughness={0.93}
+          metalness={0.015}
+          transparent
+          opacity={opacity}
+          depthWrite={opacity > 0.55}
         />
       </mesh>
 
-      {/* Sombra visual oscura en la base para dar profundidad */}
-      {distanceM < 260 && (
-        <mesh geometry={createFlatPolygonGeometry(footprint, 0.011)} receiveShadow>
-          <meshBasicMaterial color="#020617" transparent opacity={0.22} side={THREE.DoubleSide} />
+      {distanceM < 280 && (
+        <mesh geometry={createFlatPolygonGeometry(footprint, 0.009)} receiveShadow>
+          <meshBasicMaterial color="#020617" transparent opacity={0.16} side={THREE.DoubleSide} />
         </mesh>
       )}
 
       {style.showRoof && (
-        <>
-          <mesh geometry={roofGeometry} receiveShadow>
-            <meshStandardMaterial color={style.roof} roughness={0.92} metalness={0.02} />
-          </mesh>
-          <lineSegments geometry={new THREE.EdgesGeometry(roofGeometry, 12)}>
-            <lineBasicMaterial color={style.roofDark} transparent opacity={0.55} />
-          </lineSegments>
-        </>
+        <mesh geometry={roofGeometry} receiveShadow>
+          <meshStandardMaterial
+            color={style.roof}
+            roughness={0.96}
+            metalness={0.01}
+            transparent
+            opacity={roofOpacity}
+            depthWrite={false}
+          />
+        </mesh>
       )}
 
       {style.showEdges && (
         <lineSegments geometry={edgeGeometry}>
-          <lineBasicMaterial color={style.edge} transparent opacity={selected ? 0.7 : 0.24} />
+          <lineBasicMaterial color={selected ? "#22d3ee" : "#dbeafe"} transparent opacity={selected ? 0.7 : 0.22} />
         </lineSegments>
       )}
 
-      {/* Líneas de planta/ventanas aproximadas: solo cerca para no saturar */}
-      {style.showWindows && b && Array.from({ length: Math.min(floors, 12) }).map((_, i) => {
-        const y = 1.7 + i * 3;
+      {style.showWindows && b && Array.from({ length: Math.min(floors, 8) }).map((_, i) => {
+        const y = 1.6 + i * 3;
         if (y >= visualHeight - 0.4) return null;
-        const half = facadeAxisX ? widthX * 0.28 : widthZ * 0.28;
+        const half = facadeAxisX ? widthX * 0.25 : widthZ * 0.25;
         return (
           <Line
             key={`floor-band-${i}`}
@@ -1246,10 +1261,10 @@ function UrbanBuildingMesh({ building, selected }: { building: any; selected?: b
                 ? [[center.x - half, y, center.z + widthZ * 0.51], [center.x + half, y, center.z + widthZ * 0.51]]
                 : [[center.x + widthX * 0.51, y, center.z - half], [center.x + widthX * 0.51, y, center.z + half]]
             }
-            color={style.accent}
-            lineWidth={0.65}
+            color="#dff8ff"
+            lineWidth={0.5}
             transparent
-            opacity={0.28}
+            opacity={0.2}
           />
         );
       })}
@@ -1288,15 +1303,18 @@ function UrbanOrthoTexturePlane({ imageUrl, radius }: { imageUrl: string; radius
   texture.wrapS = THREE.ClampToEdgeWrapping;
   texture.wrapT = THREE.ClampToEdgeWrapping;
 
+  // Alineación GIS:
+  // local X = Este/Oeste; local Z = Norte/Sur.
+  // La imagen WMS viene norte-arriba, por eso el plano se rota +PI/2.
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.004, 0]} receiveShadow>
+    <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, -0.004, 0]} receiveShadow>
       <planeGeometry args={[radius * 2, radius * 2, 1, 1]} />
       <meshStandardMaterial
         map={texture}
         roughness={0.92}
         metalness={0}
         transparent
-        opacity={0.9}
+        opacity={1}
         side={THREE.DoubleSide}
       />
     </mesh>
@@ -1352,14 +1370,14 @@ function CapaEscenarioUrbano({
 
   return (
     <group name="urban-rf-scenario-pro">
-      <mesh position={[0, -0.09, 0]} receiveShadow>
-        <boxGeometry args={[radius * 2.08, 0.06, radius * 2.08]} />
-        <meshStandardMaterial color="#0a1322" roughness={0.98} metalness={0.01} />
+      <mesh position={[0, -0.11, 0]} receiveShadow>
+        <boxGeometry args={[radius * 2.08, 0.045, radius * 2.08]} />
+        <meshStandardMaterial color="#020617" roughness={0.98} metalness={0.01} />
       </mesh>
 
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.046, 0]}>
         <circleGeometry args={[radius, 192]} />
-        <meshStandardMaterial color="#111827" roughness={0.97} metalness={0.01} transparent opacity={0.88} side={THREE.DoubleSide} />
+        <meshStandardMaterial color="#111827" roughness={0.97} metalness={0.01} transparent opacity={scenario?.visualLayer?.ortho?.imageUrl ? 0.18 : 0.88} side={THREE.DoubleSide} />
       </mesh>
 
       <UrbanOrthoGround scenario={scenario} />
