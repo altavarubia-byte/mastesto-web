@@ -46,13 +46,15 @@ export async function POST(req: Request) {
     const habitaciones = [];
     let habId = 1;
     for (let p = 0; p < plantas; p++) {
-      const offsetZ = p * (largoT + 3);
+      const offsetZ = 0; // plantas en Y
+      const offsetY = p * (alto + 0.3);
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
           if (habId > num * plantas) break;
           const cx = Math.round((-anchoT/2 + anchoHab/2 + c * anchoHab) * 10) / 10;
           const cz = Math.round((-largoT/2 + largoHab/2 + r * largoHab + offsetZ) * 10) / 10;
           habitaciones.push({
+            altoBase: Math.round(offsetY * 10) / 10,
             id: `h-${habId}`,
             nombre: tipo === 'Vivienda'
               ? (habId === 1 ? 'Salón' : habId === 2 ? 'Cocina' : habId === 3 ? 'Dormitorio principal' : habId === 4 ? 'Baño' : `Habitación ${habId}`)
