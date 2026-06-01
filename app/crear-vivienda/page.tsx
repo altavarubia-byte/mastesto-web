@@ -2584,7 +2584,7 @@ const url = `${BASE_URL}/raytrace`;
   const generarEscenaDesdeIA = async (datos: Record<string, any>) => {
     setIaCargando(true);
     try {
-      const pf = (v: any, def: number) => parseFloat(String(v ?? '').replace(/[^0-9.\-]/g, '')) || def;
+      const pf = (v: any, def: number) => parseFloat(String(v ?? '').replace(/[^0-9.]/g, '')) || def;
       const num = pf(datos.numHabitaciones, 4);
       const anchoTotal = pf(datos.anchoTotal, 10);
       const largoTotal = pf(datos.largoTotal, 12);
