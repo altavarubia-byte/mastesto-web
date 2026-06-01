@@ -285,6 +285,86 @@ type RespuestaFrecuenciaV5 = {
   [key: string]: any;
 };
 
+
+
+type UrbanImportStatus = "idle" | "searching" | "importing" | "polling" | "done" | "error";
+
+type UrbanSiteCandidate = {
+  id: string;
+  name: string;
+  address: string;
+  lat: number;
+  lon: number;
+  provider: string;
+  bbox?: number[] | null;
+};
+
+type UrbanScenario = {
+  ok?: boolean;
+  schemaVersion?: string;
+  tipoEscenario?: string;
+  site?: {
+    id?: string;
+    name?: string;
+    address?: string;
+    lat?: number;
+    lon?: number;
+    provider?: string;
+    radiusM?: number;
+  };
+  bounds?: {
+    minX?: number;
+    maxX?: number;
+    minZ?: number;
+    maxZ?: number;
+    bboxLatLon?: any;
+  };
+  terrain?: {
+    source?: string;
+    gridN?: number;
+    vertices?: any[];
+    note?: string;
+  };
+  urban?: {
+    buildings?: any[];
+    roads?: any[];
+    greenAreas?: any[];
+    stats?: any;
+    sourceStatus?: any;
+  };
+  edificioPrincipal?: any;
+  tx?: any[];
+  rx?: any[];
+  antennas?: any[];
+};
+
+type UrbanImportResult = {
+  ok: boolean;
+  scenario: UrbanScenario;
+  site?: any;
+  stats?: any;
+};
+
+type UrbanJobStatus = {
+  ok: boolean;
+  jobId: string;
+  status: "queued" | "running" | "done" | "error" | string;
+  progress: number;
+  stage: string;
+  message: string;
+  error?: { detail?: string } | string | null;
+  result?: UrbanImportResult;
+};
+
+const clampNumber = (value: number, min: number, max: number) =>
+  Math.max(min, Math.min(max, value));
+
+const fmtUrban = (value: unknown, digits = 2): string => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n.toFixed(digits) : "-";
+};
+
+
 type ResultadoCobertura = {
   ok: boolean;
   mensaje: string;
@@ -686,6 +766,322 @@ function PanelSionnaV5({ resultado }: { resultado: ResultadoCobertura }) {
   );
 }
 
+
+
+function CapaEscenarioUrbano({
+  scenario,
+  visible,
+}: {
+  scenario: UrbanScenario | null;
+  visible: boolean;
+}) {
+  const buildings = useMemo(() => (scenario?.urban?.buildings ?? []).slice(0, 180), [scenario]);
+  const roads = useMemo(() => (scenario?.urban?.roads ?? []).slice(0, 120), [scenario]);
+  const greenAreas = useMemo(() => (scenario?.urban?.greenAreas ?? []).slice(0, 40), [scenario]);
+  const radius = Number(scenario?.site?.radiusM ?? 60);
+
+  if (!visible || !scenario) return null;
+
+  const bboxFromFootprint = (footprint: any[]) => {
+    const xs = footprint.map((p) => nrf(p.x));
+    const zs = footprint.map((p) => nrf(p.z));
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minZ = Math.min(...zs);
+    const maxZ = Math.max(...zs);
+    return {
+      cx: (minX + maxX) / 2,
+      cz: (minZ + maxZ) / 2,
+      sx: Math.max(0.6, maxX - minX),
+      sz: Math.max(0.6, maxZ - minZ),
+    };
+  };
+
+  return (
+    <group name="urban-rf-scenario">
+      <mesh position={[0, -0.045, 0]} receiveShadow>
+        <boxGeometry args={[radius * 2, 0.035, radius * 2]} />
+        <meshStandardMaterial color="#07111c" roughness={0.92} metalness={0.02} />
+      </mesh>
+
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]}>
+        <ringGeometry args={[Math.max(1, radius - 0.6), radius, 96]} />
+        <meshBasicMaterial color="#22d3ee" transparent opacity={0.13} side={THREE.DoubleSide} />
+      </mesh>
+
+      {greenAreas.map((area: any) => {
+        const fp = area.footprint ?? [];
+        if (fp.length < 3) return null;
+        const b = bboxFromFootprint(fp);
+        return (
+          <mesh key={area.id} position={[b.cx, 0.006, b.cz]} receiveShadow>
+            <boxGeometry args={[b.sx, 0.012, b.sz]} />
+            <meshStandardMaterial color="#14532d" transparent opacity={0.55} roughness={0.9} />
+          </mesh>
+        );
+      })}
+
+      {roads.map((road: any) => {
+        const points = (road.points ?? [])
+          .slice(0, 80)
+          .map((p: any) => [nrf(p.x), 0.035, nrf(p.z)] as [number, number, number]);
+        if (points.length < 2) return null;
+        return <Line key={road.id} points={points} color="#64748b" lineWidth={2} transparent opacity={0.75} />;
+      })}
+
+      {buildings.map((building: any) => {
+        const fp = building.footprint ?? [];
+        if (fp.length < 3) return null;
+        const b = bboxFromFootprint(fp);
+        const h = clampNumber(nrf(building.heightM, 9), 2.5, 85);
+        const isNearCenter = Math.abs(b.cx) < 8 && Math.abs(b.cz) < 8;
+        return (
+          <mesh
+            key={building.id}
+            position={[b.cx, h / 2, b.cz]}
+            castShadow
+            receiveShadow
+          >
+            <boxGeometry args={[b.sx, h, b.sz]} />
+            <meshStandardMaterial
+              color={isNearCenter ? "#0ea5e9" : "#334155"}
+              transparent
+              opacity={isNearCenter ? 0.45 : 0.38}
+              roughness={0.75}
+              metalness={0.08}
+            />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+}
+
+function FloatingUrbanImportProgress({
+  visible,
+  progress,
+  message,
+  stage,
+  jobId,
+}: {
+  visible: boolean;
+  progress: number;
+  message: string;
+  stage: string;
+  jobId: string | null;
+}) {
+  if (!visible) return null;
+
+  const p = Math.round(clampNumber(progress, 0, 100));
+
+  return (
+    <div className="fixed bottom-5 right-5 z-[999] w-[370px] max-w-[calc(100vw-2rem)] rounded-3xl border border-cyan-400/30 bg-slate-950/95 p-4 text-white shadow-2xl shadow-cyan-950/30 backdrop-blur-xl">
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className={`h-2.5 w-2.5 rounded-full ${p >= 100 ? "bg-emerald-400" : "animate-pulse bg-cyan-400"}`} />
+            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-cyan-300">
+              Urban RF Importer
+            </p>
+          </div>
+          <p className="mt-2 line-clamp-2 text-sm font-semibold leading-snug text-zinc-100">
+            {message || "Importando escenario real..."}
+          </p>
+        </div>
+
+        <div className="shrink-0 rounded-full bg-cyan-400 px-3 py-1 text-sm font-black text-black">
+          {p}%
+        </div>
+      </div>
+
+      <div className="h-3 overflow-hidden rounded-full bg-zinc-800 ring-1 ring-white/10">
+        <div
+          className="h-full rounded-full bg-cyan-400 transition-all duration-300"
+          style={{ width: `${p}%` }}
+        />
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] uppercase tracking-[0.16em] text-zinc-500">
+        <div className="rounded-xl border border-white/10 bg-black/40 px-3 py-2">
+          <span className="block text-zinc-600">Fase</span>
+          <span className="mt-1 block truncate font-bold text-zinc-300">{stage || "-"}</span>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-black/40 px-3 py-2">
+          <span className="block text-zinc-600">Job</span>
+          <span className="mt-1 block truncate font-bold text-zinc-300">
+            {jobId ? `${jobId.slice(0, 8)}...` : "-"}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function UrbanImportPanel({
+  query,
+  setQuery,
+  radiusM,
+  setRadiusM,
+  candidates,
+  selected,
+  setSelected,
+  importStatus,
+  progress,
+  stage,
+  message,
+  jobId,
+  error,
+  scenario,
+  onSearch,
+  onImport,
+  onClear,
+}: {
+  query: string;
+  setQuery: (v: string) => void;
+  radiusM: number;
+  setRadiusM: (v: number) => void;
+  candidates: UrbanSiteCandidate[];
+  selected: UrbanSiteCandidate | null;
+  setSelected: (v: UrbanSiteCandidate) => void;
+  importStatus: UrbanImportStatus;
+  progress: number;
+  stage: string;
+  message: string;
+  jobId: string | null;
+  error: string;
+  scenario: UrbanScenario | null;
+  onSearch: () => void;
+  onImport: () => void;
+  onClear: () => void;
+}) {
+  const busy = importStatus === "searching" || importStatus === "importing" || importStatus === "polling";
+  const buildings = scenario?.urban?.buildings?.length ?? 0;
+  const roads = scenario?.urban?.roads?.length ?? 0;
+  const green = scenario?.urban?.greenAreas?.length ?? 0;
+
+  return (
+    <div className="mb-5 rounded-2xl border border-cyan-500/30 bg-cyan-950/10 p-4 shadow-[0_0_30px_rgba(34,211,238,0.06)]">
+      <div className="mb-3 flex items-start justify-between gap-2">
+        <div>
+          <p className="text-[9px] font-black uppercase tracking-[0.25em] text-cyan-300">
+            Escenario real
+          </p>
+          <p className="mt-1 text-[10px] leading-relaxed text-slate-500">
+            Catastro + OSM + terreno preparado. No sustituye tu edificio: lo envuelve en un canvas urbano.
+          </p>
+        </div>
+        {scenario && (
+          <button
+            onClick={onClear}
+            className="rounded-lg border border-red-900/60 bg-red-950/30 px-2 py-1 text-[8px] font-black uppercase text-red-300"
+          >
+            Quitar
+          </button>
+        )}
+      </div>
+
+      <input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Buscar sitio real"
+        className="w-full rounded-xl border border-slate-700 bg-black/70 p-3 text-xs text-white outline-none focus:border-cyan-400"
+      />
+
+      <button
+        onClick={onSearch}
+        disabled={busy || query.trim().length < 2}
+        className="mt-3 w-full rounded-xl bg-cyan-400 py-3 text-[10px] font-black uppercase text-slate-950 transition-all hover:bg-white disabled:opacity-40"
+      >
+        {importStatus === "searching" ? "Buscando..." : "Buscar sitio"}
+      </button>
+
+      {candidates.length > 0 && (
+        <div className="mt-3 max-h-64 space-y-2 overflow-auto pr-1">
+          {candidates.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => setSelected(c)}
+              className={`w-full rounded-xl border p-3 text-left text-[10px] transition ${
+                selected?.id === c.id
+                  ? "border-cyan-400 bg-cyan-400/10"
+                  : "border-slate-800 bg-black/40 hover:border-slate-600"
+              }`}
+            >
+              <p className="font-black text-white">{c.name}</p>
+              <p className="mt-1 line-clamp-2 text-slate-500">{c.address}</p>
+              <p className="mt-2 uppercase tracking-[0.16em] text-slate-600">
+                {c.provider} · {fmtUrban(c.lat, 5)}, {fmtUrban(c.lon, 5)}
+              </p>
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-3 rounded-xl border border-slate-800 bg-black/40 p-3">
+        <p className="mb-2 text-[8px] font-black uppercase tracking-widest text-slate-500">
+          Radio importación: {radiusM >= 1000 ? `${radiusM / 1000} km` : `${radiusM} m`}
+        </p>
+        <div className="grid grid-cols-4 gap-1">
+          {[100, 250, 500, 1000].map((r) => (
+            <button
+              key={r}
+              onClick={() => setRadiusM(r)}
+              className={`rounded-lg border px-2 py-2 text-[8px] font-black ${
+                radiusM === r
+                  ? "border-cyan-400 bg-cyan-400 text-black"
+                  : "border-slate-800 bg-slate-950 text-slate-400"
+              }`}
+            >
+              {r >= 1000 ? `${r / 1000}km` : `${r}m`}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <button
+        onClick={onImport}
+        disabled={busy || !selected}
+        className="mt-3 w-full rounded-xl bg-orange-500 py-3 text-[10px] font-black uppercase text-black transition-all hover:bg-white disabled:opacity-40"
+      >
+        {busy && importStatus !== "searching" ? "Importando..." : "Importar escenario RF"}
+      </button>
+
+      {(importStatus === "importing" || importStatus === "polling") && (
+        <div className="mt-3 rounded-xl border border-slate-800 bg-black/50 p-3">
+          <div className="mb-2 flex items-center justify-between gap-3 text-[9px] uppercase tracking-widest">
+            <span className="truncate text-slate-400">{message || "Importando..."}</span>
+            <span className="font-black text-cyan-300">{Math.round(progress)}%</span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+            <div className="h-full rounded-full bg-cyan-400 transition-all" style={{ width: `${clampNumber(progress, 0, 100)}%` }} />
+          </div>
+          <p className="mt-2 text-[8px] uppercase text-slate-600">
+            {stage || "-"} {jobId ? `· ${jobId.slice(0, 8)}...` : ""}
+          </p>
+        </div>
+      )}
+
+      {error && (
+        <div className="mt-3 rounded-xl border border-red-900/60 bg-red-950/30 p-3 text-[10px] text-red-300">
+          {error}
+        </div>
+      )}
+
+      {scenario && (
+        <div className="mt-3 rounded-xl border border-emerald-900/60 bg-emerald-950/20 p-3">
+          <p className="text-[9px] font-black uppercase tracking-widest text-emerald-300">
+            Escenario cargado
+          </p>
+          <p className="mt-1 text-[10px] text-slate-400">
+            {scenario.site?.name} · {buildings} edificios · {roads} calles · {green} zonas
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 // =========================================================
 // PÁGINA PRINCIPAL: CREAR VIVIENDA / SIMULADOR RF
 // =========================================================
@@ -788,6 +1184,23 @@ export default function CrearViviendaPage() {
 
   const [resultadoCobertura, setResultadoCobertura] =
     useState<ResultadoCobertura | null>(null);
+
+  // ---------------------------------------------------------
+  // ESTADO: ESCENARIO URBANO REAL CATastro/OSM/TERRENO
+  // ---------------------------------------------------------
+  const [scenarioMode, setScenarioMode] = useState<"indoor" | "urban">("indoor");
+  const [urbanScenario, setUrbanScenario] = useState<UrbanScenario | null>(null);
+  const [urbanQuery, setUrbanQuery] = useState("Universitat Jaume I Castellón");
+  const [urbanRadiusM, setUrbanRadiusM] = useState(250);
+  const [urbanCandidates, setUrbanCandidates] = useState<UrbanSiteCandidate[]>([]);
+  const [urbanSelected, setUrbanSelected] = useState<UrbanSiteCandidate | null>(null);
+  const [urbanImportStatus, setUrbanImportStatus] = useState<UrbanImportStatus>("idle");
+  const [urbanImportError, setUrbanImportError] = useState("");
+  const [urbanJobId, setUrbanJobId] = useState<string | null>(null);
+  const [urbanProgress, setUrbanProgress] = useState(0);
+  const [urbanStage, setUrbanStage] = useState("");
+  const [urbanMessage, setUrbanMessage] = useState("");
+  const [mostrarEscenarioUrbano, setMostrarEscenarioUrbano] = useState(true);
 
   // ---------------------------------------------------------
   // ESTADO: VISUALIZACIÓN, SIMULACIÓN DINÁMICA Y MIMO
@@ -1364,6 +1777,149 @@ export default function CrearViviendaPage() {
       })),
       objetos,
     };
+  };
+
+
+  const buscarSitioUrbano = async () => {
+    setUrbanImportError("");
+    setUrbanImportStatus("searching");
+    setUrbanCandidates([]);
+    setUrbanSelected(null);
+
+    try {
+      const res = await fetch(
+        `${SIONNA_API_URL}/urban/full/search?q=${encodeURIComponent(urbanQuery)}&limit=6`,
+        { cache: "no-store" },
+      );
+      const data = await res.json();
+
+      if (!res.ok || !data.ok) {
+        throw new Error(data?.detail || "No se pudo buscar el sitio real.");
+      }
+
+      const results = (data.results ?? []) as UrbanSiteCandidate[];
+      setUrbanCandidates(results);
+      if (results.length > 0) setUrbanSelected(results[0]);
+      setUrbanImportStatus("idle");
+    } catch (e) {
+      setUrbanImportStatus("error");
+      setUrbanImportError(e instanceof Error ? e.message : "Error buscando sitio real.");
+    }
+  };
+
+  const esperarImportacionUrbana = async (newJobId: string): Promise<UrbanImportResult> => {
+    while (true) {
+      const statusRes = await fetch(`${SIONNA_API_URL}/urban/full/import/status/${newJobId}`, {
+        cache: "no-store",
+      });
+      const statusData: UrbanJobStatus = await statusRes.json();
+
+      if (!statusRes.ok || !statusData.ok) {
+        throw new Error((statusData as any)?.detail || "Error consultando importación urbana.");
+      }
+
+      setUrbanProgress(Number(statusData.progress || 0));
+      setUrbanStage(statusData.stage || "");
+      setUrbanMessage(statusData.message || "Importando escenario real...");
+
+      if (statusData.status === "error") {
+        const detail = typeof statusData.error === "string" ? statusData.error : statusData.error?.detail;
+        throw new Error(detail || "Error importando escenario real.");
+      }
+
+      if (statusData.status === "done") {
+        const resultRes = await fetch(`${SIONNA_API_URL}/urban/full/import/result/${newJobId}`, {
+          cache: "no-store",
+        });
+        const resultData: UrbanJobStatus = await resultRes.json();
+
+        if (!resultRes.ok || !resultData.ok) {
+          throw new Error((resultData as any)?.detail || "Error obteniendo escenario real.");
+        }
+
+        if (!resultData.result?.ok) {
+          throw new Error("El job terminó, pero no devolvió un escenario válido.");
+        }
+
+        return resultData.result;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 900));
+    }
+  };
+
+  const importarEscenarioUrbano = async () => {
+    setUrbanImportError("");
+    setUrbanProgress(0);
+    setUrbanStage("");
+    setUrbanMessage("");
+    setUrbanJobId(null);
+
+    if (!urbanSelected) {
+      setUrbanImportError("Selecciona primero un sitio real.");
+      return;
+    }
+
+    setUrbanImportStatus("importing");
+
+    try {
+      const payload = {
+        placeId: urbanSelected.id,
+        name: urbanSelected.name,
+        address: urbanSelected.address,
+        lat: urbanSelected.lat,
+        lon: urbanSelected.lon,
+        radiusM: urbanRadiusM,
+        sources: {
+          catastroBuildings: true,
+          osmContext: true,
+          terrain: true,
+          useCurrentBuilding: true,
+        },
+        currentBuilding: crearDatosVivienda(),
+        terrainGridN: 25,
+      };
+
+      const startRes = await fetch(`${SIONNA_API_URL}/urban/full/import/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const startData: UrbanJobStatus = await startRes.json();
+
+      if (!startRes.ok || !startData.ok) {
+        throw new Error((startData as any)?.detail || "Error iniciando importación urbana.");
+      }
+
+      setUrbanJobId(startData.jobId);
+      setUrbanProgress(Number(startData.progress || 0));
+      setUrbanStage(startData.stage || "queued");
+      setUrbanMessage(startData.message || "Importación iniciada");
+      setUrbanImportStatus("polling");
+
+      const result = await esperarImportacionUrbana(startData.jobId);
+      setUrbanScenario(result.scenario);
+      setScenarioMode("urban");
+      setMostrarEscenarioUrbano(true);
+      setUrbanProgress(100);
+      setUrbanStage("done");
+      setUrbanMessage("Escenario RF real importado");
+      setUrbanImportStatus("done");
+    } catch (e) {
+      setUrbanImportStatus("error");
+      setUrbanImportError(e instanceof Error ? e.message : "Error importando escenario real.");
+    }
+  };
+
+  const limpiarEscenarioUrbano = () => {
+    setUrbanScenario(null);
+    setScenarioMode("indoor");
+    setUrbanProgress(0);
+    setUrbanStage("");
+    setUrbanMessage("");
+    setUrbanJobId(null);
+    setUrbanImportStatus("idle");
+    setMostrarEscenarioUrbano(true);
   };
 
   const actualizarDopplerDesdeBackend = (taps: MuestraCIR[]) => {
@@ -2676,11 +3232,11 @@ const url = `${BASE_URL}/raytrace`;
               </p>
 
               <h1 className="text-3xl md:text-5xl font-black uppercase tracking-[-0.08em] text-white">
-                Simulador técnico de propagación indoor
+                Simulador técnico indoor / urbano
               </h1>
 
               <p className="text-slate-400 mt-3 max-w-4xl text-xs md:text-sm leading-relaxed">
-                Consola de ingeniería para modelar viviendas 3D, ejecutar ray
+                Consola de ingeniería para modelar viviendas 3D, importar entorno urbano real, ejecutar ray
                 tracing con Sionna, visualizar cobertura, rayos, CIR, Doppler,
                 delay spread, MIMO y exportar informes RF.
               </p>
@@ -2712,6 +3268,7 @@ const url = `${BASE_URL}/raytrace`;
                 </p>
                 <p className="text-xs font-black text-white">
                   {habitaciones.length} salas · {objetos.length} obj.
+                  {urbanScenario ? ` · ${urbanScenario.urban?.buildings?.length ?? 0} edif.` : ""}
                 </p>
               </div>
               <div className="rounded-xl border border-cyan-900/50 bg-black/50 p-3">
@@ -2733,6 +3290,61 @@ const url = `${BASE_URL}/raytrace`;
             <h2 className="text-xs font-black uppercase tracking-widest text-cyan-300 mb-5">
               Habitaciones
             </h2>
+
+
+            <div className="mb-5 grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setScenarioMode("indoor")}
+                className={`rounded-xl border px-3 py-2 text-[9px] font-black uppercase ${
+                  scenarioMode === "indoor"
+                    ? "border-cyan-400 bg-cyan-400 text-black"
+                    : "border-slate-800 bg-black/50 text-slate-400"
+                }`}
+              >
+                Interior
+              </button>
+              <button
+                onClick={() => setScenarioMode("urban")}
+                className={`rounded-xl border px-3 py-2 text-[9px] font-black uppercase ${
+                  scenarioMode === "urban"
+                    ? "border-orange-400 bg-orange-400 text-black"
+                    : "border-slate-800 bg-black/50 text-slate-400"
+                }`}
+              >
+                Urbano
+              </button>
+            </div>
+
+            <UrbanImportPanel
+              query={urbanQuery}
+              setQuery={setUrbanQuery}
+              radiusM={urbanRadiusM}
+              setRadiusM={setUrbanRadiusM}
+              candidates={urbanCandidates}
+              selected={urbanSelected}
+              setSelected={setUrbanSelected}
+              importStatus={urbanImportStatus}
+              progress={urbanProgress}
+              stage={urbanStage}
+              message={urbanMessage}
+              jobId={urbanJobId}
+              error={urbanImportError}
+              scenario={urbanScenario}
+              onSearch={buscarSitioUrbano}
+              onImport={importarEscenarioUrbano}
+              onClear={limpiarEscenarioUrbano}
+            />
+
+            {urbanScenario && (
+              <label className="mb-5 flex items-center justify-between rounded-xl border border-slate-800 bg-black/50 p-3 text-[9px] uppercase text-slate-400">
+                <span>Mostrar escenario urbano</span>
+                <input
+                  type="checkbox"
+                  checked={mostrarEscenarioUrbano}
+                  onChange={(e) => setMostrarEscenarioUrbano(e.target.checked)}
+                />
+              </label>
+            )}
 
             <button
               onClick={crearHabitacion}
@@ -3311,10 +3923,15 @@ const url = `${BASE_URL}/raytrace`;
               <span className="px-3 py-2 rounded-lg bg-black/75 border border-slate-800 text-slate-300">
                 Heatmap: {modoHeatmap}
               </span>
+              {urbanScenario && (
+                <span className="px-3 py-2 rounded-lg bg-black/75 border border-orange-900/60 text-orange-300">
+                  Urbano: {urbanScenario.urban?.buildings?.length ?? 0} edif.
+                </span>
+              )}
             </div>
             <Canvas
               shadows
-              camera={{ position: [10, 8, 10], fov: 48 }}
+              camera={{ position: urbanScenario && scenarioMode === "urban" ? [Math.max(35, urbanRadiusM * 0.22), Math.max(28, urbanRadiusM * 0.18), Math.max(35, urbanRadiusM * 0.22)] : [10, 8, 10], fov: 48 }}
               style={{ background: "#06111f" }}
             >
               <ambientLight intensity={0.45} />
@@ -3330,7 +3947,7 @@ const url = `${BASE_URL}/raytrace`;
               <pointLight position={[0, 3, 0]} intensity={0.8} />
 
               <Grid
-                args={[60, 60]}
+                args={[urbanScenario && scenarioMode === "urban" ? Math.max(60, urbanRadiusM * 2) : 60, urbanScenario && scenarioMode === "urban" ? Math.max(60, urbanRadiusM * 2) : 60]}
                 cellColor="#123247"
                 sectionColor="#0891b2"
                 cellSize={1}
@@ -3338,6 +3955,11 @@ const url = `${BASE_URL}/raytrace`;
                 sectionSize={5}
                 sectionThickness={2}
                 infiniteGrid={false}
+              />
+
+              <CapaEscenarioUrbano
+                scenario={urbanScenario}
+                visible={scenarioMode === "urban" && mostrarEscenarioUrbano}
               />
 
               {habitaciones.map((h) => (
@@ -3420,7 +4042,7 @@ const url = `${BASE_URL}/raytrace`;
                 target={[0, 1, 0]}
                 maxPolarAngle={Math.PI / 2}
                 minDistance={2}
-                maxDistance={40}
+                maxDistance={urbanScenario && scenarioMode === "urban" ? Math.max(80, urbanRadiusM * 1.8) : 40}
               />
             </Canvas>
             {imagenRender && (
@@ -4956,6 +5578,15 @@ const url = `${BASE_URL}/raytrace`;
         }}
       />
 
+
+
+      <FloatingUrbanImportProgress
+        visible={urbanImportStatus === "importing" || urbanImportStatus === "polling"}
+        progress={urbanProgress}
+        message={urbanMessage}
+        stage={urbanStage}
+        jobId={urbanJobId}
+      />
     </main>
   );
 }
