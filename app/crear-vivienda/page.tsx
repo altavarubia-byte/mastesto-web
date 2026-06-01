@@ -692,7 +692,20 @@ export default function CrearViviendaPage() {
   // ESTADO: CONSTRUCTOR IA DE ESCENARIOS
   // ---------------------------------------------------------
   const [iaModalAbierto, setIaModalAbierto] = useState(false);
-  const [iaChatHistory, setIaChatHistory] = useState<{role: 'assistant'|'user', content: string, slider?: {key: string, label: string, min: number, max: number, step: number, value: number, unit: string}}[]>([]);
+  type IaMensaje = {
+    role: 'assistant' | 'user';
+    content: string;
+    slider?: {
+      key: string;
+      label: string;
+      min: number;
+      max: number;
+      step: number;
+      value: number;
+      unit: string;
+    };
+  };
+  const [iaChatHistory, setIaChatHistory] = useState<IaMensaje[]>([]);
   const [iaEtapa, setIaEtapa] = useState(0);
   const [iaDatos, setIaDatos] = useState<Record<string, any>>({});
   const [iaCargando, setIaCargando] = useState(false);
@@ -2618,10 +2631,10 @@ const url = `${BASE_URL}/raytrace`;
       } else {
         throw new Error('JSON inválido');
       }
-    } catch (e) {
+    } catch (e: any) {
       setIaChatHistory(prev => [...prev, {
         role: 'assistant',
-        content: '❌ Error generando la escena. Inténtalo de nuevo.',
+        content: `❌ Error: ${e?.message || String(e)}. Revisa que el archivo route.ts está en app/api/construir-escena/route.ts y que GROQ_API_KEY está en .env.local`,
       }]);
     } finally {
       setIaCargando(false);
