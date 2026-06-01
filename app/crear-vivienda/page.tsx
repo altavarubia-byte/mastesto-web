@@ -689,6 +689,17 @@ function PanelSionnaV5({ resultado }: { resultado: ResultadoCobertura }) {
 // =========================================================
 export default function CrearViviendaPage() {
   // ---------------------------------------------------------
+  // ESTADO: CONSTRUCTOR IA DE ESCENARIOS
+  // ---------------------------------------------------------
+  const [iaModalAbierto, setIaModalAbierto] = useState(false);
+  const [iaChatHistory, setIaChatHistory] = useState<{role: 'assistant'|'user', content: string, slider?: {key: string, label: string, min: number, max: number, step: number, value: number, unit: string}}[]>([]);
+  const [iaEtapa, setIaEtapa] = useState(0);
+  const [iaDatos, setIaDatos] = useState<Record<string, any>>({});
+  const [iaCargando, setIaCargando] = useState(false);
+  const [iaSliderValores, setIaSliderValores] = useState<Record<string, number>>({});
+  const iaScrollRef = useRef<HTMLDivElement>(null);
+
+  // ---------------------------------------------------------
   // ESTADO: VIVIENDA, HABITACIONES Y MATERIALES
   // ---------------------------------------------------------
   const [habitaciones, setHabitaciones] = useState<Habitacion[]>([
@@ -2397,6 +2408,227 @@ const url = `${BASE_URL}/raytrace`;
     ? columnaBackend.pathsResumen[0]
     : null;
 
+
+  // ---------------------------------------------------------
+  // LÓGICA: CONSTRUCTOR IA DE ESCENARIOS CON SLIDERS
+  // ---------------------------------------------------------
+
+  const IA_ETAPAS = [
+    {
+      pregunta: "¿Qué tipo de espacio quieres simular?",
+      key: "tipo",
+      tipo: "opciones",
+      opciones: ["Vivienda", "Oficina", "Almacén", "Hospital", "Hotel", "Nave industrial"],
+    },
+    {
+      pregunta: "¿Cuántas habitaciones o zonas tiene el espacio?",
+      key: "numHabitaciones",
+      tipo: "slider",
+      min: 1, max: 20, step: 1, value: 4, unit: "zonas",
+    },
+    {
+      pregunta: "Ancho total del edificio",
+      key: "anchoTotal",
+      tipo: "slider",
+      min: 3, max: 50, step: 0.5, value: 10, unit: "m",
+    },
+    {
+      pregunta: "Largo total del edificio",
+      key: "largoTotal",
+      tipo: "slider",
+      min: 3, max: 80, step: 0.5, value: 12, unit: "m",
+    },
+    {
+      pregunta: "Altura de techo",
+      key: "altoTecho",
+      tipo: "slider",
+      min: 2.2, max: 8, step: 0.1, value: 2.7, unit: "m",
+    },
+    {
+      pregunta: "Material principal de las paredes",
+      key: "materialParedIA",
+      tipo: "opciones",
+      opciones: ["ladrillo", "hormigon", "pladur", "madera", "cristal", "metal"],
+    },
+    {
+      pregunta: "Espesor de las paredes",
+      key: "espesorParedIA",
+      tipo: "slider",
+      min: 0.05, max: 0.6, step: 0.005, value: 0.115, unit: "m",
+    },
+    {
+      pregunta: "Rugosidad superficial de las paredes",
+      key: "rugosidadParedIA",
+      tipo: "slider",
+      min: 0.0001, max: 0.02, step: 0.0001, value: 0.0015, unit: "m",
+    },
+    {
+      pregunta: "Material del suelo",
+      key: "materialSueloIA",
+      tipo: "opciones",
+      opciones: ["hormigon", "madera", "ladrillo", "pladur", "cristal"],
+    },
+    {
+      pregunta: "Espesor del suelo",
+      key: "espesorSueloIA",
+      tipo: "slider",
+      min: 0.05, max: 0.6, step: 0.005, value: 0.2, unit: "m",
+    },
+    {
+      pregunta: "Material del techo",
+      key: "materialTechoIA",
+      tipo: "opciones",
+      opciones: ["pladur", "hormigon", "madera", "cristal", "metal"],
+    },
+    {
+      pregunta: "Espesor del techo",
+      key: "espesorTechoIA",
+      tipo: "slider",
+      min: 0.005, max: 0.4, step: 0.005, value: 0.013, unit: "m",
+    },
+    {
+      pregunta: "Frecuencia de simulación",
+      key: "frecuenciaIA",
+      tipo: "slider",
+      min: 700, max: 60000, step: 100, value: 5000, unit: "MHz",
+    },
+    {
+      pregunta: "¿Quieres añadir objetos (muebles, personas, ventanas)?",
+      key: "addObjetos",
+      tipo: "opciones",
+      opciones: ["Sí, añade muebles básicos", "Solo router y receptor", "Sin objetos"],
+    },
+  ];
+
+  const iniciarConstructorIA = () => {
+    setIaEtapa(0);
+    setIaDatos({});
+    setIaSliderValores({});
+    const primera = IA_ETAPAS[0];
+    setIaChatHistory([{
+      role: 'assistant',
+      content: `👋 Voy a construir tu escenario RF paso a paso con parámetros físicos reales.\n\n${primera.pregunta}`,
+    }]);
+    setIaModalAbierto(true);
+  };
+
+  const avanzarEtapaIA = (valor: any) => {
+    const etapaActual = IA_ETAPAS[iaEtapa];
+    const nuevosDatos = { ...iaDatos, [etapaActual.key]: valor };
+    setIaDatos(nuevosDatos);
+
+    const siguiente = iaEtapa + 1;
+
+    if (siguiente >= IA_ETAPAS.length) {
+      // Todas las preguntas respondidas — generar escena
+      setIaChatHistory(prev => [
+        ...prev,
+        { role: 'user', content: String(valor) },
+        { role: 'assistant', content: '⚙️ Generando escena RF con todos los parámetros físicos...' },
+      ]);
+      generarEscenaDesdeIA(nuevosDatos);
+      return;
+    }
+
+    const proximaEtapa = IA_ETAPAS[siguiente];
+    setIaEtapa(siguiente);
+    setIaChatHistory(prev => [
+      ...prev,
+      { role: 'user', content: String(valor) },
+      {
+        role: 'assistant',
+        content: proximaEtapa.pregunta,
+        ...(proximaEtapa.tipo === 'slider' ? {
+          slider: {
+            key: proximaEtapa.key,
+            label: proximaEtapa.pregunta,
+            min: proximaEtapa.min!,
+            max: proximaEtapa.max!,
+            step: proximaEtapa.step!,
+            value: proximaEtapa.value!,
+            unit: proximaEtapa.unit!,
+          }
+        } : {}),
+      },
+    ]);
+
+    if (proximaEtapa.tipo === 'slider') {
+      setIaSliderValores(prev => ({
+        ...prev,
+        [proximaEtapa.key]: proximaEtapa.value!,
+      }));
+    }
+
+    setTimeout(() => iaScrollRef.current?.scrollTo({ top: iaScrollRef.current.scrollHeight, behavior: 'smooth' }), 80);
+  };
+
+  const confirmarSliderIA = (key: string) => {
+    const valor = iaSliderValores[key] ?? IA_ETAPAS[iaEtapa].value;
+    const etapa = IA_ETAPAS[iaEtapa];
+    avanzarEtapaIA(`${valor} ${etapa.unit}`);
+  };
+
+  const generarEscenaDesdeIA = async (datos: Record<string, any>) => {
+    setIaCargando(true);
+    try {
+      const num = parseInt(datos.numHabitaciones) || 4;
+      const anchoTotal = parseFloat(datos.anchoTotal) || 10;
+      const largoTotal = parseFloat(datos.largoTotal) || 12;
+      const alto = parseFloat(datos.altoTecho) || 2.7;
+      const matPared = datos.materialParedIA || 'ladrillo';
+      const matSuelo = datos.materialSueloIA || 'hormigon';
+      const matTecho = datos.materialTechoIA || 'pladur';
+      const espesorP = parseFloat(datos.espesorParedIA) || 0.115;
+      const rugosidadP = parseFloat(datos.rugosidadParedIA) || 0.0015;
+      const espesorS = parseFloat(datos.espesorSueloIA) || 0.2;
+      const espesorT = parseFloat(datos.espesorTechoIA) || 0.013;
+      const freq = parseFloat(datos.frecuenciaIA) || 5000;
+
+      const res = await fetch('/api/construir-escena', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ datos }),
+      });
+
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || 'Error en API');
+      const escena = data.escena;
+
+      if (escena.habitaciones?.length) {
+        setHabitaciones(escena.habitaciones);
+        setHabitacionSeleccionada(escena.habitaciones[0].id);
+        setMaterialPared(matPared);
+        setMaterialSuelo(matSuelo);
+        setMaterialTecho(matTecho);
+        setEspesorParedM(espesorP);
+        setEspesorSueloM(espesorS);
+        setEspesorTechoM(espesorT);
+        setRugosidadParedM(rugosidadP);
+        setFrecuenciaMhz(freq);
+        if (escena.objetos?.length) setObjetos(escena.objetos);
+        setResultadoCobertura(null);
+        setCir([]);
+        setCirResumen(null);
+
+        setIaChatHistory(prev => [...prev, {
+          role: 'assistant',
+          content: `✅ Escena generada con ${escena.habitaciones.length} zonas y parámetros físicos completos.\n\nPuedes ajustar cualquier valor manualmente y calcular cobertura.`,
+        }]);
+        setTimeout(() => setIaModalAbierto(false), 2000);
+      } else {
+        throw new Error('JSON inválido');
+      }
+    } catch (e) {
+      setIaChatHistory(prev => [...prev, {
+        role: 'assistant',
+        content: '❌ Error generando la escena. Inténtalo de nuevo.',
+      }]);
+    } finally {
+      setIaCargando(false);
+    }
+  };
+
+
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#0f172a_0,#020617_36%,#000_100%)] text-slate-100 p-3 md:p-5 font-mono">
       <section className="max-w-[1800px] mx-auto">
@@ -2910,6 +3142,12 @@ const url = `${BASE_URL}/raytrace`;
               <Boton texto="Ventana" onClick={() => crearObjeto("ventana")} />
             </div>
 
+            <button
+              onClick={iniciarConstructorIA}
+              className="mt-5 w-full py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-purple-600 text-white text-[10px] font-black uppercase hover:opacity-90 transition-all"
+            >
+              🤖 Construir escena con IA
+            </button>
             <button
               onClick={exportarJSON}
               className="mt-5 w-full py-4 rounded-xl bg-cyan-400 text-slate-950 text-[10px] font-black uppercase hover:bg-white transition-all"
@@ -4558,6 +4796,103 @@ const url = `${BASE_URL}/raytrace`;
           </aside>
         </div>
       </section>
+
+      {/* ============================================================
+          MODAL CONSTRUCTOR IA DE ESCENARIOS
+          ============================================================ */}
+      {iaModalAbierto && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[160] flex items-end sm:items-center justify-center p-4">
+          <div className="w-full max-w-lg bg-slate-950 border border-cyan-900/60 rounded-2xl overflow-hidden flex flex-col shadow-[0_0_60px_rgba(8,145,178,0.2)]" style={{maxHeight: '85vh'}}>
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800 bg-black/40">
+              <div>
+                <p className="text-[9px] uppercase text-cyan-300 font-black tracking-widest">Constructor IA</p>
+                <p className="text-[8px] text-slate-500 uppercase">Parámetros físicos RF reales</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[8px] text-slate-500 uppercase">{Math.min(iaEtapa + 1, IA_ETAPAS.length)}/{IA_ETAPAS.length}</span>
+                <div className="w-24 h-1 bg-slate-800 rounded-full overflow-hidden">
+                  <div className="h-full bg-cyan-400 transition-all duration-300" style={{width: `${(Math.min(iaEtapa + 1, IA_ETAPAS.length) / IA_ETAPAS.length) * 100}%`}} />
+                </div>
+                <button onClick={() => setIaModalAbierto(false)} className="w-7 h-7 rounded-full bg-slate-800 text-slate-400 hover:text-white text-xs font-black ml-2">✕</button>
+              </div>
+            </div>
+
+            {/* Chat */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0" ref={iaScrollRef}>
+              {iaChatHistory.map((msg, idx) => (
+                <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-[10px] leading-relaxed ${
+                    msg.role === 'user'
+                      ? 'bg-cyan-900/50 border border-cyan-800/50 text-cyan-100'
+                      : 'bg-slate-900 border border-slate-700 text-slate-200'
+                  }`}>
+                    <p className="whitespace-pre-line">{msg.content}</p>
+
+                    {/* Slider inline en el mensaje */}
+                    {msg.role === 'assistant' && msg.slider && idx === iaChatHistory.length - 1 && (
+                      <div className="mt-4 space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[9px] text-slate-400 uppercase font-black">{msg.slider.unit}</span>
+                          <span className="text-[13px] font-black text-cyan-300 font-mono">
+                            {(iaSliderValores[msg.slider.key] ?? msg.slider.value).toFixed(
+                              msg.slider.step < 0.01 ? 4 : msg.slider.step < 0.1 ? 3 : msg.slider.step < 1 ? 2 : 0
+                            )} {msg.slider.unit}
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min={msg.slider.min}
+                          max={msg.slider.max}
+                          step={msg.slider.step}
+                          value={iaSliderValores[msg.slider.key] ?? msg.slider.value}
+                          onChange={e => setIaSliderValores(prev => ({...prev, [msg.slider!.key]: Number(e.target.value)}))}
+                          className="w-full accent-cyan-400"
+                        />
+                        <div className="flex justify-between text-[8px] text-slate-600 font-mono">
+                          <span>{msg.slider.min} {msg.slider.unit}</span>
+                          <span>{msg.slider.max} {msg.slider.unit}</span>
+                        </div>
+                        <button
+                          onClick={() => confirmarSliderIA(msg.slider!.key)}
+                          className="w-full py-2.5 rounded-xl bg-cyan-400 text-slate-950 text-[10px] font-black uppercase hover:bg-white transition-all"
+                        >
+                          Confirmar →
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {/* Opciones de la etapa actual */}
+              {!iaCargando && iaEtapa < IA_ETAPAS.length && IA_ETAPAS[iaEtapa].tipo === 'opciones' && (
+                <div className="flex flex-wrap gap-2 justify-start pl-1">
+                  {IA_ETAPAS[iaEtapa].opciones!.map(op => (
+                    <button
+                      key={op}
+                      onClick={() => avanzarEtapaIA(op)}
+                      className="px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-[9px] font-black uppercase text-slate-300 hover:border-cyan-400 hover:text-cyan-300 transition-all"
+                    >
+                      {op}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {iaCargando && (
+                <div className="flex justify-start">
+                  <div className="bg-slate-900 border border-slate-700 rounded-2xl px-4 py-3">
+                    <p className="text-[9px] text-cyan-300 font-black uppercase animate-pulse">Generando escena RF...</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
     </main>
   );
 }
