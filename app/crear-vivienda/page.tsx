@@ -2,7 +2,7 @@
 // FRONTEND RF V4 INTEGRADO: preparado para materialesRF, anchoBanda, modeloAvanzado y validacionFekoSionna.
 import ModelObjeto from "@/components/ModelObjeto";
 import { Canvas, useThree, useFrame } from "@react-three/fiber";
-import { OrbitControls, Grid, Line, useGLTF } from "@react-three/drei";
+import { OrbitControls, Grid, Line, Sky, useGLTF } from "@react-three/drei";
 import { Suspense, useEffect, useRef, useState, useMemo } from "react";
 import * as THREE from "three";
 import jsPDF from "jspdf";
@@ -372,6 +372,39 @@ const clampNumber = (value: number, min: number, max: number) =>
 const fmtUrban = (value: unknown, digits = 2): string => {
   const n = Number(value);
   return Number.isFinite(n) ? n.toFixed(digits) : "-";
+};
+
+const hashUrbanString = (value: unknown): number => {
+  const text = String(value ?? "");
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return Math.abs(h >>> 0);
+};
+
+const hexToRgbUrban = (hex: string) => {
+  const h = hex.replace("#", "");
+  const n = parseInt(h.length === 3 ? h.split("").map((c) => c + c).join("") : h, 16);
+  return {
+    r: (n >> 16) & 255,
+    g: (n >> 8) & 255,
+    b: n & 255,
+  };
+};
+
+const rgbToHexUrban = (r: number, g: number, b: number) =>
+  `#${[r, g, b].map((v) => clampNumber(Math.round(v), 0, 255).toString(16).padStart(2, "0")).join("")}`;
+
+const mixHexUrban = (a: string, b: string, t: number) => {
+  const ca = hexToRgbUrban(a);
+  const cb = hexToRgbUrban(b);
+  return rgbToHexUrban(
+    ca.r + (cb.r - ca.r) * t,
+    ca.g + (cb.g - ca.g) * t,
+    ca.b + (cb.b - ca.b) * t,
+  );
 };
 
 
@@ -887,55 +920,66 @@ function estiloVisualEdificio(building: any, selected: boolean, distanceM: numbe
   const source = String(building?.source ?? "").toLowerCase();
   const material = String(building?.material ?? "").toLowerCase();
   const tags = building?.tags ?? {};
-  const use = String(tags.currentUse ?? tags.building ?? tags.amenity ?? "").toLowerCase();
+  const use = String(tags.currentUse ?? tags.building ?? tags.amenity ?? tags.landuse ?? "").toLowerCase();
+  const seed = hashUrbanString(building?.id ?? building?.osmId ?? building?.name ?? distanceM);
+  const variant = (seed % 100) / 100;
 
   const isCatastro = source.includes("catastro");
-  const isOsm = source.includes("osm");
 
-  let facade = isCatastro ? "#2f4a60" : "#3c4b5e";
-  let roof = isCatastro ? "#7f93a6" : "#64748b";
+  let facade = isCatastro ? "#24384a" : "#334155";
+  let roof = isCatastro ? "#71869a" : "#64748b";
   let edge = "#67e8f9";
+  let accent = "#bae6fd";
 
   if (material.includes("cristal") || material.includes("glass")) {
-    facade = "#1f6f8b";
+    facade = mixHexUrban("#0e7490", "#164e63", variant * 0.55);
     roof = "#7dd3fc";
     edge = "#a5f3fc";
+    accent = "#e0f2fe";
   } else if (material.includes("metal")) {
-    facade = "#475569";
+    facade = mixHexUrban("#334155", "#64748b", variant * 0.35);
     roof = "#cbd5e1";
     edge = "#bae6fd";
   } else if (material.includes("ladrillo") || material.includes("brick")) {
-    facade = "#7c3f2f";
+    facade = mixHexUrban("#78350f", "#7c2d12", variant * 0.4);
     roof = "#b45309";
     edge = "#fed7aa";
-  } else if (use.includes("industrial")) {
-    facade = "#475569";
+    accent = "#fdba74";
+  } else if (use.includes("industrial") || use.includes("warehouse")) {
+    facade = mixHexUrban("#475569", "#1e293b", variant * 0.45);
     roof = "#94a3b8";
     edge = "#cbd5e1";
-  } else if (use.includes("residential") || use.includes("apartments")) {
-    facade = "#334155";
-    roof = "#94a3b8";
+  } else if (use.includes("residential") || use.includes("apartments") || use.includes("house")) {
+    facade = mixHexUrban("#334155", "#475569", variant * 0.28);
+    roof = mixHexUrban("#94a3b8", "#cbd5e1", variant * 0.25);
+  } else if (use.includes("commercial") || use.includes("retail")) {
+    facade = mixHexUrban("#1e3a5f", "#334155", variant * 0.35);
+    roof = "#93a4b8";
   }
 
   if (selected) {
     facade = "#0891b2";
     roof = "#67e8f9";
     edge = "#22d3ee";
+    accent = "#cffafe";
   }
 
-  const showEdges = selected || distanceM < 190;
-  const showRoof = distanceM < 320;
-  const showWindows = distanceM < 85 && nrf(building?.heightM, 9) > 8;
+  const showEdges = selected || distanceM < 230;
+  const showRoof = distanceM < 380;
+  const showWindows = distanceM < 130 && nrf(building?.heightM, 9) > 7;
 
   return {
     facade,
+    facadeDark: mixHexUrban(facade, "#020617", 0.38),
     roof,
+    roofDark: mixHexUrban(roof, "#020617", 0.25),
     edge,
+    accent,
     showEdges,
     showRoof,
     showWindows,
-    roughness: 0.88,
-    metalness: material.includes("metal") || material.includes("glass") ? 0.08 : 0.025,
+    roughness: 0.86,
+    metalness: material.includes("metal") || material.includes("glass") ? 0.1 : 0.025,
   };
 }
 
@@ -1128,7 +1172,6 @@ function UrbanBuildingMesh({ building, selected }: { building: any; selected?: b
   const area = nrf(building.areaM2, 0);
   const visualHeight = alturaVisualEdificio(building);
 
-  // LOD: más detalle cerca o en edificios grandes; menos detalle lejos.
   const maxPoints = selected || distanceM < 100 || area > 1200 ? 120 : distanceM < 260 ? 64 : 28;
   const footprint = useMemo(() => limpiarFootprintEdificio(rawFootprint, maxPoints), [rawFootprint, maxPoints]);
 
@@ -1138,20 +1181,23 @@ function UrbanBuildingMesh({ building, selected }: { building: any; selected?: b
   );
 
   const roofGeometry = useMemo(
-    () => createFlatPolygonGeometry(footprint, visualHeight + 0.035),
+    () => createFlatPolygonGeometry(footprint, visualHeight + 0.055),
     [footprint, visualHeight],
   );
 
   const edgeGeometry = useMemo(() => new THREE.EdgesGeometry(geometry, 22), [geometry]);
-
   const style = estiloVisualEdificio(building, Boolean(selected), distanceM);
 
   if (!footprint || footprint.length < 3) return null;
 
   const floors = Math.max(1, Math.floor(visualHeight / 3));
+  const b = boundsFromPoints(footprint);
+  const widthX = b ? Math.max(0.4, b.maxX - b.minX) : 1;
+  const widthZ = b ? Math.max(0.4, b.maxZ - b.minZ) : 1;
+  const facadeAxisX = widthX >= widthZ;
 
   return (
-    <group name={`urban-building-${building.id ?? "unknown"}`}>
+    <group name={`urban-building-premium-${building.id ?? "unknown"}`}>
       <mesh geometry={geometry} castShadow receiveShadow>
         <meshStandardMaterial
           color={style.facade}
@@ -1161,31 +1207,50 @@ function UrbanBuildingMesh({ building, selected }: { building: any; selected?: b
         />
       </mesh>
 
-      {style.showRoof && (
-        <mesh geometry={roofGeometry} receiveShadow>
-          <meshStandardMaterial color={style.roof} roughness={0.92} metalness={0.02} />
+      {/* Sombra visual oscura en la base para dar profundidad */}
+      {distanceM < 260 && (
+        <mesh geometry={createFlatPolygonGeometry(footprint, 0.011)} receiveShadow>
+          <meshBasicMaterial color="#020617" transparent opacity={0.22} side={THREE.DoubleSide} />
         </mesh>
+      )}
+
+      {style.showRoof && (
+        <>
+          <mesh geometry={roofGeometry} receiveShadow>
+            <meshStandardMaterial color={style.roof} roughness={0.92} metalness={0.02} />
+          </mesh>
+          <lineSegments geometry={new THREE.EdgesGeometry(roofGeometry, 12)}>
+            <lineBasicMaterial color={style.roofDark} transparent opacity={0.55} />
+          </lineSegments>
+        </>
       )}
 
       {style.showEdges && (
         <lineSegments geometry={edgeGeometry}>
-          <lineBasicMaterial color={style.edge} transparent opacity={selected ? 0.62 : 0.28} />
+          <lineBasicMaterial color={style.edge} transparent opacity={selected ? 0.7 : 0.24} />
         </lineSegments>
       )}
 
-      {style.showWindows && Array.from({ length: Math.min(floors, 10) }).map((_, i) => (
-        <Line
-          key={`floor-${i}`}
-          points={[
-            [center.x - 0.42, 2.1 + i * 3, center.z],
-            [center.x + 0.42, 2.1 + i * 3, center.z],
-          ]}
-          color="#bae6fd"
-          lineWidth={0.55}
-          transparent
-          opacity={0.22}
-        />
-      ))}
+      {/* Líneas de planta/ventanas aproximadas: solo cerca para no saturar */}
+      {style.showWindows && b && Array.from({ length: Math.min(floors, 12) }).map((_, i) => {
+        const y = 1.7 + i * 3;
+        if (y >= visualHeight - 0.4) return null;
+        const half = facadeAxisX ? widthX * 0.28 : widthZ * 0.28;
+        return (
+          <Line
+            key={`floor-band-${i}`}
+            points={
+              facadeAxisX
+                ? [[center.x - half, y, center.z + widthZ * 0.51], [center.x + half, y, center.z + widthZ * 0.51]]
+                : [[center.x + widthX * 0.51, y, center.z - half], [center.x + widthX * 0.51, y, center.z + half]]
+            }
+            color={style.accent}
+            lineWidth={0.65}
+            transparent
+            opacity={0.28}
+          />
+        );
+      })}
 
       {selected && (
         <group position={[center.x, visualHeight + 1.2, center.z]}>
@@ -1249,12 +1314,12 @@ function CapaEscenarioUrbano({
     <group name="urban-rf-scenario-pro">
       <mesh position={[0, -0.09, 0]} receiveShadow>
         <boxGeometry args={[radius * 2.08, 0.06, radius * 2.08]} />
-        <meshStandardMaterial color="#0b1120" roughness={0.98} metalness={0.01} />
+        <meshStandardMaterial color="#0a1322" roughness={0.98} metalness={0.01} />
       </mesh>
 
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.046, 0]}>
         <circleGeometry args={[radius, 192]} />
-        <meshStandardMaterial color="#0f172a" roughness={0.96} metalness={0.01} transparent opacity={0.88} side={THREE.DoubleSide} />
+        <meshStandardMaterial color="#111827" roughness={0.97} metalness={0.01} transparent opacity={0.88} side={THREE.DoubleSide} />
       </mesh>
 
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.018, 0]}>
@@ -4742,6 +4807,19 @@ const url = `${BASE_URL}/raytrace`;
               }}
               style={{ background: "#06111f" }}
             >
+
+              {urbanScenario && scenarioMode === "urban" && (
+                <Sky
+                  distance={450000}
+                  sunPosition={[80, 35, 45]}
+                  inclination={0.49}
+                  azimuth={0.25}
+                  turbidity={4.2}
+                  rayleigh={1.15}
+                  mieCoefficient={0.006}
+                  mieDirectionalG={0.82}
+                />
+              )}
               {urbanScenario && scenarioMode === "urban" && (
                 <fog attach="fog" args={["#06111f", Math.max(120, urbanRadiusM * 0.8), Math.max(520, urbanRadiusM * 2.8)]} />
               )}
