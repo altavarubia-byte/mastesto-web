@@ -5530,7 +5530,7 @@ function CapaCobertura({
         mejorHab = h;
       }
     }
-    return mejorHab.altoBase ?? 0;
+    return (mejorHab as any).altoBase ?? 0;
   };
 
   const heatmapBase = (resultado.heatmap ?? [])
