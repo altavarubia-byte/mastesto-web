@@ -122,6 +122,7 @@ type PuntoHeatmap = {
   z: number;
   potenciaDbm: number;
   calidad: "excelente" | "buena" | "media" | "mala";
+  altoBase?: number;
   delaySpreadRmsNs?: number;
   retardoMedioNs?: number;
   dopplerHz?: number;
@@ -5511,29 +5512,13 @@ function CapaCobertura({
       z,
       potenciaDbm,
       calidad: p.calidad ?? "media",
+      altoBase: typeof p.altoBase === "number" ? p.altoBase : undefined,
       delaySpreadRmsNs: p.delaySpreadRmsNs,
       retardoMedioNs: p.retardoMedioNs,
       dopplerHz: p.dopplerHz,
       numComponentes: p.numComponentes,
       modelo: p.modelo,
     };
-  };
-
-  // Calcular altoBase para cada punto del heatmap según habitación más cercana
-  const altoBasePorPunto = (x: number, z: number): number => {
-    if (!habitaciones?.length) return 0;
-    let mejorHab = habitaciones[0];
-    let mejorDist = Infinity;
-    for (const h of habitaciones) {
-      const dx = x - h.x;
-      const dz = z - h.z;
-      const dist = dx * dx + dz * dz;
-      if (dist < mejorDist) {
-        mejorDist = dist;
-        mejorHab = h;
-      }
-    }
-    return mejorHab.altoBase ?? 0;
   };
 
   const heatmapBase = (resultado.heatmap ?? [])
@@ -5599,7 +5584,7 @@ function CapaCobertura({
         heatmapMesh.map((p, index) => (
           <mesh
             key={`heatmap-mesh-denso-${index}`}
-            position={[p.x, altoBasePorPunto(p.x, p.z) + 0.085, p.z]}
+            position={[p.x, (p.altoBase ?? 0) + 0.085, p.z]}
             rotation={[-Math.PI / 2, 0, 0]}
           >
             <circleGeometry args={[0.32, 32]} />
@@ -5615,7 +5600,7 @@ function CapaCobertura({
         heatmapActivo.map((p, i) => (
           <mesh
             key={`heatmap-${modoHeatmap}-${i}`}
-            position={[p.x, altoBasePorPunto(p.x, p.z) + 0.05, p.z]}
+            position={[p.x, (p.altoBase ?? 0) + 0.05, p.z]}
             rotation={[-Math.PI / 2, 0, 0]}
           >
             <circleGeometry
