@@ -47,7 +47,6 @@ type Habitacion = {
   ancho: number;
   largo: number;
   alto: number;
-  altoBase?: number;
   materialPared?: string;
   materialSuelo?: string;
   materialTecho?: string;
@@ -3385,6 +3384,7 @@ const url = `${BASE_URL}/raytrace`;
                 <CapaCobertura
                   resultado={resultadoCobertura}
                   objetos={objetos}
+                  habitaciones={habitaciones}
                   mostrarHeatmap={mostrarHeatmap}
                   mostrarRayos={mostrarRayos}
                   mostrarRouterOptimo={mostrarRouterOptimo}
@@ -4942,12 +4942,10 @@ function GrupoHabitacion({
   onClick: () => void;
 }) {
   const { x, z, ancho, largo, alto } = habitacion;
-  const base = habitacion.altoBase ?? 0;
   const grosor = 0.12;
 
   return (
     <group
-      position={[0, base, 0]}
       onClick={(e) => {
         e.stopPropagation();
         onClick();
@@ -5470,6 +5468,7 @@ function CapaArraysMIMO({
 function CapaCobertura({
   resultado,
   objetos,
+  habitaciones,
   mostrarHeatmap,
   mostrarRayos,
   mostrarRouterOptimo,
@@ -5479,6 +5478,7 @@ function CapaCobertura({
 }: {
   resultado: ResultadoCobertura;
   objetos: Objeto3D[];
+  habitaciones: Habitacion[];
   mostrarHeatmap: boolean;
   mostrarRayos: boolean;
   mostrarRouterOptimo: boolean;
@@ -5514,6 +5514,23 @@ function CapaCobertura({
       numComponentes: p.numComponentes,
       modelo: p.modelo,
     };
+  };
+
+  // Calcular altoBase para cada punto del heatmap según habitación más cercana
+  const altoBasePorPunto = (x: number, z: number): number => {
+    if (!habitaciones?.length) return 0;
+    let mejorHab = habitaciones[0];
+    let mejorDist = Infinity;
+    for (const h of habitaciones) {
+      const dx = x - h.x;
+      const dz = z - h.z;
+      const dist = dx * dx + dz * dz;
+      if (dist < mejorDist) {
+        mejorDist = dist;
+        mejorHab = h;
+      }
+    }
+    return mejorHab.altoBase ?? 0;
   };
 
   const heatmapBase = (resultado.heatmap ?? [])
@@ -5579,7 +5596,7 @@ function CapaCobertura({
         heatmapMesh.map((p, index) => (
           <mesh
             key={`heatmap-mesh-denso-${index}`}
-            position={[p.x, 0.085, p.z]}
+            position={[p.x, altoBasePorPunto(p.x, p.z) + 0.085, p.z]}
             rotation={[-Math.PI / 2, 0, 0]}
           >
             <circleGeometry args={[0.32, 32]} />
@@ -5595,7 +5612,7 @@ function CapaCobertura({
         heatmapActivo.map((p, i) => (
           <mesh
             key={`heatmap-${modoHeatmap}-${i}`}
-            position={[p.x, 0.05, p.z]}
+            position={[p.x, altoBasePorPunto(p.x, p.z) + 0.05, p.z]}
             rotation={[-Math.PI / 2, 0, 0]}
           >
             <circleGeometry
