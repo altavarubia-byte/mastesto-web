@@ -854,6 +854,98 @@ function boundsOverlap2D(a: any, b: any, margen = 0.8) {
   );
 }
 
+function limpiarFootprintEdificio(footprint: any[], maxPoints = 80) {
+  const pts = (footprint ?? [])
+    .map((p: any) => ({ x: nrf(p.x), z: nrf(p.z) }))
+    .filter((p: any) => Number.isFinite(p.x) && Number.isFinite(p.z));
+
+  if (pts.length < 3) return [];
+
+  // Elimina cierre duplicado y puntos repetidos/solapados.
+  const limpios: { x: number; z: number }[] = [];
+  for (const p of pts) {
+    const last = limpios[limpios.length - 1];
+    if (!last || Math.hypot(last.x - p.x, last.z - p.z) > 0.12) {
+      limpios.push(p);
+    }
+  }
+
+  if (limpios.length > 2) {
+    const a = limpios[0];
+    const b = limpios[limpios.length - 1];
+    if (Math.hypot(a.x - b.x, a.z - b.z) < 0.12) limpios.pop();
+  }
+
+  if (limpios.length <= maxPoints) return limpios;
+
+  // LOD simple: conserva puntos repartidos para no saturar WebGL con huellas complejas.
+  const step = Math.ceil(limpios.length / maxPoints);
+  return limpios.filter((_, i) => i % step === 0).slice(0, maxPoints);
+}
+
+function estiloVisualEdificio(building: any, selected: boolean, distanceM: number) {
+  const source = String(building?.source ?? "").toLowerCase();
+  const material = String(building?.material ?? "").toLowerCase();
+  const tags = building?.tags ?? {};
+  const use = String(tags.currentUse ?? tags.building ?? tags.amenity ?? "").toLowerCase();
+
+  const isCatastro = source.includes("catastro");
+  const isOsm = source.includes("osm");
+
+  let facade = isCatastro ? "#2f4a60" : "#3c4b5e";
+  let roof = isCatastro ? "#7f93a6" : "#64748b";
+  let edge = "#67e8f9";
+
+  if (material.includes("cristal") || material.includes("glass")) {
+    facade = "#1f6f8b";
+    roof = "#7dd3fc";
+    edge = "#a5f3fc";
+  } else if (material.includes("metal")) {
+    facade = "#475569";
+    roof = "#cbd5e1";
+    edge = "#bae6fd";
+  } else if (material.includes("ladrillo") || material.includes("brick")) {
+    facade = "#7c3f2f";
+    roof = "#b45309";
+    edge = "#fed7aa";
+  } else if (use.includes("industrial")) {
+    facade = "#475569";
+    roof = "#94a3b8";
+    edge = "#cbd5e1";
+  } else if (use.includes("residential") || use.includes("apartments")) {
+    facade = "#334155";
+    roof = "#94a3b8";
+  }
+
+  if (selected) {
+    facade = "#0891b2";
+    roof = "#67e8f9";
+    edge = "#22d3ee";
+  }
+
+  const showEdges = selected || distanceM < 190;
+  const showRoof = distanceM < 320;
+  const showWindows = distanceM < 85 && nrf(building?.heightM, 9) > 8;
+
+  return {
+    facade,
+    roof,
+    edge,
+    showEdges,
+    showRoof,
+    showWindows,
+    roughness: 0.88,
+    metalness: material.includes("metal") || material.includes("glass") ? 0.08 : 0.025,
+  };
+}
+
+function alturaVisualEdificio(building: any) {
+  const h = nrf(building?.heightM, 9);
+  // Capa visual: evita rascacielos absurdos por datos OSM/Catastro raros.
+  return clampNumber(h, 2.8, 52);
+}
+
+
 function evaluarColocacionEdificio(
   x: number,
   z: number,
@@ -988,24 +1080,20 @@ function createFlatPolygonGeometry(footprint: any[], y = 0) {
   return geo;
 }
 
-function createExtrudedBuildingGeometry(footprint: any[], heightM: number) {
-  const pts = (footprint ?? [])
-    .map((p: any) => ({ x: nrf(p.x), z: nrf(p.z) }))
-    .filter((p: any) => Number.isFinite(p.x) && Number.isFinite(p.z));
+function createExtrudedBuildingGeometry(footprint: any[], heightM: number, maxPoints = 80) {
+  const pts = limpiarFootprintEdificio(footprint, maxPoints);
 
   const geo = new THREE.BufferGeometry();
   if (pts.length < 3) return geo;
 
-  const h = clampNumber(nrf(heightM, 9), 2.5, 120);
+  const h = alturaVisualEdificio({ heightM });
   const c = polygonCentroidLocal(pts);
 
   const positions: number[] = [];
 
-  // base polygon vertices
   pts.forEach((p) => positions.push(p.x, 0, p.z));
-  // top polygon vertices
   pts.forEach((p) => positions.push(p.x, h, p.z));
-  // centroid bottom + top
+
   const bottomCenterIndex = pts.length * 2;
   positions.push(c.x, 0, c.z);
   const topCenterIndex = pts.length * 2 + 1;
@@ -1017,68 +1105,93 @@ function createExtrudedBuildingGeometry(footprint: any[], heightM: number) {
   for (let i = 0; i < n; i++) {
     const j = (i + 1) % n;
 
-    // sides
     indices.push(i, j, n + j);
     indices.push(i, n + j, n + i);
 
-    // roof fan
     indices.push(topCenterIndex, n + i, n + j);
-
-    // underside
     indices.push(bottomCenterIndex, j, i);
   }
 
   geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
   geo.setIndex(indices);
   geo.computeVertexNormals();
+  geo.computeBoundingSphere();
   return geo;
 }
 
 function UrbanBuildingMesh({ building, selected }: { building: any; selected?: boolean }) {
-  const footprint = building.footprint ?? [];
-  const height = clampNumber(nrf(building.heightM, 9), 2.5, 120);
-  const source = String(building.source ?? "");
-  const isCatastro = source.includes("catastro");
+  const rawFootprint = building.footprint ?? [];
+  if (!rawFootprint || rawFootprint.length < 3) return null;
+
+  const center = polygonCentroidLocal(rawFootprint);
+  const distanceM = Math.sqrt(center.x * center.x + center.z * center.z);
+  const area = nrf(building.areaM2, 0);
+  const visualHeight = alturaVisualEdificio(building);
+
+  // LOD: más detalle cerca o en edificios grandes; menos detalle lejos.
+  const maxPoints = selected || distanceM < 100 || area > 1200 ? 120 : distanceM < 260 ? 64 : 28;
+  const footprint = useMemo(() => limpiarFootprintEdificio(rawFootprint, maxPoints), [rawFootprint, maxPoints]);
 
   const geometry = useMemo(
-    () => createExtrudedBuildingGeometry(footprint, height),
-    [footprint, height],
+    () => createExtrudedBuildingGeometry(footprint, visualHeight, maxPoints),
+    [footprint, visualHeight, maxPoints],
   );
+
+  const roofGeometry = useMemo(
+    () => createFlatPolygonGeometry(footprint, visualHeight + 0.035),
+    [footprint, visualHeight],
+  );
+
+  const edgeGeometry = useMemo(() => new THREE.EdgesGeometry(geometry, 22), [geometry]);
+
+  const style = estiloVisualEdificio(building, Boolean(selected), distanceM);
 
   if (!footprint || footprint.length < 3) return null;
 
-  const color = selected ? "#38bdf8" : isCatastro ? "#d8e2ea" : "#9fb2c4";
-  const roofColor = selected ? "#7dd3fc" : "#f8fafc";
-  const edgeColor = selected ? "#22d3ee" : "#7dd3fc";
-
-  const center = polygonCentroidLocal(footprint);
-  const labelY = height + 0.8;
+  const floors = Math.max(1, Math.floor(visualHeight / 3));
 
   return (
-    <group>
+    <group name={`urban-building-${building.id ?? "unknown"}`}>
       <mesh geometry={geometry} castShadow receiveShadow>
         <meshStandardMaterial
-          color={color}
-          roughness={0.58}
-          metalness={0.04}
+          color={style.facade}
+          roughness={style.roughness}
+          metalness={style.metalness}
           transparent={false}
-          opacity={1}
         />
       </mesh>
 
-      <lineSegments geometry={new THREE.EdgesGeometry(geometry, 30)}>
-        <lineBasicMaterial color={edgeColor} transparent opacity={0.3} />
-      </lineSegments>
+      {style.showRoof && (
+        <mesh geometry={roofGeometry} receiveShadow>
+          <meshStandardMaterial color={style.roof} roughness={0.92} metalness={0.02} />
+        </mesh>
+      )}
 
-      <mesh geometry={createFlatPolygonGeometry(footprint, height + 0.025)} receiveShadow>
-        <meshStandardMaterial color={roofColor} roughness={0.82} metalness={0.02} />
-      </mesh>
+      {style.showEdges && (
+        <lineSegments geometry={edgeGeometry}>
+          <lineBasicMaterial color={style.edge} transparent opacity={selected ? 0.62 : 0.28} />
+        </lineSegments>
+      )}
 
-      {height > 9 && (
-        <group position={[center.x, labelY, center.z]}>
+      {style.showWindows && Array.from({ length: Math.min(floors, 10) }).map((_, i) => (
+        <Line
+          key={`floor-${i}`}
+          points={[
+            [center.x - 0.42, 2.1 + i * 3, center.z],
+            [center.x + 0.42, 2.1 + i * 3, center.z],
+          ]}
+          color="#bae6fd"
+          lineWidth={0.55}
+          transparent
+          opacity={0.22}
+        />
+      ))}
+
+      {selected && (
+        <group position={[center.x, visualHeight + 1.2, center.z]}>
           <mesh rotation={[-Math.PI / 2, 0, 0]}>
-            <ringGeometry args={[0.7, 0.95, 32]} />
-            <meshBasicMaterial color="#22d3ee" transparent opacity={0.22} side={THREE.DoubleSide} />
+            <ringGeometry args={[0.85, 1.15, 48]} />
+            <meshBasicMaterial color="#22d3ee" transparent opacity={0.42} side={THREE.DoubleSide} />
           </mesh>
         </group>
       )}
@@ -1087,13 +1200,14 @@ function UrbanBuildingMesh({ building, selected }: { building: any; selected?: b
 }
 
 function UrbanGreenArea({ area }: { area: any }) {
-  const footprint = area.footprint ?? [];
-  const geometry = useMemo(() => createFlatPolygonGeometry(footprint, 0.022), [footprint]);
+  const rawFootprint = area.footprint ?? [];
+  const footprint = useMemo(() => limpiarFootprintEdificio(rawFootprint, 90), [rawFootprint]);
+  const geometry = useMemo(() => createFlatPolygonGeometry(footprint, 0.024), [footprint]);
   if (!footprint || footprint.length < 3) return null;
 
   return (
     <mesh geometry={geometry} receiveShadow>
-      <meshStandardMaterial color="#166534" roughness={0.95} metalness={0} transparent opacity={0.72} side={THREE.DoubleSide} />
+      <meshStandardMaterial color="#14532d" roughness={0.98} metalness={0} transparent opacity={0.82} side={THREE.DoubleSide} />
     </mesh>
   );
 }
@@ -1105,28 +1219,47 @@ function CapaEscenarioUrbano({
   scenario: UrbanScenario | null;
   visible: boolean;
 }) {
-  const buildings = useMemo(() => (scenario?.urban?.buildings ?? []).slice(0, 260), [scenario]);
-  const roads = useMemo(() => (scenario?.urban?.roads ?? []).slice(0, 180), [scenario]);
-  const greenAreas = useMemo(() => (scenario?.urban?.greenAreas ?? []).slice(0, 80), [scenario]);
   const radius = Number(scenario?.site?.radiusM ?? 60);
+
+  const buildings = useMemo(() => {
+    const all = (scenario?.urban?.buildings ?? [])
+      .filter((b: any) => (b.footprint ?? []).length >= 3)
+      .filter((b: any) => nrf(b.areaM2, 20) >= 6);
+
+    // Orden LOD: edificios grandes/cercanos primero para que se vea real sin saturar.
+    return all
+      .sort((a: any, b: any) => {
+        const ca = polygonCentroidLocal(a.footprint ?? []);
+        const cb = polygonCentroidLocal(b.footprint ?? []);
+        const da = Math.sqrt(ca.x * ca.x + ca.z * ca.z);
+        const db = Math.sqrt(cb.x * cb.x + cb.z * cb.z);
+        const aa = nrf(a.areaM2, 0);
+        const ab = nrf(b.areaM2, 0);
+        return da - db || ab - aa;
+      })
+      .slice(0, 520);
+  }, [scenario]);
+
+  const roads = useMemo(() => (scenario?.urban?.roads ?? []).slice(0, 260), [scenario]);
+  const greenAreas = useMemo(() => (scenario?.urban?.greenAreas ?? []).slice(0, 120), [scenario]);
 
   if (!visible || !scenario) return null;
 
   return (
-    <group name="urban-rf-scenario">
-      <mesh position={[0, -0.075, 0]} receiveShadow>
-        <boxGeometry args={[radius * 2.04, 0.055, radius * 2.04]} />
-        <meshStandardMaterial color="#111827" roughness={0.96} metalness={0.01} />
+    <group name="urban-rf-scenario-pro">
+      <mesh position={[0, -0.09, 0]} receiveShadow>
+        <boxGeometry args={[radius * 2.08, 0.06, radius * 2.08]} />
+        <meshStandardMaterial color="#0b1120" roughness={0.98} metalness={0.01} />
       </mesh>
 
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.035, 0]}>
-        <circleGeometry args={[radius, 128]} />
-        <meshBasicMaterial color="#0f172a" transparent opacity={0.55} side={THREE.DoubleSide} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.046, 0]}>
+        <circleGeometry args={[radius, 192]} />
+        <meshStandardMaterial color="#0f172a" roughness={0.96} metalness={0.01} transparent opacity={0.88} side={THREE.DoubleSide} />
       </mesh>
 
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]}>
-        <ringGeometry args={[Math.max(1, radius - 0.7), radius, 128]} />
-        <meshBasicMaterial color="#22d3ee" transparent opacity={0.16} side={THREE.DoubleSide} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.018, 0]}>
+        <ringGeometry args={[Math.max(1, radius - 0.7), radius, 192]} />
+        <meshBasicMaterial color="#22d3ee" transparent opacity={0.18} side={THREE.DoubleSide} />
       </mesh>
 
       {greenAreas.map((area: any) => (
@@ -1135,19 +1268,22 @@ function CapaEscenarioUrbano({
 
       {roads.map((road: any) => {
         const points = (road.points ?? [])
-          .slice(0, 120)
-          .map((p: any) => [nrf(p.x), 0.07, nrf(p.z)] as [number, number, number]);
+          .slice(0, 180)
+          .map((p: any) => [nrf(p.x), 0.095, nrf(p.z)] as [number, number, number]);
         if (points.length < 2) return null;
+
         const roadType = String(road.roadType ?? "");
-        const isMain = ["primary", "secondary", "tertiary", "trunk"].some((t) => roadType.includes(t));
+        const isMain = ["motorway", "trunk", "primary", "secondary", "tertiary"].some((t) => roadType.includes(t));
+        const isService = ["service", "footway", "path", "pedestrian"].some((t) => roadType.includes(t));
+
         return (
           <Line
             key={road.id}
             points={points}
-            color={isMain ? "#cbd5e1" : "#64748b"}
-            lineWidth={isMain ? 3.5 : 2.1}
+            color={isMain ? "#e2e8f0" : isService ? "#475569" : "#94a3b8"}
+            lineWidth={isMain ? 4.0 : isService ? 1.25 : 2.35}
             transparent
-            opacity={isMain ? 0.88 : 0.68}
+            opacity={isMain ? 0.95 : isService ? 0.44 : 0.74}
           />
         );
       })}
@@ -4582,37 +4718,70 @@ const url = `${BASE_URL}/raytrace`;
             <Canvas
               shadows
               dpr={[1, 2]}
+              camera={{
+                position:
+                  urbanScenario && scenarioMode === "urban"
+                    ? [Math.max(80, urbanRadiusM * 0.42), Math.max(85, urbanRadiusM * 0.34), Math.max(95, urbanRadiusM * 0.46)]
+                    : [10, 8, 10],
+                fov: urbanScenario && scenarioMode === "urban" ? 39 : 48,
+                near: 0.1,
+                far: urbanScenario && scenarioMode === "urban" ? 5000 : 1000,
+              }}
               gl={{
                 antialias: true,
                 alpha: false,
                 powerPreference: "high-performance",
                 logarithmicDepthBuffer: true,
-                toneMapping: THREE.ACESFilmicToneMapping,
-                outputColorSpace: THREE.SRGBColorSpace,
               }}
-              camera={{ position: urbanScenario && scenarioMode === "urban" ? [Math.max(35, urbanRadiusM * 0.22), Math.max(28, urbanRadiusM * 0.18), Math.max(35, urbanRadiusM * 0.22)] : [10, 8, 10], fov: 48 }}
+              onCreated={({ gl }) => {
+                gl.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+                gl.shadowMap.enabled = true;
+                gl.shadowMap.type = THREE.PCFSoftShadowMap;
+                gl.toneMapping = THREE.ACESFilmicToneMapping;
+                gl.toneMappingExposure = 1.05;
+              }}
               style={{ background: "#06111f" }}
             >
-              <ambientLight intensity={0.45} />
+              {urbanScenario && scenarioMode === "urban" && (
+                <fog attach="fog" args={["#06111f", Math.max(120, urbanRadiusM * 0.8), Math.max(520, urbanRadiusM * 2.8)]} />
+              )}
 
-              <directionalLight
-                position={[10, 15, 8]}
-                intensity={2}
-                castShadow
+              <ambientLight intensity={urbanScenario && scenarioMode === "urban" ? 0.58 : 0.45} />
+
+              <hemisphereLight
+                intensity={urbanScenario && scenarioMode === "urban" ? 0.52 : 0.25}
+                groundColor="#020617"
+                color="#e0f2fe"
               />
 
-              <directionalLight position={[-8, 8, -6]} intensity={1} />
+              <directionalLight
+                position={urbanScenario && scenarioMode === "urban" ? [120, 180, 85] : [10, 15, 8]}
+                intensity={urbanScenario && scenarioMode === "urban" ? 1.65 : 2}
+                castShadow
+                shadow-mapSize-width={2048}
+                shadow-mapSize-height={2048}
+                shadow-camera-near={1}
+                shadow-camera-far={600}
+                shadow-camera-left={-260}
+                shadow-camera-right={260}
+                shadow-camera-top={260}
+                shadow-camera-bottom={-260}
+              />
 
-              <pointLight position={[0, 3, 0]} intensity={0.8} />
+              <directionalLight position={[-80, 65, -90]} intensity={urbanScenario && scenarioMode === "urban" ? 0.42 : 1} />
+
+              <pointLight position={[0, 3, 0]} intensity={urbanScenario && scenarioMode === "urban" ? 0.25 : 0.8} />
 
               <Grid
-                args={[urbanScenario && scenarioMode === "urban" ? Math.max(60, urbanRadiusM * 2) : 60, urbanScenario && scenarioMode === "urban" ? Math.max(60, urbanRadiusM * 2) : 60]}
-                cellColor="#123247"
-                sectionColor="#0891b2"
-                cellSize={1}
-                cellThickness={1}
-                sectionSize={5}
-                sectionThickness={2}
+                args={[urbanScenario && scenarioMode === "urban" ? Math.max(80, urbanRadiusM * 2) : 60, urbanScenario && scenarioMode === "urban" ? Math.max(80, urbanRadiusM * 2) : 60]}
+                cellColor={urbanScenario && scenarioMode === "urban" ? "#1e293b" : "#123247"}
+                sectionColor={urbanScenario && scenarioMode === "urban" ? "#0e7490" : "#0891b2"}
+                cellSize={urbanScenario && scenarioMode === "urban" ? 10 : 1}
+                cellThickness={urbanScenario && scenarioMode === "urban" ? 0.32 : 1}
+                sectionSize={urbanScenario && scenarioMode === "urban" ? 50 : 5}
+                sectionThickness={urbanScenario && scenarioMode === "urban" ? 0.9 : 2}
+                fadeDistance={urbanScenario && scenarioMode === "urban" ? Math.max(180, urbanRadiusM * 1.7) : 100}
+                fadeStrength={1}
                 infiniteGrid={false}
               />
 
@@ -4711,14 +4880,14 @@ const url = `${BASE_URL}/raytrace`;
                 enableZoom={true}
                 enableRotate={true}
                 enableDamping
-                dampingFactor={0.08}
-                rotateSpeed={0.8}
-                panSpeed={1}
-                zoomSpeed={1}
-                target={[offsetEdificioPrincipal?.x ?? 0, 1, offsetEdificioPrincipal?.z ?? 0]}
-                maxPolarAngle={Math.PI / 2}
-                minDistance={2}
-                maxDistance={urbanScenario && scenarioMode === "urban" ? Math.max(80, urbanRadiusM * 1.8) : 40}
+                dampingFactor={0.085}
+                rotateSpeed={urbanScenario && scenarioMode === "urban" ? 0.62 : 0.8}
+                panSpeed={urbanScenario && scenarioMode === "urban" ? 1.25 : 1}
+                zoomSpeed={0.9}
+                target={[offsetEdificioPrincipal?.x ?? 0, urbanScenario && scenarioMode === "urban" ? 4 : 1, offsetEdificioPrincipal?.z ?? 0]}
+                maxPolarAngle={urbanScenario && scenarioMode === "urban" ? Math.PI / 2.08 : Math.PI / 2}
+                minDistance={urbanScenario && scenarioMode === "urban" ? 18 : 2}
+                maxDistance={urbanScenario && scenarioMode === "urban" ? Math.max(260, urbanRadiusM * 2.4) : 40}
               />
             </Canvas>
             {imagenRender && (
@@ -4741,7 +4910,7 @@ const url = `${BASE_URL}/raytrace`;
                   🧊 Modelo 3D Blender
                 </p>
 
-                <Canvas dpr={[1, 2]} gl={{ antialias: true }} camera={{ position: [8, 6, 8], fov: 45 }}>
+                <Canvas camera={{ position: [8, 6, 8], fov: 45 }}>
                   <ambientLight intensity={0.8} />
                   <directionalLight position={[5, 8, 5]} intensity={2} />
 
@@ -7877,5 +8046,3 @@ function ConteoHabitaciones({ numPlantas, onConfirmar }: { numPlantas: number; o
     </div>
   );
 }
-
-
