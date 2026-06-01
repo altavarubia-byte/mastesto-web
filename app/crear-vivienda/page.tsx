@@ -2434,10 +2434,22 @@ const url = `${BASE_URL}/raytrace`;
       opciones: ["Vivienda", "Oficina", "Almacén", "Hospital", "Hotel", "Nave industrial"],
     },
     {
-      pregunta: "¿Cuántas habitaciones o zonas tiene el espacio?",
+      pregunta: "¿Cuántas plantas tiene el edificio?",
+      key: "numPlantas",
+      tipo: "slider",
+      min: 1, max: 10, step: 1, value: 1, unit: "plantas",
+    },
+    {
+      pregunta: "¿Cuántas habitaciones o zonas tiene cada planta?",
       key: "numHabitaciones",
       tipo: "slider",
       min: 1, max: 20, step: 1, value: 4, unit: "zonas",
+    },
+    {
+      pregunta: "¿Tiene pasillos o zonas de circulación?",
+      key: "tienePasillos",
+      tipo: "opciones",
+      opciones: ["Sí, añade pasillos", "No, solo habitaciones"],
     },
     {
       pregunta: "Ancho total del edificio",
@@ -2452,7 +2464,7 @@ const url = `${BASE_URL}/raytrace`;
       min: 3, max: 80, step: 0.5, value: 12, unit: "m",
     },
     {
-      pregunta: "Altura de techo",
+      pregunta: "Altura de techo por planta",
       key: "altoTecho",
       tipo: "slider",
       min: 2.2, max: 8, step: 0.1, value: 2.7, unit: "m",
@@ -2506,10 +2518,10 @@ const url = `${BASE_URL}/raytrace`;
       min: 700, max: 60000, step: 100, value: 5000, unit: "MHz",
     },
     {
-      pregunta: "¿Quieres añadir objetos (muebles, personas, ventanas)?",
+      pregunta: "¿Qué mobiliario quieres añadir?",
       key: "addObjetos",
       tipo: "opciones",
-      opciones: ["Sí, añade muebles básicos", "Solo router y receptor", "Sin objetos"],
+      opciones: ["Muebles completos según el espacio", "Solo router y receptor", "Sin objetos"],
     },
   ];
 
@@ -2603,7 +2615,10 @@ const url = `${BASE_URL}/raytrace`;
         const res = await fetch('/api/construir-escena', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ datos }),
+        body: JSON.stringify({ datos: {
+          ...datos,
+          objetosDisponibles: 'sofa, mesa, silla, tv, cama, armario, ventana, persona',
+        } }),
       });
 
       const data = await res.json();
