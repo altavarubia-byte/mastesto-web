@@ -1046,26 +1046,47 @@ function buscarHuecoLibreEdificio(
   // Paso de búsqueda: suficiente para encontrar huecos sin bloquear el navegador.
   const paso = clampNumber(mayor * 0.55, 4, 18);
 
+  // Centroide de la nube de edificios. Colocamos el edificio principal (y por
+  // tanto el router) CERCA de los demas edificios, no en el origen (0,0) que
+  // suele ser zona vacia. Asi TX/RX quedan entre edificios y Sionna encuentra
+  // rebotes. El usuario puede mover el edificio despues si quiere.
+  let cx = 0;
+  let cz = 0;
+  if (buildings.length > 0) {
+    let sx = 0;
+    let sz = 0;
+    let cuenta = 0;
+    for (const b of buildings) {
+      const bb = buildingBounds2D(b);
+      if (!bb) continue;
+      sx += (bb.minX + bb.maxX) / 2;
+      sz += (bb.minZ + bb.maxZ) / 2;
+      cuenta += 1;
+    }
+    if (cuenta > 0) {
+      cx = sx / cuenta;
+      cz = sz / cuenta;
+    }
+  }
+
   let mejor = {
-    x: 0,
-    z: 0,
+    x: cx,
+    z: cz,
     libre: false,
     colisiones: Number.POSITIVE_INFINITY,
     score: Number.POSITIVE_INFINITY,
   };
 
   const evaluar = (x: number, z: number) => {
-    if (Math.abs(x) > limite || Math.abs(z) > limite) return;
-
     const b0 = rectBounds2D(x, z, ancho, largo);
     const colisiones = buildings.filter((b: any) =>
       boundsOverlap2D(b0, buildingBounds2D(b), margenSeguridad),
     ).length;
 
-    const distanciaCentro = Math.sqrt(x * x + z * z);
-
-    // Preferimos huecos libres cerca del centro, pero nunca dentro de edificios.
-    const score = colisiones * 1_000_000 + distanciaCentro;
+    // Distancia al centroide de la nube (no al origen): premiamos estar cerca
+    // de los edificios pero sin solaparse con ninguno.
+    const distanciaNube = Math.sqrt((x - cx) ** 2 + (z - cz) ** 2);
+    const score = colisiones * 1_000_000 + distanciaNube;
 
     if (score < mejor.score) {
       mejor = {
@@ -1078,28 +1099,16 @@ function buscarHuecoLibreEdificio(
     }
   };
 
-  // 1) centro
-  evaluar(0, 0);
+  evaluar(cx, cz);
 
-  // 2) búsqueda en espiral/cuadrícula alrededor del centro
-  for (let r = paso; r <= limite; r += paso) {
+  // Espiral alrededor del centroide de los edificios buscando hueco libre.
+  for (let r = paso; r <= limite * 2; r += paso) {
     const samples = Math.max(16, Math.ceil((2 * Math.PI * r) / paso));
     for (let i = 0; i < samples; i++) {
       const a = (i / samples) * Math.PI * 2;
-      evaluar(Math.cos(a) * r, Math.sin(a) * r);
+      evaluar(cx + Math.cos(a) * r, cz + Math.sin(a) * r);
     }
-
-    // Si ya encontró sitio libre cerca, no necesita recorrer todo el radio.
     if (mejor.libre && r > mayor * 1.5) break;
-  }
-
-  // 3) refuerzo por cuadrícula para zonas urbanas con geometrías raras
-  if (!mejor.libre) {
-    for (let x = -limite; x <= limite; x += paso) {
-      for (let z = -limite; z <= limite; z += paso) {
-        evaluar(x, z);
-      }
-    }
   }
 
   return {
@@ -1109,8 +1118,8 @@ function buscarHuecoLibreEdificio(
     colisiones: Number.isFinite(mejor.colisiones) ? mejor.colisiones : 0,
     margenSeguridad,
     metodo: mejor.libre
-      ? "auto_free_spot_spiral_search"
-      : "auto_least_collision_spot_no_free_area_found",
+      ? "near_building_cluster_free_spot"
+      : "near_building_cluster_least_collision",
   };
 }
 
