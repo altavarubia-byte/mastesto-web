@@ -1641,9 +1641,9 @@ function RxExteriorDraggable({
           [0, pose.y + 0.9, 0],
         ]}
         color={color}
-        lineWidth={1.5}
+        lineWidth={2.5}
         transparent
-        opacity={0.75}
+        opacity={0.9}
       />
 
       <group position={[0, pose.y + 1.15, 0]}>
@@ -4732,6 +4732,23 @@ const url = `${BASE_URL}/raytrace`;
                     Fijar RX
                   </button>
                 </div>
+
+                <Control
+                  label="Altura RX exterior"
+                  value={rxExteriorPose.y}
+                  min={0.5}
+                  max={40}
+                  step={0.1}
+                  onChange={(v) => {
+                    setRxExteriorPose((prev) => crearPoseRxExterior(prev.x, prev.z, v, false));
+                    setUrbanSionnaResult(null);
+                    setResultadoCobertura(null);
+                  }}
+                />
+
+                <p className="text-[9px] uppercase leading-relaxed text-slate-500">
+                  El RX se arrastra en planta X/Z. La altura se ajusta aquí: 1.5 m para móvil/peatón, 10-30 m para azotea o antena exterior.
+                </p>
 
                 <button
                   onClick={calcularSionnaOutdoorExperimental}
