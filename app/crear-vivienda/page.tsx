@@ -3148,6 +3148,44 @@ export default function CrearViviendaPage() {
         },
       });
       setEdificioPrincipalPose(poseInicial);
+
+      // Reubicar TX (router) y RX (receptor) dentro del grupo de edificios.
+      // El backend sugiere posiciones en scenario.suggestedPlacement; si no,
+      // usamos la pose del edificio principal para el router. Esto evita que
+      // el router se quede en una zona vacía donde no hay rebotes.
+      const sug = (result.scenario as any)?.suggestedPlacement ?? null;
+      const rxSug = sug?.rx ?? null;
+      setObjetos((prev) => {
+        let nuevos = prev.map((o) => {
+          if (o.tipo === "router") {
+            // Router en el edificio principal (centro de los edificios), elevado.
+            return { ...o, x: Number(poseInicial.x.toFixed(2)), z: Number(poseInicial.z.toFixed(2)), y: 6 };
+          }
+          if (esReceptor(o.tipo) && rxSug) {
+            return { ...o, x: Number(rxSug.x), z: Number(rxSug.z), y: Number(rxSug.y ?? 1.5) };
+          }
+          return o;
+        });
+        // Si no hay ningún receptor y el backend sugiere RX, lo creamos.
+        if (rxSug && !nuevos.some((o) => esReceptor(o.tipo))) {
+          nuevos = [
+            ...nuevos,
+            {
+              id: `receptor-urban-${Date.now()}`,
+              tipo: "receptor",
+              x: Number(rxSug.x),
+              y: Number(rxSug.y ?? 1.5),
+              z: Number(rxSug.z),
+              sx: 0.25, sy: 0.25, sz: 0.25,
+              color: "#22c55e",
+              material: "rx",
+            } as Objeto3D,
+          ];
+        }
+        return nuevos;
+      });
+      setResultadoCobertura(null);
+
       setScenarioMode("urban");
       setColocandoEdificioPrincipal(true);
       setMostrarEscenarioUrbano(true);
