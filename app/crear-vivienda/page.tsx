@@ -1215,8 +1215,8 @@ function UrbanBuildingMesh({ building, selected }: { building: any; selected?: b
 
   if (!footprint || footprint.length < 3) return null;
 
-  const opacity = selected ? 0.78 : distanceM < 120 ? 0.58 : distanceM < 260 ? 0.44 : 0.32;
-  const roofOpacity = selected ? 0.86 : 0.64;
+  const opacity = 1;
+  const roofOpacity = 1;
   const floors = Math.max(1, Math.floor(visualHeight / 3));
   const b = boundsFromPoints(footprint);
   const widthX = b ? Math.max(0.4, b.maxX - b.minX) : 1;
@@ -1228,11 +1228,12 @@ function UrbanBuildingMesh({ building, selected }: { building: any; selected?: b
       <mesh geometry={geometry} castShadow receiveShadow>
         <meshStandardMaterial
           color={style.facade}
-          roughness={0.93}
-          metalness={0.015}
-          transparent
-          opacity={opacity}
-          depthWrite={opacity > 0.55}
+          roughness={0.82}
+          metalness={0.05}
+          transparent={false}
+          opacity={1}
+          side={THREE.DoubleSide}
+          flatShading
         />
       </mesh>
 
@@ -1246,18 +1247,18 @@ function UrbanBuildingMesh({ building, selected }: { building: any; selected?: b
         <mesh geometry={roofGeometry} receiveShadow>
           <meshStandardMaterial
             color={style.roof}
-            roughness={0.96}
-            metalness={0.01}
-            transparent
-            opacity={roofOpacity}
-            depthWrite={false}
+            roughness={0.9}
+            metalness={0.02}
+            transparent={false}
+            opacity={1}
+            side={THREE.DoubleSide}
           />
         </mesh>
       )}
 
       {style.showEdges && (
         <lineSegments geometry={edgeGeometry}>
-          <lineBasicMaterial color={selected ? "#22d3ee" : "#dbeafe"} transparent opacity={selected ? 0.7 : 0.22} />
+          <lineBasicMaterial color={selected ? "#22d3ee" : "#cbd5e1"} transparent opacity={selected ? 0.85 : 0.45} />
         </lineSegments>
       )}
 
@@ -1273,10 +1274,10 @@ function UrbanBuildingMesh({ building, selected }: { building: any; selected?: b
                 ? [[center.x - half, y, center.z + widthZ * 0.51], [center.x + half, y, center.z + widthZ * 0.51]]
                 : [[center.x + widthX * 0.51, y, center.z - half], [center.x + widthX * 0.51, y, center.z + half]]
             }
-            color="#dff8ff"
-            lineWidth={0.5}
+            color="#bfe9ff"
+            lineWidth={0.8}
             transparent
-            opacity={0.2}
+            opacity={0.4}
           />
         );
       })}
@@ -5438,7 +5439,7 @@ const url = `${BASE_URL}/raytrace`;
                 />
               )}
               {urbanScenario && scenarioMode === "urban" && (
-                <fog attach="fog" args={["#06111f", Math.max(120, urbanRadiusM * 0.8), Math.max(520, urbanRadiusM * 2.8)]} />
+                <fog attach="fog" args={["#06111f", Math.max(220, urbanRadiusM * 1.4), Math.max(900, urbanRadiusM * 4.5)]} />
               )}
 
               <ambientLight intensity={urbanScenario && scenarioMode === "urban" ? 0.58 : 0.45} />
