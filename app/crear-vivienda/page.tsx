@@ -1989,6 +1989,8 @@ export default function CrearViviendaPage() {
   const [resultadoCobertura, setResultadoCobertura] =
     useState<ResultadoCobertura | null>(null);
 
+  const [resultadoCoberturaOutdoor, setResultadoCoberturaOutdoor] = useState(false);
+
   // ---------------------------------------------------------
   // ESTADO: ESCENARIO URBANO REAL CATastro/OSM/TERRENO
   // ---------------------------------------------------------
@@ -2974,9 +2976,12 @@ export default function CrearViviendaPage() {
 
       const raytrace = result?.raytrace;
       if (raytrace?.ok) {
-        setResultadoCobertura(raytrace);
-        setCir(raytrace.cir ?? []);
-        setCirResumen(raytrace.cirResumen ?? null);
+        const resultadoVisual = prepararResultadoVisual(raytrace);
+        setResultadoCoberturaOutdoor(true);
+        setResultadoCobertura(resultadoVisual);
+        const cirNormalizado = normalizarCIR(resultadoVisual);
+        setCir(cirNormalizado);
+        setCirResumen(resultadoVisual.cirResumen ?? extraerResumenCIR(resultadoVisual));
       }
 
       setUrbanSionnaStatus("done");
@@ -3171,7 +3176,9 @@ export default function CrearViviendaPage() {
     setUrbanSionnaMessage("");
     setUrbanSionnaError("");
     setUrbanSionnaResult(null);
+    setResultadoCoberturaOutdoor(false);
   };
+
 
   const actualizarDopplerDesdeBackend = (taps: MuestraCIR[]) => {
     const dopplers = taps
@@ -3546,6 +3553,7 @@ const url = `${BASE_URL}/raytrace`;
         return;
       }
       const resultadoVisual = prepararResultadoVisual(resultado);
+      setResultadoCoberturaOutdoor(false);
       setResultadoCobertura(resultadoVisual);
 
       const cirNormalizado = normalizarCIR(resultadoVisual);
@@ -3622,6 +3630,7 @@ const url = `${BASE_URL}/raytrace`;
       }
 
       const resultadoVisual = prepararResultadoVisual(resultado);
+      setResultadoCoberturaOutdoor(false);
       setResultadoCobertura(resultadoVisual);
 
       const cirNormalizado = normalizarCIR(resultadoVisual);
@@ -4788,7 +4797,8 @@ const url = `${BASE_URL}/raytrace`;
                     </p>
                     <div className="mt-2 grid grid-cols-2 gap-2 text-[10px] text-slate-300">
                       <p>Sionna: <span className="font-black text-white">{urbanSionnaResult.raytrace?.modelo?.sionnaUsado ? "sí" : "no"}</span></p>
-                      <p>Rayos: <span className="font-black text-white">{urbanSionnaResult.raytrace?.modelo?.rayosTotales ?? urbanSionnaResult.raytrace?.rayos?.length ?? "-"}</span></p>
+                      <p>Rayos modelo: <span className="font-black text-white">{urbanSionnaResult.raytrace?.modelo?.rayosTotales ?? "-"}</span></p>
+                      <p>Rayos pintables: <span className="font-black text-white">{urbanSionnaResult.raytrace?.rayos?.length ?? resultadoCobertura?.rayos?.length ?? "-"}</span></p>
                       <p>Directos: <span className="font-black text-white">{urbanSionnaResult.raytrace?.modelo?.rayosDirectos ?? "-"}</span></p>
                       <p>Reflejados: <span className="font-black text-white">{urbanSionnaResult.raytrace?.modelo?.rayosReflejados ?? "-"}</span></p>
                       <p>RX detectados: <span className="font-black text-white">{urbanSionnaResult.raytrace?.modelo?.receptoresDetectados ?? "-"}</span></p>
@@ -5376,6 +5386,11 @@ const url = `${BASE_URL}/raytrace`;
               <span className="px-3 py-2 rounded-lg bg-black/75 border border-slate-800 text-slate-300">
                 Heatmap: {modoHeatmap}
               </span>
+              {resultadoCoberturaOutdoor && (
+                <span className="px-3 py-2 rounded-lg bg-black/75 border border-fuchsia-900/60 text-fuchsia-300">
+                  Rayos outdoor globales
+                </span>
+              )}
               {urbanScenario && (
                 <span className="px-3 py-2 rounded-lg bg-black/75 border border-orange-900/60 text-orange-300">
                   Urbano: {urbanScenario.urban?.buildings?.length ?? 0} edif.
@@ -5550,7 +5565,7 @@ const url = `${BASE_URL}/raytrace`;
                 habitaciones={habitaciones}
               />
 
-              {resultadoCobertura && (
+              {resultadoCobertura && !resultadoCoberturaOutdoor && (
                 <CapaCobertura
                   resultado={resultadoCobertura}
                   objetos={objetos}
@@ -5564,6 +5579,20 @@ const url = `${BASE_URL}/raytrace`;
                 />
               )}
               </group>
+
+              {resultadoCobertura && resultadoCoberturaOutdoor && (
+                <CapaCobertura
+                  resultado={resultadoCobertura}
+                  objetos={objetos}
+                  habitaciones={habitaciones}
+                  mostrarHeatmap={mostrarHeatmap}
+                  mostrarRayos={mostrarRayos}
+                  mostrarRouterOptimo={mostrarRouterOptimo}
+                  maxRayos={maxRayos}
+                  modoHeatmap={modoHeatmap}
+                  mostrarMesh={mostrarMesh}
+                />
+              )}
 
               <axesHelper args={[4]} />
 
