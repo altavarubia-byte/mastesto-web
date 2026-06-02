@@ -368,6 +368,18 @@ type EdificioPrincipalPose = {
   colisiones: number;
 };
 
+type RxExteriorPose = {
+  id: string;
+  x: number;
+  y: number;
+  z: number;
+  lat: number | null;
+  lon: number | null;
+  fixed: boolean;
+};
+
+type UrbanSionnaJobStatus = "idle" | "queued" | "running" | "done" | "error";
+
 const clampNumber = (value: number, min: number, max: number) =>
   Math.max(min, Math.min(max, value));
 
@@ -1532,6 +1544,123 @@ function EdificioPrincipalDraggable({
   );
 }
 
+
+function RxExteriorDraggable({
+  visible,
+  moving,
+  pose,
+  onMove,
+  onToggleMove,
+  onFix,
+}: {
+  visible: boolean;
+  moving: boolean;
+  pose: RxExteriorPose;
+  onMove: (x: number, z: number) => void;
+  onToggleMove: () => void;
+  onFix: () => void;
+}) {
+  const { camera, gl } = useThree();
+  const planoSuelo = useRef(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0));
+  const puntoInterseccion = useRef(new THREE.Vector3());
+  const raycaster = useRef(new THREE.Raycaster());
+  const mouse = useRef(new THREE.Vector2());
+  const [arrastrando, setArrastrando] = useState(false);
+
+  if (!visible) return null;
+
+  const moverEnSuelo = (event: any) => {
+    if (!arrastrando || !moving) return;
+    const rect = gl.domElement.getBoundingClientRect();
+    mouse.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.current.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.current.setFromCamera(mouse.current, camera);
+
+    const hit = raycaster.current.ray.intersectPlane(planoSuelo.current, puntoInterseccion.current);
+    if (!hit) return;
+
+    onMove(
+      Number(puntoInterseccion.current.x.toFixed(2)),
+      Number(puntoInterseccion.current.z.toFixed(2)),
+    );
+  };
+
+  const color = pose.fixed ? "#22c55e" : moving ? "#38bdf8" : "#60a5fa";
+
+  return (
+    <group name="rx-exterior-draggable" position={[pose.x, 0, pose.z]}>
+      <mesh
+        position={[0, 0.06, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (!moving) onToggleMove();
+        }}
+        onPointerDown={(e: any) => {
+          e.stopPropagation();
+          if (!moving) return;
+          setArrastrando(true);
+          gl.domElement.style.cursor = "grabbing";
+          if (e.target?.setPointerCapture) e.target.setPointerCapture(e.pointerId);
+        }}
+        onPointerMove={(e: any) => {
+          if (!arrastrando) return;
+          e.stopPropagation();
+          moverEnSuelo(e);
+        }}
+        onPointerUp={(e: any) => {
+          e.stopPropagation();
+          setArrastrando(false);
+          gl.domElement.style.cursor = "default";
+          if (e.target?.releasePointerCapture) e.target.releasePointerCapture(e.pointerId);
+        }}
+        onPointerOver={() => {
+          if (moving) gl.domElement.style.cursor = "grab";
+        }}
+        onPointerOut={() => {
+          if (!arrastrando) gl.domElement.style.cursor = "default";
+        }}
+      >
+        <ringGeometry args={[0.9, 1.25, 48]} />
+        <meshBasicMaterial color={color} transparent opacity={0.42} side={THREE.DoubleSide} />
+      </mesh>
+
+      <mesh position={[0, pose.y / 2, 0]} castShadow>
+        <cylinderGeometry args={[0.08, 0.12, Math.max(0.5, pose.y), 24]} />
+        <meshStandardMaterial color={color} roughness={0.5} metalness={0.08} />
+      </mesh>
+
+      <mesh position={[0, pose.y + 0.25, 0]} castShadow>
+        <sphereGeometry args={[0.38, 32, 16]} />
+        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.35} roughness={0.45} />
+      </mesh>
+
+      <Line
+        points={[
+          [0, 0.05, 0],
+          [0, pose.y + 0.9, 0],
+        ]}
+        color={color}
+        lineWidth={1.5}
+        transparent
+        opacity={0.75}
+      />
+
+      <group position={[0, pose.y + 1.15, 0]}>
+        <mesh>
+          <boxGeometry args={[2.4, 0.45, 0.05]} />
+          <meshBasicMaterial color="#020617" transparent opacity={0.78} />
+        </mesh>
+        <mesh position={[0, 0, 0.04]}>
+          <boxGeometry args={[2.25, 0.32, 0.04]} />
+          <meshBasicMaterial color={color} transparent opacity={0.2} />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+
 function FloatingUrbanImportProgress({
   visible,
   progress,
@@ -1886,6 +2015,24 @@ export default function CrearViviendaPage() {
     libre: true,
     colisiones: 0,
   });
+
+  const [rxExteriorPose, setRxExteriorPose] = useState<RxExteriorPose>({
+    id: "rx-ext-1",
+    x: 25,
+    y: 1.5,
+    z: 15,
+    lat: null,
+    lon: null,
+    fixed: false,
+  });
+  const [moviendoRxExterior, setMoviendoRxExterior] = useState(false);
+  const [urbanSionnaJobId, setUrbanSionnaJobId] = useState<string | null>(null);
+  const [urbanSionnaStatus, setUrbanSionnaStatus] = useState<UrbanSionnaJobStatus>("idle");
+  const [urbanSionnaProgress, setUrbanSionnaProgress] = useState(0);
+  const [urbanSionnaStage, setUrbanSionnaStage] = useState("");
+  const [urbanSionnaMessage, setUrbanSionnaMessage] = useState("");
+  const [urbanSionnaError, setUrbanSionnaError] = useState("");
+  const [urbanSionnaResult, setUrbanSionnaResult] = useState<any | null>(null);
 
   // ---------------------------------------------------------
   // ESTADO: VISUALIZACIÓN, SIMULACIÓN DINÁMICA Y MIMO
@@ -2532,6 +2679,8 @@ export default function CrearViviendaPage() {
               colisiones: edificioPrincipalPose.colisiones,
               dimensiones: dimensionesEdificioPrincipal,
             },
+            rxExterior: rxExteriorPose,
+            txInterior: routerTxInterior(),
           }
         : undefined,
     };
@@ -2638,6 +2787,209 @@ export default function CrearViviendaPage() {
     setColocandoEdificioPrincipal(false);
     setUrbanImportError("");
     setResultadoCobertura(null);
+  };
+
+
+  const crearPoseRxExterior = (
+    x: number,
+    z: number,
+    y: number = rxExteriorPose.y,
+    fixed: boolean = rxExteriorPose.fixed,
+    scenario: UrbanScenario | null = urbanScenario,
+  ): RxExteriorPose => {
+    const ll = localXzToLatLonFrontend(x, z, scenario?.site);
+    return {
+      id: "rx-ext-1",
+      x: Number(x.toFixed(2)),
+      y: Number(y.toFixed(2)),
+      z: Number(z.toFixed(2)),
+      lat: ll.lat === null ? null : Number(ll.lat.toFixed(8)),
+      lon: ll.lon === null ? null : Number(ll.lon.toFixed(8)),
+      fixed,
+    };
+  };
+
+  const moverRxExterior = (x: number, z: number) => {
+    setRxExteriorPose(crearPoseRxExterior(x, z, rxExteriorPose.y, false));
+    setUrbanSionnaResult(null);
+    setResultadoCobertura(null);
+  };
+
+  const fijarRxExterior = () => {
+    setRxExteriorPose((prev) => crearPoseRxExterior(prev.x, prev.z, prev.y, true));
+    setMoviendoRxExterior(false);
+    setUrbanSionnaError("");
+  };
+
+  const colocarRxExteriorCerca = () => {
+    if (!urbanScenario) {
+      setUrbanImportError("Primero importa un escenario real.");
+      return;
+    }
+    const baseX = edificioPrincipalPose.x + Math.max(18, dimensionesEdificioPrincipal.ancho * 1.4);
+    const baseZ = edificioPrincipalPose.z + Math.max(12, dimensionesEdificioPrincipal.largo * 1.1);
+    setRxExteriorPose(crearPoseRxExterior(baseX, baseZ, 1.5, false));
+    setScenarioMode("urban");
+    setMostrarEscenarioUrbano(true);
+    setMoviendoRxExterior(true);
+  };
+
+  const routerTxInterior = () => {
+    const router =
+      objetos.find((o) => o.tipo === "router") ||
+      objetos.find((o) => o.id === "router-1") ||
+      objetos[0];
+
+    return {
+      id: router?.id ?? "tx-router-1",
+      placement: "interior",
+      x: nrf(router?.x, 0),
+      y: nrf(router?.y, 1.2),
+      z: nrf(router?.z, 0),
+      powerDbm: 20,
+      frequencyMhz: frecuenciaMhz,
+      polarization: polarizationTx,
+      antennaType: antennaTypeTx,
+    };
+  };
+
+  const esperarJobSionnaOutdoor = async (jobId: string) => {
+    while (true) {
+      const statusRes = await fetch(`${SIONNA_API_URL}/urban/sionna/job/status/${jobId}`, {
+        cache: "no-store",
+      });
+      const statusData = await statusRes.json();
+
+      if (!statusRes.ok || !statusData.ok) {
+        throw new Error(statusData?.detail || "Error consultando job Sionna outdoor.");
+      }
+
+      setUrbanSionnaStatus(statusData.status);
+      setUrbanSionnaProgress(Number(statusData.progress || 0));
+      setUrbanSionnaStage(statusData.stage || "");
+      setUrbanSionnaMessage(statusData.message || "");
+
+      if (statusData.status === "error") {
+        const detail =
+          typeof statusData.error === "string"
+            ? statusData.error
+            : statusData.error?.detail;
+        throw new Error(detail || "Error en job Sionna outdoor.");
+      }
+
+      if (statusData.status === "done") {
+        const resultRes = await fetch(`${SIONNA_API_URL}/urban/sionna/job/result/${jobId}`, {
+          cache: "no-store",
+        });
+        const resultData = await resultRes.json();
+
+        if (!resultRes.ok || !resultData.ok) {
+          throw new Error(resultData?.detail || "Error obteniendo resultado Sionna outdoor.");
+        }
+
+        return resultData.result;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  };
+
+  const calcularSionnaOutdoorExperimental = async () => {
+    if (!urbanScenario) {
+      setUrbanSionnaError("Primero importa un escenario urbano.");
+      return;
+    }
+
+    setUrbanSionnaError("");
+    setUrbanSionnaResult(null);
+    setUrbanSionnaStatus("queued");
+    setUrbanSionnaProgress(0);
+    setUrbanSionnaStage("queued");
+    setUrbanSionnaMessage("Preparando job Sionna outdoor");
+    setUrbanSionnaJobId(null);
+
+    try {
+      const vivienda = {
+        ...crearDatosVivienda(),
+        version: "crear-vivienda-urban-sionna-web-v1",
+        unidades: "SI",
+        modoCalculo: "sionna",
+        materialPared,
+        materialSuelo,
+        materialTecho,
+      };
+
+      const payload = {
+        mode: "interior_to_exterior",
+        vivienda,
+        urbanScenario,
+        edificioPrincipalPose,
+        tx: routerTxInterior(),
+        rx: {
+          ...rxExteriorPose,
+          placement: "exterior",
+          antennaType: antennaTypeRx,
+          polarization: polarizationRx,
+        },
+        sionna: {
+          maxDepth: maxDepthSionna,
+          numSamples: numSamplesSionna,
+          diffractionEnabled,
+          diffuseReflection,
+          refraction: false,
+          txRows,
+          txCols,
+          rxRows,
+          rxCols,
+          arraySpacingLambda,
+          mimoMode,
+        },
+        metadata: {
+          source: "crear-vivienda",
+          startedAt: new Date().toISOString(),
+          frontendMode: "urban-sionna-experimental",
+        },
+      };
+
+      const res = await fetch(`${SIONNA_API_URL}/urban/sionna/job/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.ok) {
+        throw new Error(data?.detail || "No se pudo iniciar el job Sionna outdoor.");
+      }
+
+      setUrbanSionnaJobId(data.jobId);
+      setUrbanSionnaStatus(data.status);
+      setUrbanSionnaProgress(Number(data.progress || 0));
+      setUrbanSionnaStage(data.stage || "");
+      setUrbanSionnaMessage(data.message || "Job iniciado");
+
+      const result = await esperarJobSionnaOutdoor(data.jobId);
+      setUrbanSionnaResult(result);
+
+      const raytrace = result?.raytrace;
+      if (raytrace?.ok) {
+        setResultadoCobertura(raytrace);
+        setCir(raytrace.cir ?? []);
+        setCirResumen(raytrace.cirResumen ?? null);
+      }
+
+      setUrbanSionnaStatus("done");
+      setUrbanSionnaProgress(100);
+      setUrbanSionnaStage("done");
+      setUrbanSionnaMessage("Sionna outdoor terminado");
+    } catch (e) {
+      setUrbanSionnaStatus("error");
+      setUrbanSionnaProgress(100);
+      setUrbanSionnaStage("error");
+      setUrbanSionnaMessage("Error en Sionna outdoor");
+      setUrbanSionnaError(e instanceof Error ? e.message : "Error en Sionna outdoor.");
+    }
   };
 
 
@@ -2810,6 +3162,15 @@ export default function CrearViviendaPage() {
     setMostrarEscenarioUrbano(true);
     setColocandoEdificioPrincipal(false);
     setEdificioPrincipalPose({ x: 0, z: 0, rotationDeg: 0, lat: null, lon: null, libre: true, colisiones: 0 });
+    setRxExteriorPose({ id: "rx-ext-1", x: 25, y: 1.5, z: 15, lat: null, lon: null, fixed: false });
+    setMoviendoRxExterior(false);
+    setUrbanSionnaJobId(null);
+    setUrbanSionnaStatus("idle");
+    setUrbanSionnaProgress(0);
+    setUrbanSionnaStage("");
+    setUrbanSionnaMessage("");
+    setUrbanSionnaError("");
+    setUrbanSionnaResult(null);
   };
 
   const actualizarDopplerDesdeBackend = (taps: MuestraCIR[]) => {
@@ -4305,6 +4666,122 @@ const url = `${BASE_URL}/raytrace`;
               </div>
             )}
 
+            {urbanScenario && (
+              <div className="mb-5 rounded-2xl border border-blue-500/30 bg-blue-950/10 p-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-[0.25em] text-blue-300">
+                      Sionna Outdoor Experimental
+                    </p>
+                    <p className="mt-1 text-[10px] leading-relaxed text-slate-500">
+                      TX interior = router actual · RX exterior arrastrable · job asíncrono en HF.
+                    </p>
+                  </div>
+                  <span className={`rounded-full px-2 py-1 text-[8px] font-black uppercase ${
+                    urbanSionnaStatus === "done"
+                      ? "bg-emerald-400 text-black"
+                      : urbanSionnaStatus === "error"
+                        ? "bg-red-500 text-white"
+                        : urbanSionnaStatus === "running" || urbanSionnaStatus === "queued"
+                          ? "bg-orange-400 text-black"
+                          : "bg-slate-800 text-slate-300"
+                  }`}>
+                    {urbanSionnaStatus}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="rounded-xl border border-slate-800 bg-black/40 p-3">
+                    <p className="text-[8px] font-black uppercase text-slate-500">TX interior</p>
+                    <p className="mt-1 text-[10px] text-orange-300">
+                      Router · {fmtUrban(routerTxInterior().x, 1)}, {fmtUrban(routerTxInterior().y, 1)}, {fmtUrban(routerTxInterior().z, 1)}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-slate-800 bg-black/40 p-3">
+                    <p className="text-[8px] font-black uppercase text-slate-500">RX exterior</p>
+                    <p className="mt-1 text-[10px] text-blue-300">
+                      {fmtUrban(rxExteriorPose.x, 1)}, {fmtUrban(rxExteriorPose.y, 1)}, {fmtUrban(rxExteriorPose.z, 1)}
+                    </p>
+                    <p className="mt-1 text-[8px] text-slate-500">
+                      {rxExteriorPose.lat ? fmtUrban(rxExteriorPose.lat, 5) : "-"} / {rxExteriorPose.lon ? fmtUrban(rxExteriorPose.lon, 5) : "-"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    onClick={colocarRxExteriorCerca}
+                    className="rounded-xl bg-blue-400 px-3 py-3 text-[9px] font-black uppercase text-black transition-all hover:bg-white"
+                  >
+                    Añadir RX
+                  </button>
+                  <button
+                    onClick={() => {
+                      setScenarioMode("urban");
+                      setMostrarEscenarioUrbano(true);
+                      setMoviendoRxExterior((v) => !v);
+                    }}
+                    className={`rounded-xl px-3 py-3 text-[9px] font-black uppercase transition-all ${moviendoRxExterior ? "bg-orange-400 text-black" : "bg-slate-800 text-slate-300"}`}
+                  >
+                    {moviendoRxExterior ? "Moviendo" : "Mover RX"}
+                  </button>
+                  <button
+                    onClick={fijarRxExterior}
+                    className="rounded-xl bg-emerald-400 px-3 py-3 text-[9px] font-black uppercase text-black transition-all hover:bg-white"
+                  >
+                    Fijar RX
+                  </button>
+                </div>
+
+                <button
+                  onClick={calcularSionnaOutdoorExperimental}
+                  disabled={urbanSionnaStatus === "queued" || urbanSionnaStatus === "running"}
+                  className="w-full rounded-xl bg-fuchsia-500 px-4 py-4 text-[10px] font-black uppercase text-white transition-all hover:bg-fuchsia-400 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {urbanSionnaStatus === "queued" || urbanSionnaStatus === "running"
+                    ? "Calculando Sionna..."
+                    : "Calcular Sionna Outdoor"}
+                </button>
+
+                {(urbanSionnaStatus === "queued" || urbanSionnaStatus === "running") && (
+                  <div className="rounded-xl border border-slate-800 bg-black/50 p-3">
+                    <div className="mb-2 flex items-center justify-between gap-3 text-[9px] uppercase tracking-widest">
+                      <span className="truncate text-slate-400">{urbanSionnaMessage || "Calculando..."}</span>
+                      <span className="font-black text-fuchsia-300">{Math.round(urbanSionnaProgress)}%</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+                      <div className="h-full rounded-full bg-fuchsia-400 transition-all" style={{ width: `${clampNumber(urbanSionnaProgress, 0, 100)}%` }} />
+                    </div>
+                    <p className="mt-2 text-[8px] uppercase text-slate-600">
+                      {urbanSionnaStage || "-"} {urbanSionnaJobId ? `· ${urbanSionnaJobId.slice(0, 8)}...` : ""}
+                    </p>
+                  </div>
+                )}
+
+                {urbanSionnaError && (
+                  <div className="rounded-xl border border-red-900/60 bg-red-950/30 p-3 text-[10px] text-red-300">
+                    {urbanSionnaError}
+                  </div>
+                )}
+
+                {urbanSionnaResult?.raytrace && (
+                  <div className="rounded-xl border border-emerald-900/60 bg-emerald-950/20 p-3">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-emerald-300">
+                      Resultado Sionna
+                    </p>
+                    <div className="mt-2 grid grid-cols-2 gap-2 text-[10px] text-slate-300">
+                      <p>Sionna: <span className="font-black text-white">{urbanSionnaResult.raytrace?.modelo?.sionnaUsado ? "sí" : "no"}</span></p>
+                      <p>Rayos: <span className="font-black text-white">{urbanSionnaResult.raytrace?.modelo?.rayosTotales ?? urbanSionnaResult.raytrace?.rayos?.length ?? "-"}</span></p>
+                      <p>Directos: <span className="font-black text-white">{urbanSionnaResult.raytrace?.modelo?.rayosDirectos ?? "-"}</span></p>
+                      <p>Reflejados: <span className="font-black text-white">{urbanSionnaResult.raytrace?.modelo?.rayosReflejados ?? "-"}</span></p>
+                      <p>RX detectados: <span className="font-black text-white">{urbanSionnaResult.raytrace?.modelo?.receptoresDetectados ?? "-"}</span></p>
+                      <p>XML: <span className="font-black text-white">{urbanSionnaResult.raytrace?.modelo?.sionnaXmlCargado ? "ok" : "-"}</span></p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <button
               onClick={crearHabitacion}
               className="w-full py-4 rounded-xl bg-cyan-400 text-slate-950 text-[10px] font-black uppercase hover:bg-white transition-all mb-4"
@@ -4983,6 +5460,19 @@ const url = `${BASE_URL}/raytrace`;
                 dimensiones={dimensionesEdificioPrincipal}
                 onMove={moverEdificioPrincipal}
                 onConfirm={fijarEdificioPrincipal}
+              />
+
+              <RxExteriorDraggable
+                visible={scenarioMode === "urban" && !!urbanScenario}
+                moving={moviendoRxExterior}
+                pose={rxExteriorPose}
+                onMove={moverRxExterior}
+                onToggleMove={() => {
+                  setScenarioMode("urban");
+                  setMostrarEscenarioUrbano(true);
+                  setMoviendoRxExterior((v) => !v);
+                }}
+                onFix={fijarRxExterior}
               />
 
               <group
