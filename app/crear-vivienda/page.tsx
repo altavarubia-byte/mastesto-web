@@ -3656,11 +3656,16 @@ export default function CrearViviendaPage() {
       ? [...(resultadoConResumen.rayos ?? []), ...extrasOutdoor]
       : (resultadoConResumen.rayos ?? []);
 
+    const modeloBase = resultadoConResumen.modelo;
+
     return {
       ...resultadoConResumen,
       rayos: rayosCombinados,
       modelo: {
-        ...(resultadoConResumen.modelo ?? {}),
+        ...(modeloBase ?? {}),
+        frecuenciaMhz: modeloBase?.frecuenciaMhz ?? frecuenciaMhz,
+        potenciaTxDbm: modeloBase?.potenciaTxDbm ?? 20,
+        tipo: modeloBase?.tipo ?? (resultadoCoberturaOutdoor ? "sionna-outdoor" : "sionna-indoor"),
         rayosTotales: rayosCombinados.length,
         rayosReflejados: rayosCombinados.filter((r: any) => r.tipo === "reflejado" || r.nlos).length,
       },
