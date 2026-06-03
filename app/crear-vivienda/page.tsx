@@ -1969,7 +1969,7 @@ export default function CrearViviendaPage() {
   const [diffractionEnabled, setDiffractionEnabled] = useState(false);
   const [diffuseReflection, setDiffuseReflection] = useState(false);
   const [maxDepthSionna, setMaxDepthSionna] = useState(8);
-  const [numSamplesSionna, setNumSamplesSionna] = useState(500000);
+  const [numSamplesSionna, setNumSamplesSionna] = useState(1000000);
   const [usarPatronFeko, setUsarPatronFeko] = useState(false);
   const [fekoPatternTxContent, setFekoPatternTxContent] = useState("");
   const [fekoPatternRxContent, setFekoPatternRxContent] = useState("");
@@ -3651,10 +3651,19 @@ export default function CrearViviendaPage() {
       cirResumen: resultado.cirResumen ?? resumen ?? undefined,
     };
 
-    const extrasOutdoor = generarRayosOutdoorVisualesFrontend(resultadoConResumen);
-    const rayosCombinados = extrasOutdoor.length
-      ? [...(resultadoConResumen.rayos ?? []), ...extrasOutdoor]
-      : (resultadoConResumen.rayos ?? []);
+    const rayosBackend = resultadoConResumen.rayos ?? [];
+    const rayosSionnaReales = rayosBackend.filter((r: any) => {
+      return (
+        r?.origen === "sionna_rt" ||
+        r?.origen === "sionna" ||
+        r?.origen === "sionna_paths" ||
+        r?.sionnaUsado === true
+      );
+    });
+
+    // Para resultados técnicos no añadimos rayos visuales manuales.
+    // Si Sionna devuelve pocos paths, se muestran pocos, pero todos son reales.
+    const rayosCombinados = rayosSionnaReales.length > 0 ? rayosSionnaReales : rayosBackend;
 
     const modeloBase = resultadoConResumen.modelo;
 
@@ -3665,9 +3674,12 @@ export default function CrearViviendaPage() {
         ...(modeloBase ?? {}),
         frecuenciaMhz: modeloBase?.frecuenciaMhz ?? frecuenciaMhz,
         potenciaTxDbm: modeloBase?.potenciaTxDbm ?? 20,
-        tipo: modeloBase?.tipo ?? (resultadoCoberturaOutdoor ? "sionna-outdoor" : "sionna-indoor"),
+        tipo: modeloBase?.tipo ?? (resultadoCoberturaOutdoor ? "sionna-outdoor-real" : "sionna-indoor-real"),
         rayosTotales: rayosCombinados.length,
-        rayosReflejados: rayosCombinados.filter((r: any) => r.tipo === "reflejado" || r.nlos).length,
+        rayosOrigenSionna: rayosSionnaReales.length,
+        rayosDirectos: rayosCombinados.filter((r: any) => r.tipo === "directo" || r.los).length,
+        rayosReflejados: rayosCombinados.filter((r: any) => r.tipo === "reflejado" || r.nlos || Number(r.numRebotes ?? 0) > 0).length,
+        rayosDifractados: rayosCombinados.filter((r: any) => r.tipo === "difractado" || r.esDifractado).length,
       },
       heatmapCanal: crearHeatmapCanalFallback(
         resultadoConResumen,
@@ -8950,3 +8962,4 @@ function ConteoHabitaciones({ numPlantas, onConfirmar }: { numPlantas: number; o
     </div>
   );
 }
+
