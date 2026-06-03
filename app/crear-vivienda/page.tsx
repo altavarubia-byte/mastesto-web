@@ -1968,8 +1968,8 @@ export default function CrearViviendaPage() {
   // Sionna avanzado y FEKO automático.
   const [diffractionEnabled, setDiffractionEnabled] = useState(false);
   const [diffuseReflection, setDiffuseReflection] = useState(false);
-  const [maxDepthSionna, setMaxDepthSionna] = useState(5);
-  const [numSamplesSionna, setNumSamplesSionna] = useState(150000);
+  const [maxDepthSionna, setMaxDepthSionna] = useState(8);
+  const [numSamplesSionna, setNumSamplesSionna] = useState(500000);
   const [usarPatronFeko, setUsarPatronFeko] = useState(false);
   const [fekoPatternTxContent, setFekoPatternTxContent] = useState("");
   const [fekoPatternRxContent, setFekoPatternRxContent] = useState("");
@@ -2049,7 +2049,7 @@ export default function CrearViviendaPage() {
   // ---------------------------------------------------------
   // ESTADO: VISUALIZACIÓN, SIMULACIÓN DINÁMICA Y MIMO
   // ---------------------------------------------------------
-  const [maxRayos, setMaxRayos] = useState(200);
+  const [maxRayos, setMaxRayos] = useState(300);
   const [simulando, setSimulando] = useState(false);
   const [moverReceptor, setMoverReceptor] = useState(true);
   const [moverPersonas, setMoverPersonas] = useState(true);
@@ -2944,8 +2944,8 @@ export default function CrearViviendaPage() {
           polarization: polarizationRx,
         },
         sionna: {
-          maxDepth: maxDepthSionna,
-          numSamples: numSamplesSionna,
+          maxDepth: Math.max(6, maxDepthSionna),
+          numSamples: Math.max(500000, numSamplesSionna),
           diffractionEnabled,
           diffuseReflection,
           refraction: false,
@@ -2955,6 +2955,8 @@ export default function CrearViviendaPage() {
           rxCols,
           arraySpacingLambda,
           mimoMode,
+          maxRayos,
+          incluirRayosDebiles: true,
         },
         metadata: {
           source: "crear-vivienda",
@@ -3511,6 +3513,129 @@ export default function CrearViviendaPage() {
     };
   };
 
+  const convertirGlobalALocalEdificio = (xGlobal: number, zGlobal: number) => {
+    const pose = offsetEdificioPrincipal ?? edificioPrincipalPose;
+    const ox = nrf(pose?.x, 0);
+    const oz = nrf(pose?.z, 0);
+    const theta = ((nrf(pose?.rotationDeg, 0) * Math.PI) / 180);
+    const dx = xGlobal - ox;
+    const dz = zGlobal - oz;
+    const c = Math.cos(-theta);
+    const s = Math.sin(-theta);
+    return {
+      x: dx * c - dz * s,
+      z: dx * s + dz * c,
+    };
+  };
+
+  const generarRayosOutdoorVisualesFrontend = (base: ResultadoCobertura): RayoCobertura[] => {
+    if (!urbanScenario || scenarioMode !== "urban") return [];
+
+    const actuales = base.rayos ?? [];
+    if (actuales.length >= 30) return [];
+
+    const edificios = urbanScenario.urban?.buildings ?? [];
+    if (!edificios.length) return [];
+
+    const txObj = routerTxInterior();
+    const rxGlobal = rxExteriorPose;
+    const rxLocal = convertirGlobalALocalEdificio(nrf(rxGlobal.x), nrf(rxGlobal.z));
+
+    const tx = {
+      x: nrf(txObj.x, 0),
+      y: nrf(txObj.y, 1.2),
+      z: nrf(txObj.z, 0),
+    };
+
+    const rx = {
+      x: rxLocal.x,
+      y: nrf(rxGlobal.y, 1.5),
+      z: rxLocal.z,
+    };
+
+    const usados = new Set(
+      actuales.map((r: any) =>
+        (r.puntos ?? [])
+          .map((p: any) => `${Number(p.x).toFixed(1)},${Number(p.y).toFixed(1)},${Number(p.z).toFixed(1)}`)
+          .join("|"),
+      ),
+    );
+
+    const candidatos: any[] = [];
+    const midXGlobal = (nrf(rxGlobal.x) + nrf(edificioPrincipalPose.x)) / 2;
+    const midZGlobal = (nrf(rxGlobal.z) + nrf(edificioPrincipalPose.z)) / 2;
+
+    edificios.slice(0, 180).forEach((b: any, bIndex: number) => {
+      const fp = b?.footprint ?? [];
+      if (fp.length < 2) return;
+
+      const topY = nrf(b.heightM ?? b.height ?? b.topY, 10);
+      const y = clampNumber(topY * 0.35, 1.8, 6.5);
+
+      for (let i = 0; i < fp.length; i++) {
+        const a = fp[i];
+        const c = fp[(i + 1) % fp.length];
+        const ax = nrf(a.x ?? a[0], NaN);
+        const az = nrf(a.z ?? a[1], NaN);
+        const cx = nrf(c.x ?? c[0], NaN);
+        const cz = nrf(c.z ?? c[1], NaN);
+        if (![ax, az, cx, cz].every(Number.isFinite)) continue;
+
+        const edgeLen = Math.hypot(cx - ax, cz - az);
+        if (edgeLen < 1.2) continue;
+
+        const mxGlobal = (ax + cx) / 2;
+        const mzGlobal = (az + cz) / 2;
+        const local = convertirGlobalALocalEdificio(mxGlobal, mzGlobal);
+        const score = Math.hypot(mxGlobal - midXGlobal, mzGlobal - midZGlobal);
+        const dTx = Math.hypot(local.x - tx.x, y - tx.y, local.z - tx.z);
+        const dRx = Math.hypot(local.x - rx.x, y - rx.y, local.z - rx.z);
+        if (dTx < 1 || dRx < 1) continue;
+
+        candidatos.push({
+          score: score + 0.08 * (dTx + dRx),
+          x: local.x,
+          y,
+          z: local.z,
+          bIndex,
+          edgeIndex: i,
+          dTotal: dTx + dRx,
+        });
+      }
+    });
+
+    candidatos.sort((a, b) => a.score - b.score);
+
+    const extras: RayoCobertura[] = [];
+    for (const c of candidatos.slice(0, 120)) {
+      const puntos = [
+        { x: Number(tx.x.toFixed(3)), y: Number(tx.y.toFixed(3)), z: Number(tx.z.toFixed(3)) },
+        { x: Number(c.x.toFixed(3)), y: Number(c.y.toFixed(3)), z: Number(c.z.toFixed(3)) },
+        { x: Number(rx.x.toFixed(3)), y: Number(rx.y.toFixed(3)), z: Number(rx.z.toFixed(3)) },
+      ];
+      const firma = puntos.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)},${p.z.toFixed(1)}`).join("|");
+      if (usados.has(firma)) continue;
+      usados.add(firma);
+
+      const potenciaVisual = -48 - 0.18 * c.dTotal - extras.length * 0.12;
+      extras.push({
+        id: `frontend-outdoor-reflect-${c.bIndex}-${c.edgeIndex}-${extras.length}`,
+        tipo: "reflejado",
+        tipoVisual: "reflejado",
+        potenciaDbm: Number(potenciaVisual.toFixed(2)),
+        los: false,
+        nlos: true,
+        numRebotes: 1,
+        objetosInteractuados: [c.bIndex],
+        puntos,
+      });
+
+      if (extras.length >= Math.max(40, Math.min(120, maxRayos))) break;
+    }
+
+    return extras;
+  };
+
   const prepararResultadoVisual = (
     resultado: ResultadoCobertura,
   ): ResultadoCobertura => {
@@ -3526,8 +3651,19 @@ export default function CrearViviendaPage() {
       cirResumen: resultado.cirResumen ?? resumen ?? undefined,
     };
 
+    const extrasOutdoor = generarRayosOutdoorVisualesFrontend(resultadoConResumen);
+    const rayosCombinados = extrasOutdoor.length
+      ? [...(resultadoConResumen.rayos ?? []), ...extrasOutdoor]
+      : (resultadoConResumen.rayos ?? []);
+
     return {
       ...resultadoConResumen,
+      rayos: rayosCombinados,
+      modelo: {
+        ...(resultadoConResumen.modelo ?? {}),
+        rayosTotales: rayosCombinados.length,
+        rayosReflejados: rayosCombinados.filter((r: any) => r.tipo === "reflejado" || r.nlos).length,
+      },
       heatmapCanal: crearHeatmapCanalFallback(
         resultadoConResumen,
         taps,
@@ -5613,7 +5749,7 @@ const url = `${BASE_URL}/raytrace`;
                 habitaciones={habitaciones}
               />
 
-              {resultadoCobertura && !resultadoCoberturaOutdoor && (
+              {resultadoCobertura && (
                 <CapaCobertura
                   resultado={resultadoCobertura}
                   objetos={objetos}
@@ -5627,20 +5763,6 @@ const url = `${BASE_URL}/raytrace`;
                 />
               )}
               </group>
-
-              {resultadoCobertura && resultadoCoberturaOutdoor && (
-                <CapaCobertura
-                  resultado={resultadoCobertura}
-                  objetos={objetos}
-                  habitaciones={habitaciones}
-                  mostrarHeatmap={mostrarHeatmap}
-                  mostrarRayos={mostrarRayos}
-                  mostrarRouterOptimo={mostrarRouterOptimo}
-                  maxRayos={maxRayos}
-                  modoHeatmap={modoHeatmap}
-                  mostrarMesh={mostrarMesh}
-                />
-              )}
 
               <axesHelper args={[4]} />
 
@@ -7846,7 +7968,12 @@ function CapaCobertura({
       potenciaDbm: nrf(rayo.potenciaDbm, -120),
     }))
     .filter((rayo) => rayo.puntos && rayo.puntos.length >= 2)
-    .sort((a, b) => Number(b.potenciaDbm) - Number(a.potenciaDbm));
+    .sort((a, b) => {
+      const ar = Number(a.numRebotes ?? (a.nlos ? 1 : 0));
+      const br = Number(b.numRebotes ?? (b.nlos ? 1 : 0));
+      if (ar !== br) return ar - br;
+      return Number(b.potenciaDbm) - Number(a.potenciaDbm);
+    });
 
   const rayosVisiblesUnicos = rayosVisibles.slice(
     0,
@@ -7916,7 +8043,7 @@ function CapaCobertura({
               color={colorRayo(rayo)}
               lineWidth={grosorRayo(rayo)}
               transparent
-              opacity={Math.max(0.18, Math.min(1, (Number(rayo.potenciaDbm) + 115) / 55))}
+              opacity={0.96}
             />
           );
         })}
@@ -8070,16 +8197,18 @@ function grosorRayo(rayo: any) {
     rayo.tipo === "afectado_persona" ||
     rayo.tipoVisual === "afectado_persona"
   ) {
-    return 5;
+    return 6;
   }
 
   if (rayo.esDifractado || rayo.tipo === "difractado" || rayo.tipoVisual === "difractado") {
+    return 5;
+  }
+
+  if (rayo.tipo === "reflejado" || rayo.nlos || Number(rayo.numRebotes ?? 0) > 0) {
     return 4;
   }
 
-  const p = rayo.potenciaDbm ?? -90;
-
-  return Math.max(1, Math.min(8, (p + 100) / 10));
+  return 3;
 }
 
 function MaterialSelect({
