@@ -1968,8 +1968,8 @@ export default function CrearViviendaPage() {
   // Sionna avanzado y FEKO automático.
   const [diffractionEnabled, setDiffractionEnabled] = useState(false);
   const [diffuseReflection, setDiffuseReflection] = useState(false);
-  const [maxDepthSionna, setMaxDepthSionna] = useState(8);
-  const [numSamplesSionna, setNumSamplesSionna] = useState(1000000);
+  const [maxDepthSionna, setMaxDepthSionna] = useState(6);
+  const [numSamplesSionna, setNumSamplesSionna] = useState(500000);
   const [usarPatronFeko, setUsarPatronFeko] = useState(false);
   const [fekoPatternTxContent, setFekoPatternTxContent] = useState("");
   const [fekoPatternRxContent, setFekoPatternRxContent] = useState("");
@@ -2049,7 +2049,7 @@ export default function CrearViviendaPage() {
   // ---------------------------------------------------------
   // ESTADO: VISUALIZACIÓN, SIMULACIÓN DINÁMICA Y MIMO
   // ---------------------------------------------------------
-  const [maxRayos, setMaxRayos] = useState(300);
+  const [maxRayos, setMaxRayos] = useState(80);
   const [simulando, setSimulando] = useState(false);
   const [moverReceptor, setMoverReceptor] = useState(true);
   const [moverPersonas, setMoverPersonas] = useState(true);
