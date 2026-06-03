@@ -3663,7 +3663,7 @@ export default function CrearViviendaPage() {
 
     // Para resultados técnicos no añadimos rayos visuales manuales.
     // Si Sionna devuelve pocos paths, se muestran pocos, pero todos son reales.
-    const rayosCombinados = rayosSionnaReales.length > 0 ? rayosSionnaReales : rayosBackend;
+    const rayosCombinados = rayosSionnaReales;
 
     const modeloBase = resultadoConResumen.modelo;
 
@@ -8074,7 +8074,7 @@ function CapaCobertura({
               color={colorRayo(rayo)}
               lineWidth={grosorRayo(rayo)}
               transparent
-              opacity={0.72}
+              opacity={0.55}
             />
           );
         })}
@@ -8978,4 +8978,3 @@ function ConteoHabitaciones({ numPlantas, onConfirmar }: { numPlantas: number; o
     </div>
   );
 }
-
