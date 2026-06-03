@@ -5766,7 +5766,7 @@ const url = `${BASE_URL}/raytrace`;
                 habitaciones={habitaciones}
               />
 
-              {resultadoCobertura && (
+              {resultadoCobertura && !resultadoCoberturaOutdoor && (
                 <CapaCobertura
                   resultado={resultadoCobertura}
                   objetos={objetos}
@@ -5780,6 +5780,20 @@ const url = `${BASE_URL}/raytrace`;
                 />
               )}
               </group>
+
+              {resultadoCobertura && resultadoCoberturaOutdoor && (
+                <CapaCobertura
+                  resultado={resultadoCobertura}
+                  objetos={objetos}
+                  habitaciones={habitaciones}
+                  mostrarHeatmap={mostrarHeatmap}
+                  mostrarRayos={mostrarRayos}
+                  mostrarRouterOptimo={mostrarRouterOptimo}
+                  maxRayos={maxRayos}
+                  modoHeatmap={modoHeatmap}
+                  mostrarMesh={mostrarMesh}
+                />
+              )}
 
               <axesHelper args={[4]} />
 
@@ -8060,7 +8074,7 @@ function CapaCobertura({
               color={colorRayo(rayo)}
               lineWidth={grosorRayo(rayo)}
               transparent
-              opacity={0.96}
+              opacity={0.72}
             />
           );
         })}
@@ -8209,23 +8223,25 @@ function colorRayo(rayo: any) {
 }
 
 function grosorRayo(rayo: any) {
+  // Outdoor puede tener muchos paths reales superpuestos. Si el grosor es alto,
+  // las líneas se convierten visualmente en una banda. Mantenerlos finos.
   if (
     rayo.afectadoPorPersona ||
     rayo.tipo === "afectado_persona" ||
     rayo.tipoVisual === "afectado_persona"
   ) {
-    return 6;
+    return 2.5;
   }
 
   if (rayo.esDifractado || rayo.tipo === "difractado" || rayo.tipoVisual === "difractado") {
-    return 5;
+    return 2;
   }
 
   if (rayo.tipo === "reflejado" || rayo.nlos || Number(rayo.numRebotes ?? 0) > 0) {
-    return 4;
+    return 1.5;
   }
 
-  return 3;
+  return 1.8;
 }
 
 function MaterialSelect({
